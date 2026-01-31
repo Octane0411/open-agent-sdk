@@ -4,16 +4,19 @@
  */
 
 import { OpenAIProvider } from './providers/openai';
+import { GoogleProvider } from './providers/google';
 import { createDefaultRegistry } from './tools/registry';
 import { ReActLoop } from './agent/react-loop';
 import type { ToolRegistry } from './tools/registry';
 
 export interface PromptOptions {
-  /** Model identifier (e.g., 'gpt-4', 'gpt-4o') */
+  /** Model identifier (e.g., 'gpt-4', 'gpt-4o', 'gemini-2.0-flash') */
   model: string;
-  /** API key (defaults to OPENAI_API_KEY env var) */
+  /** API key (defaults to OPENAI_API_KEY or GEMINI_API_KEY env var based on provider) */
   apiKey?: string;
-  /** Base URL for API (for Gemini compatibility: https://generativelanguage.googleapis.com/v1beta/openai/) */
+  /** Provider to use: 'openai' or 'google' (auto-detected from model name if not specified) */
+  provider?: 'openai' | 'google';
+  /** Base URL for API (OpenAI only) */
   baseURL?: string;
   /** Maximum conversation turns (default: 10) */
   maxTurns?: number;
@@ -62,20 +65,25 @@ export async function prompt(
 ): Promise<PromptResult> {
   const startTime = Date.now();
 
-  // Get API key from options or environment
-  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
+  // Auto-detect provider from model name if not specified
+  const providerType = options.provider ??
+    (options.model.toLowerCase().includes('gemini') ? 'google' : 'openai');
+
+  // Get API key based on provider
+  const apiKey = options.apiKey ??
+    (providerType === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY);
+
   if (!apiKey) {
+    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
     throw new Error(
-      'OpenAI API key is required. Provide it via options.apiKey or OPENAI_API_KEY environment variable.'
+      `${providerType} API key is required. Provide it via options.apiKey or ${keyName} environment variable.`
     );
   }
 
   // Create provider
-  const provider = new OpenAIProvider({
-    apiKey,
-    model: options.model,
-    baseURL: options.baseURL,
-  });
+  const provider = providerType === 'google'
+    ? new GoogleProvider({ apiKey, model: options.model })
+    : new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
 
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
