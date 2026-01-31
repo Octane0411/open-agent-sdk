@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running TypeScript check..."
+
+# Run TypeScript check
+cd packages/core && npx tsc --noEmit
+
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript check failed. Please fix errors before committing."
+  exit 1
+fi
+
+echo "✅ TypeScript check passed!"

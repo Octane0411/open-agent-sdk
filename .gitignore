@@ -34,6 +34,9 @@ coverage/
 *.temp
 .cache/
 
+# Husky (managed by package manager)
+.husky/_/
+
 # External reference docs (not for version control)
 docs/dev/
 

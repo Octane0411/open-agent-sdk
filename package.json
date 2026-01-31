@@ -7,10 +7,13 @@
   ],
   "scripts": {
     "test": "bun test",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --coverage",
+    "typecheck": "cd packages/core && npx tsc --noEmit",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "husky": "^8.0.3",
     "typescript": "^5.3.0"
   },
   "engines": {
