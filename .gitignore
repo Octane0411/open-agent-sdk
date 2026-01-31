@@ -34,6 +34,9 @@ coverage/
 *.temp
 .cache/
 
-# Claude specific (optional)
+# External reference docs (not for version control)
+docs/dev/
+
+# Legacy files
 claude-agent-sdk-ts*
 REQUIREMENTS.md
