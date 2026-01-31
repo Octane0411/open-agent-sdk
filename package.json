@@ -1,0 +1,19 @@
+{
+  "name": "open-agent-sdk",
+  "version": "0.1.0",
+  "description": "Open source agent SDK compatible with Claude Agent SDK",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
