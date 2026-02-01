@@ -50,11 +50,13 @@ export abstract class LLMProvider {
    * Send messages to the LLM and get streaming response
    * @param messages - Conversation history
    * @param tools - Available tools
+   * @param signal - Optional AbortSignal for cancellation
    * @returns Async iterable of response chunks
    */
   abstract chat(
     messages: SDKMessage[],
-    tools?: ToolDefinition[]
+    tools?: ToolDefinition[],
+    signal?: AbortSignal
   ): AsyncIterable<LLMChunk>;
 
   /**

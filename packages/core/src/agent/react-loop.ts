@@ -158,7 +158,7 @@ export class ReActLoop {
     tools: ReturnType<ToolRegistry['getDefinitions']>,
     onUsage: (tokens: { input: number; output: number }) => void
   ): Promise<SDKAssistantMessage> {
-    const stream = this.provider.chat(messages, tools);
+    const stream = this.provider.chat(messages, tools, this.config.abortController?.signal);
 
     let content = '';
     const toolCalls: Map<string, ToolCall> = new Map();

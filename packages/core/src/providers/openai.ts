@@ -35,7 +35,8 @@ export class OpenAIProvider extends LLMProvider {
 
   async *chat(
     messages: SDKMessage[],
-    tools?: ToolDefinition[]
+    tools?: ToolDefinition[],
+    signal?: AbortSignal
   ): AsyncIterable<LLMChunk> {
     // Convert SDK messages to OpenAI format
     const openaiMessages = this.convertMessages(messages);
@@ -50,15 +51,18 @@ export class OpenAIProvider extends LLMProvider {
       },
     }));
 
-    const stream = await this.client.chat.completions.create({
-      model: this.config.model,
-      messages: openaiMessages,
-      tools: openaiTools,
-      tool_choice: openaiTools && openaiTools.length > 0 ? 'auto' : undefined,
-      max_tokens: this.config.maxTokens,
-      temperature: this.config.temperature,
-      stream: true,
-    });
+    const stream = await this.client.chat.completions.create(
+      {
+        model: this.config.model,
+        messages: openaiMessages,
+        tools: openaiTools,
+        tool_choice: openaiTools && openaiTools.length > 0 ? 'auto' : undefined,
+        max_tokens: this.config.maxTokens,
+        temperature: this.config.temperature,
+        stream: true,
+      },
+      { signal }
+    );
 
     let currentToolCall: {
       id: string;

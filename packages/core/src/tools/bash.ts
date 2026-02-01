@@ -63,6 +63,15 @@ export class BashTool implements Tool<BashInput, BashOutput> {
       return { output: '', exitCode: 0 };
     }
 
+    // Check if already aborted
+    if (context.abortController?.signal.aborted) {
+      return {
+        output: 'Command aborted before execution',
+        exitCode: -1,
+        killed: true,
+      };
+    }
+
     return new Promise((resolve) => {
       const shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
       const shellFlag = process.platform === 'win32' ? '/c' : '-c';
@@ -72,6 +81,18 @@ export class BashTool implements Tool<BashInput, BashOutput> {
         env: { ...process.env, ...context.env },
         stdio: ['ignore', 'pipe', 'pipe'],
       });
+
+      // Set up abort handler
+      let abortHandler: (() => void) | undefined;
+      if (context.abortController?.signal) {
+        abortHandler = () => {
+          killed = true;
+          child.kill('SIGTERM');
+          // Force kill after 5 seconds if still running
+          setTimeout(() => child.kill('SIGKILL'), 5000);
+        };
+        context.abortController.signal.addEventListener('abort', abortHandler);
+      }
 
       // Handle background execution
       if (run_in_background) {
@@ -123,6 +144,11 @@ export class BashTool implements Tool<BashInput, BashOutput> {
           killed = true;
         }
 
+        // Clean up abort listener
+        if (abortHandler && context.abortController?.signal) {
+          context.abortController.signal.removeEventListener('abort', abortHandler);
+        }
+
         let output = stdout + (stderr ? '\n' + stderr : '');
 
         // Normalize macOS /private prefix for pwd command
@@ -130,8 +156,16 @@ export class BashTool implements Tool<BashInput, BashOutput> {
           output = output.substring('/private'.length);
         }
 
+        // Check if killed due to abort
+        const wasAborted = context.abortController?.signal.aborted;
+        const outputMessage = wasAborted
+          ? output + '\n[Command aborted]'
+          : killed
+            ? output + '\n[Command timed out]'
+            : output;
+
         resolve({
-          output: killed ? output + '\n[Command timed out]' : output,
+          output: outputMessage,
           exitCode: code ?? (killed ? -1 : 0),
           killed,
         });
@@ -139,6 +173,12 @@ export class BashTool implements Tool<BashInput, BashOutput> {
 
       child.on('error', (err) => {
         clearTimeout(timeoutId);
+
+        // Clean up abort listener
+        if (abortHandler && context.abortController?.signal) {
+          context.abortController.signal.removeEventListener('abort', abortHandler);
+        }
+
         resolve({
           output: '',
           exitCode: -1,

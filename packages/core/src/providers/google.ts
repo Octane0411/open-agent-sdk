@@ -30,7 +30,8 @@ export class GoogleProvider extends LLMProvider {
 
   async *chat(
     messages: SDKMessage[],
-    tools?: ToolDefinition[]
+    tools?: ToolDefinition[],
+    signal?: AbortSignal
   ): AsyncIterable<LLMChunk> {
     // Separate system message from history
     let systemInstruction: string | undefined;
@@ -86,6 +87,12 @@ export class GoogleProvider extends LLMProvider {
       config.tools = googleTools;
     }
 
+    // Check signal before making request
+    if (signal?.aborted) {
+      yield { type: 'done' };
+      return;
+    }
+
     const response = await this.client.models.generateContentStream({
       model: this.config.model,
       contents: currentPrompt,
@@ -93,6 +100,11 @@ export class GoogleProvider extends LLMProvider {
     });
 
     for await (const chunk of response) {
+      // Check for abort signal after receiving each chunk
+      if (signal?.aborted) {
+        yield { type: 'done' };
+        return;
+      }
       // Handle text content
       if (chunk.text) {
         yield {
