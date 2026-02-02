@@ -5,6 +5,7 @@
 
 import type { ReActLoop } from '../agent/react-loop';
 import type { SDKMessage } from '../types/messages';
+import type { SessionStorage, SessionData } from './storage';
 
 /** Session states following a state machine pattern */
 export enum SessionState {
@@ -102,16 +103,79 @@ export class Session {
   private loop: ReActLoop;
   private messages: SDKMessage[];
   private isStreaming: boolean;
+  private storage?: SessionStorage;
+  private updatedAt: number;
 
-  constructor(loop: ReActLoop, options: SessionOptions) {
+  constructor(loop: ReActLoop, options: SessionOptions, storage?: SessionStorage) {
     this.id = options.id ?? generateUUID();
     this.model = options.model;
     this.provider = options.provider;
     this.createdAt = Date.now();
+    this.updatedAt = this.createdAt;
     this.loop = loop;
     this.messages = [];
     this._state = SessionState.IDLE;
     this.isStreaming = false;
+    this.storage = storage;
+  }
+
+  /**
+   * Load a session from storage by ID
+   * @param id - Session ID to load
+   * @param storage - Storage implementation to use
+   * @param loop - ReActLoop instance for the session
+   * @returns Session instance or null if not found
+   */
+  static async loadFromStorage(
+    id: string,
+    storage: SessionStorage,
+    loop: ReActLoop
+  ): Promise<Session | null> {
+    const data = await storage.load(id);
+    if (!data) {
+      return null;
+    }
+
+    // Create session with loaded data
+    const session = new Session(loop, {
+      id: data.id,
+      model: data.model,
+      provider: data.provider,
+    }, storage);
+
+    // Restore message history
+    (session as unknown as { messages: SDKMessage[] }).messages = [...data.messages];
+    (session as unknown as { createdAt: number }).createdAt = data.createdAt;
+    (session as unknown as { updatedAt: number }).updatedAt = data.updatedAt;
+
+    return session;
+  }
+
+  /**
+   * Save session data to storage
+   * @private
+   */
+  private async saveToStorage(): Promise<void> {
+    if (!this.storage) {
+      return;
+    }
+
+    this.updatedAt = Date.now();
+
+    const sessionData: SessionData = {
+      id: this.id,
+      model: this.model,
+      provider: this.provider,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      messages: [...this.messages],
+      options: {
+        model: this.model,
+        provider: this.provider,
+      },
+    };
+
+    await this.storage.save(sessionData);
   }
 
   /** Current state of the session */
@@ -216,6 +280,11 @@ export class Session {
       // If we were in ERROR state, transition back to IDLE for recovery
       if (this._state === SessionState.ERROR) {
         this._state = SessionState.IDLE;
+      }
+
+      // Save to storage after stream completes
+      if (this.storage) {
+        await this.saveToStorage();
       }
     }
   }

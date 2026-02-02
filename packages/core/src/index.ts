@@ -187,8 +187,12 @@ export {
   SessionClosedError,
   InMemoryStorage,
   FileStorage,
+  createSession,
+  resumeSession,
   type SessionStorage,
   type SessionData,
   type SessionOptions as SessionStorageOptions,
   type FileStorageOptions,
+  type CreateSessionOptions,
+  type ResumeSessionOptions,
 } from './session';

@@ -21,3 +21,10 @@ export {
   type SessionData,
   type FileStorageOptions,
 } from './storage';
+
+export {
+  createSession,
+  resumeSession,
+  type CreateSessionOptions,
+  type ResumeSessionOptions,
+} from './factory';
