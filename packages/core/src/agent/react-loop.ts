@@ -10,11 +10,21 @@ import {
   type SDKMessage,
   type SDKAssistantMessage,
   type ToolCall,
+  type UUID,
   createUserMessage,
   createSystemMessage,
   createAssistantMessage,
   createToolResultMessage,
 } from '../types/messages';
+
+/** Generate a simple UUID v4 */
+function generateUUID(): UUID {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export interface ReActLoopConfig {
   maxTurns: number;
@@ -39,11 +49,13 @@ export class ReActLoop {
   private provider: LLMProvider;
   private toolRegistry: ToolRegistry;
   private config: ReActLoopConfig;
+  private sessionId: string;
 
   constructor(
     provider: LLMProvider,
     toolRegistry: ToolRegistry,
-    config: ReActLoopConfig
+    config: ReActLoopConfig,
+    sessionId?: string
   ) {
     this.provider = provider;
     this.toolRegistry = toolRegistry;
@@ -55,6 +67,7 @@ export class ReActLoop {
       env: config.env ?? {},
       abortController: config.abortController,
     };
+    this.sessionId = sessionId ?? generateUUID();
   }
 
   async run(userPrompt: string): Promise<ReActResult> {
@@ -62,11 +75,19 @@ export class ReActLoop {
 
     // Add system prompt if provided
     if (this.config.systemPrompt) {
-      messages.push(createSystemMessage(this.config.systemPrompt));
+      messages.push(
+        createSystemMessage(
+          'default',
+          this.provider.constructor.name.toLowerCase().replace('provider', ''),
+          this.config.allowedTools ?? this.toolRegistry.getAll().map((t) => t.name),
+          this.sessionId,
+          generateUUID()
+        )
+      );
     }
 
     // Add user message
-    messages.push(createUserMessage(userPrompt));
+    messages.push(createUserMessage(userPrompt, this.sessionId, generateUUID()));
 
     let turnCount = 0;
     let totalInputTokens = 0;
@@ -121,16 +142,27 @@ export class ReActLoop {
       messages.push(assistantMessage);
 
       // Check if assistant wants to use tools
-      if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+      const assistantToolCalls = assistantMessage.message.tool_calls;
+      if (assistantToolCalls && assistantToolCalls.length > 0) {
         // Execute tools and add results
-        for (const toolCall of assistantMessage.tool_calls) {
+        for (const toolCall of assistantToolCalls) {
           const result = await this.executeTool(toolCall, availableTools, toolContext);
-          messages.push(createToolResultMessage(toolCall.id, result.content, result.isError));
+          messages.push(
+            createToolResultMessage(
+              toolCall.id,
+              toolCall.function.name,
+              result.content,
+              result.isError,
+              this.sessionId,
+              generateUUID()
+            )
+          );
         }
       } else {
         // No tool calls - we have the final answer
+        const textContent = assistantMessage.message.content.find((c) => c.type === 'text');
         return {
-          result: assistantMessage.content || '',
+          result: textContent?.text ?? '',
           messages,
           turnCount,
           usage: {
@@ -202,8 +234,15 @@ export class ReActLoop {
 
     onUsage({ input: inputTokens, output: outputTokens });
 
+    const contentBlocks: { type: 'text'; text: string }[] = content
+      ? [{ type: 'text', text: content }]
+      : [];
+
     return createAssistantMessage(
-      content || undefined,
+      contentBlocks,
+      this.sessionId,
+      generateUUID(),
+      null,
       toolCalls.size > 0 ? Array.from(toolCalls.values()) : undefined
     );
   }

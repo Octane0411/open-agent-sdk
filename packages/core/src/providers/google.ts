@@ -39,7 +39,9 @@ export class GoogleProvider extends LLMProvider {
 
     for (const msg of messages) {
       if (msg.type === 'system') {
-        systemInstruction = msg.content;
+        // System messages now contain model/provider info, not content
+        // Skip for now as they're metadata messages
+        continue;
       } else {
         const content = this.convertMessage(msg);
         if (content) {
@@ -147,18 +149,20 @@ export class GoogleProvider extends LLMProvider {
       case 'user':
         return {
           role: 'user',
-          parts: [{ text: msg.content }],
+          parts: [{ text: msg.message.content }],
         };
 
-      case 'assistant':
+      case 'assistant': {
         const parts: Part[] = [];
+        const textContent = msg.message.content.find((c) => c.type === 'text');
 
-        if (msg.content) {
-          parts.push({ text: msg.content });
+        if (textContent) {
+          parts.push({ text: textContent.text });
         }
 
-        if (msg.tool_calls) {
-          for (const tc of msg.tool_calls) {
+        const toolCalls = msg.message.tool_calls;
+        if (toolCalls) {
+          for (const tc of toolCalls) {
             parts.push({
               functionCall: {
                 name: tc.function.name,
@@ -169,19 +173,23 @@ export class GoogleProvider extends LLMProvider {
         }
 
         return { role: 'model', parts };
+      }
 
-      case 'tool_result':
+      case 'tool_result': {
+        const resultText =
+          typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
         return {
           role: 'user',
           parts: [
             {
               functionResponse: {
-                name: 'tool_response',
-                response: { result: msg.content },
+                name: msg.tool_name,
+                response: { result: resultText },
               },
             },
           ],
         };
+      }
 
       default:
         return null;

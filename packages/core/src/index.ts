@@ -173,4 +173,15 @@ export {
   createSystemMessage,
   createAssistantMessage,
   createToolResultMessage,
+  createResultMessage,
 } from './types/messages';
+
+// Re-export session storage
+export {
+  InMemoryStorage,
+  FileStorage,
+  type SessionStorage,
+  type SessionData,
+  type SessionOptions,
+  type FileStorageOptions,
+} from './session/storage';

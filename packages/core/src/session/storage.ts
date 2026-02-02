@@ -1,0 +1,226 @@
+/**
+ * Session storage interfaces and implementations
+ * Supports in-memory (default) and file-based persistence
+ */
+
+/// <reference lib="esnext" />
+/// <reference types="bun" />
+
+import type { SDKMessage } from '../types/messages';
+
+/** Session data structure for storage */
+export interface SessionData {
+  /** Unique session identifier */
+  id: string;
+  /** Model identifier (e.g., 'gpt-4o') */
+  model: string;
+  /** Provider identifier (e.g., 'openai') */
+  provider: string;
+  /** Session creation timestamp */
+  createdAt: number;
+  /** Last update timestamp */
+  updatedAt: number;
+  /** Message history */
+  messages: SDKMessage[];
+  /** Session options (excluding storage to avoid circular reference) */
+  options: Omit<SessionOptions, 'storage'>;
+}
+
+/** Session configuration options */
+export interface SessionOptions {
+  /** Model identifier (required) */
+  model: string;
+  /** Provider identifier (optional, defaults to auto-detect) */
+  provider?: string;
+  /** API key (optional, can use env var) */
+  apiKey?: string;
+  /** Maximum number of turns (optional) */
+  maxTurns?: number;
+  /** Allowed tool names (optional, defaults to all) */
+  allowedTools?: string[];
+  /** System prompt (optional) */
+  systemPrompt?: string;
+  /** Working directory (optional) */
+  cwd?: string;
+  /** Environment variables (optional) */
+  env?: Record<string, string>;
+  /** AbortController for cancellation (optional) */
+  abortController?: AbortController;
+  /** Storage implementation (optional, defaults to InMemoryStorage) */
+  storage?: SessionStorage;
+}
+
+/** Storage interface for session persistence */
+export interface SessionStorage {
+  /** Save session data */
+  save(data: SessionData): Promise<void>;
+  /** Load session by ID, returns null if not found */
+  load(id: string): Promise<SessionData | null>;
+  /** Delete session by ID */
+  delete(id: string): Promise<void>;
+  /** List all session IDs */
+  list(): Promise<string[]>;
+  /** Check if session exists */
+  exists(id: string): Promise<boolean>;
+}
+
+/** File storage options */
+export interface FileStorageOptions {
+  /** Directory path for session files (default: ~/.open-agent/sessions) */
+  directory?: string;
+}
+
+/**
+ * In-memory storage implementation (default)
+ * Data is lost when process exits
+ */
+export class InMemoryStorage implements SessionStorage {
+  private sessions = new Map<string, SessionData>();
+
+  async save(data: SessionData): Promise<void> {
+    this.sessions.set(data.id, { ...data });
+  }
+
+  async load(id: string): Promise<SessionData | null> {
+    const data = this.sessions.get(id);
+    return data ? { ...data } : null;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.sessions.delete(id);
+  }
+
+  async list(): Promise<string[]> {
+    return Array.from(this.sessions.keys());
+  }
+
+  async exists(id: string): Promise<boolean> {
+    return this.sessions.has(id);
+  }
+}
+
+/**
+ * File-based storage implementation
+ * Persists sessions to JSON files
+ */
+export class FileStorage implements SessionStorage {
+  private directory: string;
+
+  constructor(options: FileStorageOptions = {}) {
+    // Default to ~/.open-agent/sessions
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '.';
+    this.directory = options.directory || `${homeDir}/.open-agent/sessions`;
+  }
+
+  private getFilePath(id: string): string {
+    // Sanitize ID to prevent directory traversal
+    const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return `${this.directory}/${sanitizedId}.json`;
+  }
+
+  async save(data: SessionData): Promise<void> {
+    const filePath = this.getFilePath(data.id);
+
+    // Ensure directory exists
+    const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+    await this.ensureDir(dir);
+
+    // Write directly (atomic rename not available in Bun yet)
+    const content = JSON.stringify(data, null, 2);
+    await Bun.write(filePath, content);
+  }
+
+  async load(id: string): Promise<SessionData | null> {
+    const filePath = this.getFilePath(id);
+
+    try {
+      const file = Bun.file(filePath);
+      if (!(await file.exists())) {
+        return null;
+      }
+      const content = await file.text();
+      return JSON.parse(content) as SessionData;
+    } catch {
+      return null;
+    }
+  }
+
+  async delete(id: string): Promise<void> {
+    const filePath = this.getFilePath(id);
+
+    try {
+      const file = Bun.file(filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch {
+      // Ignore errors for non-existent files
+    }
+  }
+
+  async list(): Promise<string[]> {
+    try {
+      const dir = Bun.file(this.directory);
+      if (!(await dir.exists())) {
+        return [];
+      }
+
+      // Use glob pattern to list files
+      const pattern = `${this.directory}/*.json`;
+      const files: string[] = [];
+      for await (const file of glob(pattern)) {
+        files.push(file);
+      }
+      return files
+        .map((f: string) => {
+          const match = f.match(/([^/]+)\.json$/);
+          return match ? match[1] : null;
+        })
+        .filter((id): id is string => id !== null);
+    } catch {
+      return [];
+    }
+  }
+
+  async exists(id: string): Promise<boolean> {
+    const filePath = this.getFilePath(id);
+    try {
+      return await Bun.file(filePath).exists();
+    } catch {
+      return false;
+    }
+  }
+
+  private async ensureDir(dir: string): Promise<void> {
+    try {
+      await Bun.file(dir).exists();
+    } catch {
+      // Directory doesn't exist, create it
+      const parentDir = dir.substring(0, dir.lastIndexOf('/'));
+      if (parentDir && parentDir !== dir) {
+        await this.ensureDir(parentDir);
+      }
+      // Note: Bun doesn't have a direct mkdir API yet
+      // Using Bun.write to create the directory via shell
+      await Bun.spawn(['mkdir', '-p', dir]).exited;
+    }
+  }
+}
+
+// Helper function for glob (simplified implementation)
+async function* glob(pattern: string): AsyncGenerator<string> {
+  // Simple glob implementation for *.json files
+  const dir = pattern.substring(0, pattern.lastIndexOf('/'));
+  const suffix = pattern.substring(pattern.lastIndexOf('/') + 1).replace(/\*/g, '');
+
+  try {
+    const proc = Bun.spawn(['ls', '-1', dir]);
+    const output = await new Response(proc.stdout).text();
+    const files = output.split('\n').filter((f) => f.endsWith(suffix));
+    for (const file of files) {
+      yield `${dir}/${file}`;
+    }
+  } catch {
+    // Directory doesn't exist or ls failed
+  }
+}

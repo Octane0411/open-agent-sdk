@@ -1,9 +1,25 @@
 import { describe, it, expect } from 'bun:test';
 import { GoogleProvider } from '../../src/providers/google';
-import type { SDKMessage, ToolCall } from '../../src/types/messages';
+import {
+  createUserMessage,
+  createSystemMessage,
+  type SDKMessage,
+  type UUID,
+} from '../../src/types/messages';
 import type { ToolDefinition } from '../../src/types/tools';
 
+// Helper to generate test UUID
+function generateUUID(): UUID {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 describe('Google Provider', () => {
+  const sessionId = 'test-session-google';
+
   it('should create provider with API key', () => {
     const provider = new GoogleProvider({
       apiKey: 'test-api-key',
@@ -22,11 +38,13 @@ describe('Google Provider', () => {
 
     // Test through a mock that we can inspect the converted messages
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'Hello Gemini' },
+      createUserMessage('Hello Gemini', sessionId, generateUUID()),
     ];
 
     // Provider should be created successfully
     expect(provider).toBeDefined();
+    expect(messages).toHaveLength(1);
+    expect(messages[0].type).toBe('user');
   });
 
   it('should convert system message to Google format', () => {
@@ -35,7 +53,17 @@ describe('Google Provider', () => {
       model: 'gemini-2.0-flash',
     });
 
+    const systemMsg = createSystemMessage(
+      'gemini-2.0-flash',
+      'google',
+      ['read_file'],
+      sessionId,
+      generateUUID()
+    );
+
     expect(provider).toBeDefined();
+    expect(systemMsg.type).toBe('system');
+    expect(systemMsg.model).toBe('gemini-2.0-flash');
   });
 
   it('should convert assistant message with tool calls', () => {
@@ -85,6 +113,7 @@ describe('Google Provider', () => {
 describe('Google Provider Real API Tests', () => {
   const apiKey = process.env.GEMINI_API_KEY;
   const hasApiKey = !!apiKey && apiKey.startsWith('AIza');
+  const sessionId = 'gemini-test-session';
 
   it('should get response from Gemini API', async () => {
     if (!hasApiKey) {
@@ -98,7 +127,7 @@ describe('Google Provider Real API Tests', () => {
     });
 
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'Say "Hello from Gemini" and nothing else' },
+      createUserMessage('Say "Hello from Gemini" and nothing else', sessionId, generateUUID()),
     ];
 
     const chunks: string[] = [];
@@ -144,7 +173,7 @@ describe('Google Provider Real API Tests', () => {
     ];
 
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'What is the weather in Tokyo?' },
+      createUserMessage('What is the weather in Tokyo?', sessionId, generateUUID()),
     ];
 
     const toolCalls: Array<{ id: string; name: string; arguments: string }> = [];
@@ -176,7 +205,7 @@ describe('Google Provider Real API Tests', () => {
 
     const controller = new AbortController();
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'Say "Hello" and nothing else' },
+      createUserMessage('Say "Hello" and nothing else', sessionId, generateUUID()),
     ];
 
     const chunks: string[] = [];
@@ -224,7 +253,7 @@ describe('Google Provider Real API Tests', () => {
 
     // Ask for a long response
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'Write a 500 word essay about artificial intelligence' },
+      createUserMessage('Write a 500 word essay about artificial intelligence', sessionId, generateUUID()),
     ];
 
     const chunks: string[] = [];
@@ -269,15 +298,15 @@ describe('Google Provider Real API Tests', () => {
 
     // Should have received at least one chunk before abort
     expect(chunkCount).toBeGreaterThan(0);
-    
+
     // Critical verification: After abort, very few chunks should arrive
     // This proves the stream actually stopped, not just that we stopped processing
     // Allow a small buffer (1-2 chunks) due to async nature, but should be minimal
     expect(chunkCountAfterAbort).toBeLessThanOrEqual(2);
-    
+
     // The stream should have ended (either by done or abort)
     expect(streamEnded).toBe(true);
-    
+
     // Verify we got significantly less content than a full essay would be
     const fullResponseEstimate = 2500; // ~500 words in characters
     expect(chunks.join('').length).toBeLessThan(fullResponseEstimate);
@@ -298,7 +327,7 @@ describe('Google Provider Real API Tests', () => {
     controller.abort(); // Pre-abort before the call
 
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'Say "Hello"' },
+      createUserMessage('Say "Hello"', sessionId, generateUUID()),
     ];
 
     const chunks: string[] = [];
@@ -343,7 +372,7 @@ describe('Google Provider Real API Tests', () => {
 
     const controller = new AbortController();
     const messages: SDKMessage[] = [
-      { type: 'user', content: 'Write a 1000 word detailed essay about machine learning algorithms' },
+      createUserMessage('Write a 1000 word detailed essay about machine learning algorithms', sessionId, generateUUID()),
     ];
 
     const chunks: string[] = [];
@@ -381,7 +410,7 @@ describe('Google Provider Real API Tests', () => {
 
     // Verify abort actually happened
     expect(abortedAt).toBe(5);
-    
+
     // The key verification: after abort is called, should receive very few additional chunks
     // This proves the underlying stream stopped, not just our processing loop
     expect(chunksAfterAbort.length).toBeLessThanOrEqual(3);

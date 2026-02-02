@@ -1,7 +1,22 @@
 import { describe, it, expect, mock } from 'bun:test';
 import { OpenAIProvider } from '../../src/providers/openai';
-import { createUserMessage, createSystemMessage, createAssistantMessage, createToolResultMessage } from '../../src/types/messages';
+import {
+  createUserMessage,
+  createSystemMessage,
+  createAssistantMessage,
+  createToolResultMessage,
+  type UUID,
+} from '../../src/types/messages';
 import type { ToolDefinition } from '../../src/types/tools';
+
+// Helper to generate test UUID
+function generateUUID(): UUID {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Mock OpenAI client
 const mockStream = async function* () {
@@ -20,6 +35,8 @@ const mockStream = async function* () {
 };
 
 describe('OpenAI Provider', () => {
+  const sessionId = 'test-session-123';
+
   it('should create provider with config', () => {
     const provider = new OpenAIProvider({
       apiKey: 'test-key',
@@ -41,34 +58,51 @@ describe('OpenAI Provider', () => {
     expect(provider.getModel()).toBe('gpt-4');
   });
 
-  it('should convert system message', () => {
-    const msg = createSystemMessage('You are helpful');
+  it('should create system message', () => {
+    const uuid = generateUUID();
+    const msg = createSystemMessage('gpt-4o', 'openai', ['read_file'], sessionId, uuid);
     expect(msg.type).toBe('system');
-    expect(msg.content).toBe('You are helpful');
+    expect(msg.subtype).toBe('init');
+    expect(msg.model).toBe('gpt-4o');
+    expect(msg.provider).toBe('openai');
+    expect(msg.tools).toContain('read_file');
   });
 
-  it('should convert assistant message with content', () => {
-    const msg = createAssistantMessage('Hello!');
+  it('should create assistant message with content', () => {
+    const uuid = generateUUID();
+    const contentBlocks = [{ type: 'text' as const, text: 'Hello!' }];
+    const msg = createAssistantMessage(contentBlocks, sessionId, uuid);
     expect(msg.type).toBe('assistant');
-    expect(msg.content).toBe('Hello!');
+    expect(msg.message.content[0].text).toBe('Hello!');
   });
 
-  it('should convert assistant message with tool calls', () => {
-    const msg = createAssistantMessage(undefined, [
-      {
-        id: 'call_1',
-        type: 'function',
-        function: { name: 'Read', arguments: '{"file_path": "/test.txt"}' },
-      },
-    ]);
+  it('should create assistant message with tool calls', () => {
+    const uuid = generateUUID();
+    const contentBlocks = [{ type: 'text' as const, text: 'I will read the file' }];
+    const msg = createAssistantMessage(
+      contentBlocks,
+      sessionId,
+      uuid,
+      null,
+      [
+        {
+          id: 'call_1',
+          type: 'function',
+          function: { name: 'Read', arguments: '{"file_path": "/test.txt"}' },
+        },
+      ]
+    );
     expect(msg.type).toBe('assistant');
-    expect(msg.tool_calls).toHaveLength(1);
+    expect(msg.message.tool_calls).toHaveLength(1);
   });
 
-  it('should convert tool result message', () => {
-    const msg = createToolResultMessage('call_1', 'File content');
+  it('should create tool result message', () => {
+    const uuid = generateUUID();
+    const msg = createToolResultMessage('call_1', 'read_file', 'File content', false, sessionId, uuid);
     expect(msg.type).toBe('tool_result');
-    expect(msg.tool_call_id).toBe('call_1');
+    expect(msg.tool_use_id).toBe('call_1');
+    expect(msg.tool_name).toBe('read_file');
+    expect(msg.result).toBe('File content');
   });
 
   it('should create tool definition', () => {

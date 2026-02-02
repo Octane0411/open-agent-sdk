@@ -134,17 +134,21 @@ export class OpenAIProvider extends LLMProvider {
     return messages.map((msg): OpenAI.Chat.Completions.ChatCompletionMessageParam => {
       switch (msg.type) {
         case 'user':
-          return { role: 'user', content: msg.content };
+          return { role: 'user', content: msg.message.content };
 
         case 'system':
-          return { role: 'system', content: msg.content };
+          // System messages now contain model/provider info, not content
+          // We skip them in the conversation as they're metadata
+          return { role: 'system', content: '' };
 
-        case 'assistant':
-          if (msg.tool_calls && msg.tool_calls.length > 0) {
+        case 'assistant': {
+          const toolCalls = msg.message.tool_calls;
+          const textContent = msg.message.content.find((c) => c.type === 'text');
+          if (toolCalls && toolCalls.length > 0) {
             return {
               role: 'assistant',
-              content: msg.content || null,
-              tool_calls: msg.tool_calls.map((tc) => ({
+              content: textContent?.text ?? null,
+              tool_calls: toolCalls.map((tc) => ({
                 id: tc.id,
                 type: 'function',
                 function: {
@@ -154,13 +158,14 @@ export class OpenAIProvider extends LLMProvider {
               })),
             };
           }
-          return { role: 'assistant', content: msg.content || '' };
+          return { role: 'assistant', content: textContent?.text ?? '' };
+        }
 
         case 'tool_result':
           return {
             role: 'tool',
-            tool_call_id: msg.tool_call_id,
-            content: msg.content,
+            tool_call_id: msg.tool_use_id,
+            content: typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result),
           };
 
         default:
