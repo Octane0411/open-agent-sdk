@@ -36,15 +36,26 @@ describe('Message Types', () => {
 
   it('should create system message', () => {
     const uuid = generateUUID();
-    const msg = createSystemMessage('gpt-4o', 'openai', ['read_file', 'write_file'], sessionId, uuid);
+    const msg = createSystemMessage(
+      'gpt-4o',
+      'openai',
+      ['read_file', 'write_file'],
+      '/current/working/dir',
+      sessionId,
+      uuid,
+      { permissionMode: 'accept' }
+    );
     expect(msg.type).toBe('system');
     expect(msg.subtype).toBe('init');
+    // SDKSystemMessage no longer has content field - it's metadata only
     expect(msg.uuid).toBe(uuid);
     expect(msg.session_id).toBe(sessionId);
     expect(msg.model).toBe('gpt-4o');
     expect(msg.provider).toBe('openai');
     expect(msg.tools).toContain('read_file');
     expect(msg.tools).toContain('write_file');
+    expect(msg.cwd).toBe('/current/working/dir');
+    expect(msg.permissionMode).toBe('accept');
   });
 
   it('should create assistant message with content', () => {

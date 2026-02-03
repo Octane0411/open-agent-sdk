@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { prompt, type PromptOptions } from '../src/index';
-import { LLMProvider, type LLMChunk } from '../src/providers/base';
+import { LLMProvider, type LLMChunk, type ChatOptions } from '../src/providers/base';
 import { ReActLoop } from '../src/agent/react-loop';
 import { ToolRegistry } from '../src/tools/registry';
 import { BashTool } from '../src/tools/bash';
@@ -15,12 +15,13 @@ class MockProvider extends LLMProvider {
   private handler: (
     messages: SDKMessage[],
     tools?: ToolDefinition[],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    options?: ChatOptions
   ) => AsyncIterable<LLMChunk>;
 
   constructor(
     config: { apiKey: string; model: string },
-    handler: (messages: SDKMessage[], tools?: ToolDefinition[], signal?: AbortSignal) => AsyncIterable<LLMChunk>
+    handler: (messages: SDKMessage[], tools?: ToolDefinition[], signal?: AbortSignal, options?: ChatOptions) => AsyncIterable<LLMChunk>
   ) {
     super(config);
     this.handler = handler;
@@ -29,9 +30,10 @@ class MockProvider extends LLMProvider {
   async *chat(
     messages: SDKMessage[],
     tools?: ToolDefinition[],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    options?: ChatOptions
   ): AsyncIterable<LLMChunk> {
-    yield* this.handler(messages, tools, signal);
+    yield* this.handler(messages, tools, signal, options);
   }
 }
 

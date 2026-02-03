@@ -3,7 +3,7 @@
  * Core agent logic for tool use and reasoning
  */
 
-import type { LLMProvider } from '../providers/base';
+import type { LLMProvider, ChatOptions } from '../providers/base';
 import type { ToolRegistry } from '../tools/registry';
 import type { Tool, ToolContext } from '../types/tools';
 import {
@@ -12,6 +12,7 @@ import {
   type SDKToolResultMessage,
   type ToolCall,
   type UUID,
+  type PermissionMode,
   createUserMessage,
   createSystemMessage,
   createAssistantMessage,
@@ -34,6 +35,10 @@ export interface ReActLoopConfig {
   cwd?: string;
   env?: Record<string, string>;
   abortController?: AbortController;
+  // Additional config options aligned with Claude Agent SDK
+  apiKeySource?: 'env' | 'keychain' | 'custom';
+  permissionMode?: PermissionMode;
+  mcpServers?: Record<string, unknown>;
 }
 
 export interface ReActResult {
@@ -81,15 +86,20 @@ export class ReActLoop {
   async run(userPrompt: string): Promise<ReActResult> {
     const messages: SDKMessage[] = [];
 
-    // Add system prompt if provided
+    // Add system message metadata if system prompt is configured
+    // The actual system prompt content is passed via ChatOptions to the provider
     if (this.config.systemPrompt) {
       messages.push(
         createSystemMessage(
-          'default',
+          this.provider.getModel(),
           this.provider.constructor.name.toLowerCase().replace('provider', ''),
           this.config.allowedTools ?? this.toolRegistry.getAll().map((t) => t.name),
+          this.config.cwd ?? process.cwd(),
           this.sessionId,
-          generateUUID()
+          generateUUID(),
+          {
+            permissionMode: this.config.permissionMode,
+          }
         )
       );
     }
@@ -196,25 +206,41 @@ export class ReActLoop {
   /**
    * Run the ReAct loop with streaming output
    * Yields events for assistant messages, tool results, usage stats, and completion
+   * @param userPrompt - The current user message content
+   * @param history - Previous conversation messages (optional)
    */
-  async *runStream(userPrompt: string): AsyncGenerator<ReActStreamEvent> {
-    const messages: SDKMessage[] = [];
+  async *runStream(
+    userPrompt: string,
+    history: SDKMessage[] = []
+  ): AsyncGenerator<ReActStreamEvent> {
+    // Check if history already has a system message (metadata)
+    const hasSystemInHistory = history.some((msg) => msg.type === 'system');
 
-    // Add system prompt if provided
-    if (this.config.systemPrompt) {
-      messages.push(
-        createSystemMessage(
-          'default',
-          this.provider.constructor.name.toLowerCase().replace('provider', ''),
-          this.config.allowedTools ?? this.toolRegistry.getAll().map((t) => t.name),
-          this.sessionId,
-          generateUUID()
-        )
-      );
-    }
-
-    // Add user message
-    messages.push(createUserMessage(userPrompt, this.sessionId, generateUUID()));
+    const messages: SDKMessage[] = [
+      // Add system message metadata if system prompt is configured and not already in history
+      // The actual system prompt content is passed via ChatOptions to the provider
+      ...(this.config.systemPrompt && !hasSystemInHistory
+        ? [
+            createSystemMessage(
+              this.provider.getModel(),
+              this.provider.constructor.name.toLowerCase().replace('provider', ''),
+              this.config.allowedTools ?? this.toolRegistry.getAll().map((t) => t.name),
+              this.config.cwd ?? process.cwd(),
+              this.sessionId,
+              generateUUID(),
+              {
+                permissionMode: this.config.permissionMode,
+              }
+            ),
+          ]
+        : []),
+      // Add history messages
+      ...history,
+      // Add current user message
+      createUserMessage(userPrompt, this.sessionId, generateUUID()),
+    ];
+    console.log('[ReActLoop] Total messages:', messages.length);
+    console.log('[ReActLoop] Messages:', JSON.stringify(messages, null, 2));
 
     let turnCount = 0;
     let totalInputTokens = 0;
@@ -302,7 +328,11 @@ export class ReActLoop {
     tools: ReturnType<ToolRegistry['getDefinitions']>,
     onUsage: (tokens: { input: number; output: number }) => void
   ): Promise<SDKAssistantMessage> {
-    const stream = this.provider.chat(messages, tools, this.config.abortController?.signal);
+    // Pass system prompt via ChatOptions, not in messages
+    const chatOptions: ChatOptions = {
+      systemInstruction: this.config.systemPrompt,
+    };
+    const stream = this.provider.chat(messages, tools, this.config.abortController?.signal, chatOptions);
 
     let content = '';
     const toolCalls: Map<string, ToolCall> = new Map();

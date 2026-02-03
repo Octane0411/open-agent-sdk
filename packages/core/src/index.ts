@@ -3,6 +3,8 @@
  * Single-query prompt function for one-shot agent interactions
  */
 
+console.log('[OpenAgentSDK] Core module loaded - v0.1.0-debug');
+
 import { OpenAIProvider } from './providers/openai';
 import { GoogleProvider } from './providers/google';
 import { createDefaultRegistry } from './tools/registry';
@@ -30,6 +32,10 @@ export interface PromptOptions {
   env?: Record<string, string>;
   /** AbortController for cancellation */
   abortController?: AbortController;
+  /** Permission mode for the session */
+  permissionMode?: 'accept' | 'reject' | 'prompt';
+  /** MCP servers configuration */
+  mcpServers?: Record<string, unknown>;
 }
 
 export interface PromptResult {
@@ -96,6 +102,8 @@ export async function prompt(
     cwd: options.cwd,
     env: options.env,
     abortController: options.abortController,
+    permissionMode: options.permissionMode,
+    mcpServers: options.mcpServers,
   });
 
   // Run the loop
@@ -121,6 +129,10 @@ export type {
   SDKSystemMessage,
   SDKResultMessage,
   ToolCall,
+  ApiKeySource,
+  PermissionMode,
+  McpServerConfig,
+  CreateSystemMessageOptions,
 } from './types/messages';
 
 export type {
@@ -142,7 +154,7 @@ export type { GlobInput, GlobOutput } from './tools/glob';
 export type { GrepInput, GrepOutput, GrepMatch } from './tools/grep';
 
 // Re-export providers
-export { LLMProvider, type LLMChunk, type ProviderConfig } from './providers/base';
+export { LLMProvider, type LLMChunk, type ProviderConfig, type ChatOptions } from './providers/base';
 export { OpenAIProvider, type OpenAIConfig } from './providers/openai';
 export { GoogleProvider, type GoogleConfig } from './providers/google';
 

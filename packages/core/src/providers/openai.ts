@@ -3,7 +3,7 @@
  */
 
 import OpenAI from 'openai';
-import { LLMProvider, type LLMChunk } from './base';
+import { LLMProvider, type LLMChunk, type ChatOptions } from './base';
 import type { SDKMessage } from '../types/messages';
 import type { ToolDefinition } from '../types/tools';
 
@@ -36,10 +36,12 @@ export class OpenAIProvider extends LLMProvider {
   async *chat(
     messages: SDKMessage[],
     tools?: ToolDefinition[],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    options?: ChatOptions
   ): AsyncIterable<LLMChunk> {
     // Convert SDK messages to OpenAI format
-    const openaiMessages = this.convertMessages(messages);
+    // systemInstruction from options is prepended as a system message
+    const openaiMessages = this.convertMessages(messages, options?.systemInstruction);
 
     // Convert tools to OpenAI format
     const openaiTools = tools?.map((tool) => ({
@@ -129,23 +131,32 @@ export class OpenAIProvider extends LLMProvider {
   }
 
   private convertMessages(
-    messages: SDKMessage[]
+    messages: SDKMessage[],
+    systemInstruction?: string
   ): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
-    return messages.map((msg): OpenAI.Chat.Completions.ChatCompletionMessageParam => {
+    const result: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+
+    // Add system instruction from options if provided
+    if (systemInstruction) {
+      result.push({ role: 'system', content: systemInstruction });
+    }
+
+    for (const msg of messages) {
       switch (msg.type) {
         case 'user':
-          return { role: 'user', content: msg.message.content };
+          result.push({ role: 'user', content: msg.message.content });
+          break;
 
         case 'system':
-          // System messages now contain model/provider info, not content
-          // We skip them in the conversation as they're metadata
-          return { role: 'system', content: '' };
+          // SDKSystemMessage is metadata only (no content field), skip it
+          // System instruction comes from options.systemInstruction
+          break;
 
         case 'assistant': {
           const toolCalls = msg.message.tool_calls;
           const textContent = msg.message.content.find((c) => c.type === 'text');
           if (toolCalls && toolCalls.length > 0) {
-            return {
+            result.push({
               role: 'assistant',
               content: textContent?.text ?? null,
               tool_calls: toolCalls.map((tc) => ({
@@ -156,23 +167,28 @@ export class OpenAIProvider extends LLMProvider {
                   arguments: tc.function.arguments,
                 },
               })),
-            };
+            });
+          } else {
+            result.push({ role: 'assistant', content: textContent?.text ?? '' });
           }
-          return { role: 'assistant', content: textContent?.text ?? '' };
+          break;
         }
 
         case 'tool_result':
-          return {
+          result.push({
             role: 'tool',
             tool_call_id: msg.tool_use_id,
             content: typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result),
-          };
+          });
+          break;
 
         default:
           // Skip result messages - they're not part of the conversation
-          return { role: 'user', content: '' };
+          break;
       }
-    });
+    }
+
+    return result;
   }
 }
 

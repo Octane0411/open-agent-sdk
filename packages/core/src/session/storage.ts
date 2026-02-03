@@ -48,6 +48,10 @@ export interface SessionOptions {
   abortController?: AbortController;
   /** Storage implementation (optional, defaults to InMemoryStorage) */
   storage?: SessionStorage;
+  /** Permission mode for the session (optional) */
+  permissionMode?: 'accept' | 'reject' | 'prompt';
+  /** MCP servers configuration (optional) */
+  mcpServers?: Record<string, unknown>;
 }
 
 /** Storage interface for session persistence */

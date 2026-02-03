@@ -57,6 +57,7 @@ describe('Google Provider', () => {
       'gemini-2.0-flash',
       'google',
       ['read_file'],
+      '/test/cwd',
       sessionId,
       generateUUID()
     );
@@ -64,6 +65,7 @@ describe('Google Provider', () => {
     expect(provider).toBeDefined();
     expect(systemMsg.type).toBe('system');
     expect(systemMsg.model).toBe('gemini-2.0-flash');
+    expect(systemMsg.cwd).toBe('/test/cwd');
   });
 
   it('should convert assistant message with tool calls', () => {

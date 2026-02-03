@@ -3,7 +3,7 @@
  */
 
 import { GoogleGenAI, type Content, type Part, type Schema } from '@google/genai';
-import { LLMProvider, type LLMChunk } from './base';
+import { LLMProvider, type LLMChunk, type ChatOptions } from './base';
 import type { SDKMessage } from '../types/messages';
 import type { ToolDefinition } from '../types/tools';
 
@@ -31,24 +31,29 @@ export class GoogleProvider extends LLMProvider {
   async *chat(
     messages: SDKMessage[],
     tools?: ToolDefinition[],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    options?: ChatOptions
   ): AsyncIterable<LLMChunk> {
-    // Separate system message from history
-    let systemInstruction: string | undefined;
-    const history: Content[] = [];
+    try {
+      console.log('[GoogleProvider] Received messages:', messages.length);
 
-    for (const msg of messages) {
-      if (msg.type === 'system') {
-        // System messages now contain model/provider info, not content
-        // Skip for now as they're metadata messages
-        continue;
-      } else {
+      // System instruction comes from options, not from SDKSystemMessage
+      const systemInstruction = options?.systemInstruction;
+      const history: Content[] = [];
+
+      for (const msg of messages) {
+        // Skip SDKSystemMessage - it's metadata only, no content
+        if (msg.type === 'system') {
+          continue;
+        }
         const content = this.convertMessage(msg);
+        console.log(`[GoogleProvider] Converted ${msg.type}:`, content);
         if (content) {
           history.push(content);
         }
       }
-    }
+
+      console.log('[GoogleProvider] Converted history:', JSON.stringify(history, null, 2));
 
     // Convert tools to Google format
     const googleTools = tools?.map((tool) => ({
@@ -60,12 +65,6 @@ export class GoogleProvider extends LLMProvider {
         },
       ],
     }));
-
-    // Get the last user message as the current prompt
-    const lastMessage = history.pop();
-    const currentPrompt = lastMessage?.parts
-      ?.map((p) => (p.text ?? ''))
-      .join('') || '';
 
     const config: {
       maxOutputTokens?: number;
@@ -95,9 +94,10 @@ export class GoogleProvider extends LLMProvider {
       return;
     }
 
+    // Use generateContentStream with full history
     const response = await this.client.models.generateContentStream({
       model: this.config.model,
-      contents: currentPrompt,
+      contents: history,
       config,
     });
 
@@ -142,6 +142,14 @@ export class GoogleProvider extends LLMProvider {
     }
 
     yield { type: 'done' };
+    } catch (error) {
+      console.error('[GoogleProvider] Error:', error);
+      yield {
+        type: 'content',
+        delta: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      };
+      yield { type: 'done' };
+    }
   }
 
   private convertMessage(msg: SDKMessage): Content | null {

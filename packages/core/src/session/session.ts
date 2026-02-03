@@ -247,8 +247,13 @@ export class Session {
 
       const userPrompt = lastUserMessage.message.content;
 
+      // Pass history messages (excluding the current user message which will be added by runStream)
+      const historyMessages = this.messages.slice(0, -1);
+      console.log('[Session] historyMessages count:', historyMessages.length);
+      console.log('[Session] historyMessages:', JSON.stringify(historyMessages, null, 2));
+
       // Run the ReAct loop and yield messages
-      for await (const event of this.loop.runStream(userPrompt)) {
+      for await (const event of this.loop.runStream(userPrompt, historyMessages)) {
         switch (event.type) {
           case 'assistant':
             this.messages.push(event.message);

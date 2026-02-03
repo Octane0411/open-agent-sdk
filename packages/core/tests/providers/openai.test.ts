@@ -60,12 +60,21 @@ describe('OpenAI Provider', () => {
 
   it('should create system message', () => {
     const uuid = generateUUID();
-    const msg = createSystemMessage('gpt-4o', 'openai', ['read_file'], sessionId, uuid);
+    const msg = createSystemMessage(
+      'gpt-4o',
+      'openai',
+      ['read_file'],
+      '/test/cwd',
+      sessionId,
+      uuid
+    );
     expect(msg.type).toBe('system');
     expect(msg.subtype).toBe('init');
+    // SDKSystemMessage no longer has content field - it's metadata only
     expect(msg.model).toBe('gpt-4o');
     expect(msg.provider).toBe('openai');
     expect(msg.tools).toContain('read_file');
+    expect(msg.cwd).toBe('/test/cwd');
   });
 
   it('should create assistant message with content', () => {

@@ -65,13 +65,34 @@ export interface SDKToolResultMessage extends BaseMessage {
   is_error: boolean;
 }
 
-/** System message - initialization or context */
+/** API key source for the session */
+export type ApiKeySource = 'env' | 'keychain' | 'custom';
+
+/** Permission mode for the session */
+export type PermissionMode = 'accept' | 'reject' | 'prompt';
+
+/** MCP server configuration */
+export interface McpServerConfig {
+  name: string;
+  status: string;
+}
+
+/** System message - initialization metadata (aligned with Claude Agent SDK) */
 export interface SDKSystemMessage extends BaseMessage {
   type: 'system';
   subtype: 'init';
+  uuid: UUID;
+  session_id: string;
+  // Note: No content field - system prompt is passed via Provider options
   model: string;
   provider: string;
   tools: string[];
+  cwd: string;
+  apiKeySource?: ApiKeySource;
+  mcp_servers?: McpServerConfig[];
+  permissionMode?: PermissionMode;
+  slash_commands?: string[];
+  output_style?: string;
 }
 
 /** Result message - final output of the agent */
@@ -113,13 +134,24 @@ export function createUserMessage(
   };
 }
 
-/** Helper function to create system message */
+/** Options for creating system message */
+export interface CreateSystemMessageOptions {
+  apiKeySource?: ApiKeySource;
+  mcp_servers?: McpServerConfig[];
+  permissionMode?: PermissionMode;
+  slash_commands?: string[];
+  output_style?: string;
+}
+
+/** Helper function to create system message (aligned with Claude Agent SDK) */
 export function createSystemMessage(
   model: string,
   provider: string,
   tools: string[],
+  cwd: string,
   sessionId: string,
-  uuid: UUID
+  uuid: UUID,
+  options?: CreateSystemMessageOptions
 ): SDKSystemMessage {
   return {
     type: 'system',
@@ -129,6 +161,12 @@ export function createSystemMessage(
     model,
     provider,
     tools,
+    cwd,
+    apiKeySource: options?.apiKeySource,
+    mcp_servers: options?.mcp_servers,
+    permissionMode: options?.permissionMode,
+    slash_commands: options?.slash_commands,
+    output_style: options?.output_style,
   };
 }
 

@@ -38,6 +38,12 @@ export interface ProviderConfig {
   temperature?: number;
 }
 
+/** Options for chat method */
+export interface ChatOptions {
+  /** System instruction to prepend to the conversation (not part of message history) */
+  systemInstruction?: string;
+}
+
 /** Abstract base class for LLM providers */
 export abstract class LLMProvider {
   protected config: ProviderConfig;
@@ -48,15 +54,17 @@ export abstract class LLMProvider {
 
   /**
    * Send messages to the LLM and get streaming response
-   * @param messages - Conversation history
+   * @param messages - Conversation history (SDKSystemMessage is metadata only, skipped during conversion)
    * @param tools - Available tools
    * @param signal - Optional AbortSignal for cancellation
+   * @param options - Optional chat configuration including systemInstruction
    * @returns Async iterable of response chunks
    */
   abstract chat(
     messages: SDKMessage[],
     tools?: ToolDefinition[],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    options?: ChatOptions
   ): AsyncIterable<LLMChunk>;
 
   /**

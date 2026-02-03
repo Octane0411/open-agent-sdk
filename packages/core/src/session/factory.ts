@@ -32,6 +32,10 @@ export interface CreateSessionOptions {
   abortController?: AbortController;
   /** Storage implementation (default: InMemoryStorage) */
   storage?: SessionStorage;
+  /** Permission mode for the session */
+  permissionMode?: 'accept' | 'reject' | 'prompt';
+  /** MCP servers configuration */
+  mcpServers?: Record<string, unknown>;
 }
 
 /** Options for resuming an existing session */
@@ -100,6 +104,8 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     cwd: options.cwd,
     env: options.env,
     abortController: options.abortController,
+    permissionMode: options.permissionMode,
+    mcpServers: options.mcpServers,
   });
 
   // Create session
@@ -125,6 +131,8 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
       systemPrompt: options.systemPrompt,
       cwd: options.cwd,
       env: options.env,
+      permissionMode: options.permissionMode,
+      mcpServers: options.mcpServers,
     },
   };
 
@@ -199,6 +207,8 @@ export async function resumeSession(
     allowedTools: sessionData.options.allowedTools,
     cwd: sessionData.options.cwd,
     env: sessionData.options.env,
+    permissionMode: sessionData.options.permissionMode,
+    mcpServers: sessionData.options.mcpServers,
   });
 
   // Restore session from storage
