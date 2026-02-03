@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod';
+import type { LLMProvider } from '../providers/base.js';
 
 /** JSON Schema type for tool parameters */
 export type JSONSchema = {
@@ -27,6 +28,10 @@ export interface ToolContext {
   cwd: string;
   env: Record<string, string>;
   abortController?: AbortController;
+  /** Provider for LLM operations (used by WebFetch and similar tools) */
+  provider?: LLMProvider;
+  /** Model identifier for LLM operations */
+  model?: string;
 }
 
 /** Base tool input - any object (validation happens at runtime) */

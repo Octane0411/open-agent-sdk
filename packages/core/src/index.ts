@@ -159,6 +159,8 @@ export type { EditInput, EditOutput } from './tools/edit';
 export type { BashInput, BashOutput } from './tools/bash';
 export type { GlobInput, GlobOutput } from './tools/glob';
 export type { GrepInput, GrepOutput, GrepMatch } from './tools/grep';
+export type { WebSearchInput, WebSearchOutput, WebSearchResult } from './tools/web-search';
+export type { WebFetchInput, WebFetchOutput } from './tools/web-fetch';
 
 // Re-export providers
 export { LLMProvider, type LLMChunk, type ProviderConfig, type ChatOptions } from './providers/base';
@@ -181,6 +183,10 @@ export {
   globTool,
   GrepTool,
   grepTool,
+  WebSearchTool,
+  webSearchTool,
+  WebFetchTool,
+  webFetchTool,
 } from './tools/registry';
 
 // Re-export agent
