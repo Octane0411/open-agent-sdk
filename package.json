@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Open source agent SDK compatible with Claude Agent SDK",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
     "test": "bun test",
