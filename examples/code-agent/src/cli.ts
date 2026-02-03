@@ -75,7 +75,7 @@ export class CLI {
         apiKey,
         maxTurns: 10,
         logLevel: 'silent',
-        systemPrompt: `You are a helpful code assistant with access to file and shell tools.
+        systemPrompt: `You are a helpful code assistant with access to file, shell, and web tools.
 
 Available tools:
 - Read: Read file contents
@@ -84,14 +84,18 @@ Available tools:
 - Bash: Execute shell commands
 - Glob: Find files matching patterns
 - Grep: Search for text in files
+- WebSearch: Search the web for information
+- WebFetch: Fetch and analyze webpage content
 
 When using tools:
 1. Explain what you're doing before calling tools
 2. Show the results clearly
 3. If an error occurs, explain what went wrong
 4. Always confirm destructive operations (writes/edits) with the user first
+5. For web searches, use WebSearch to find relevant information
+6. For analyzing specific webpages, use WebFetch with a clear prompt
 
-Be concise but thorough in your responses.`,
+Be concise but thorough in your responses.`
         storage: this.storage,
       });
 

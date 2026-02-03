@@ -130,6 +130,7 @@ export class ReActLoop {
       cwd: this.config.cwd!,
       env: this.config.env!,
       abortController: this.config.abortController,
+      provider: this.provider,
     };
 
     while (turnCount < this.config.maxTurns) {
@@ -265,6 +266,7 @@ export class ReActLoop {
       cwd: this.config.cwd!,
       env: this.config.env!,
       abortController: this.config.abortController,
+      provider: this.provider,
     };
 
     while (turnCount < this.config.maxTurns) {
