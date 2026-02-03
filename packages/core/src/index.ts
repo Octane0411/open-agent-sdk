@@ -159,6 +159,13 @@ export type { EditInput, EditOutput } from './tools/edit';
 export type { BashInput, BashOutput } from './tools/bash';
 export type { GlobInput, GlobOutput } from './tools/glob';
 export type { GrepInput, GrepOutput, GrepMatch } from './tools/grep';
+export type { TaskListInput, TaskListOutput } from './tools/task-list';
+export type { TaskCreateInput, TaskCreateOutput } from './tools/task-create';
+export type { TaskGetInput, TaskGetOutput } from './tools/task-get';
+export type { TaskUpdateInput, TaskUpdateOutput } from './tools/task-update';
+
+// Re-export task types
+export type { Task, TaskStatus, TaskStorage } from './types/task';
 
 // Re-export providers
 export { LLMProvider, type LLMChunk, type ProviderConfig, type ChatOptions } from './providers/base';
@@ -181,6 +188,14 @@ export {
   globTool,
   GrepTool,
   grepTool,
+  TaskListTool,
+  taskListTool,
+  TaskCreateTool,
+  taskCreateTool,
+  TaskGetTool,
+  taskGetTool,
+  TaskUpdateTool,
+  taskUpdateTool,
 } from './tools/registry';
 
 // Re-export agent

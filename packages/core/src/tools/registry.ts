@@ -9,6 +9,10 @@ import { EditTool } from './edit';
 import { BashTool } from './bash';
 import { GlobTool } from './glob';
 import { GrepTool } from './grep';
+import { TaskListTool } from './task-list';
+import { TaskCreateTool } from './task-create';
+import { TaskGetTool } from './task-get';
+import { TaskUpdateTool } from './task-update';
 
 export class ToolRegistry {
   private tools = new Map<string, Tool<any, any>>();
@@ -59,6 +63,10 @@ export function createDefaultRegistry(): ToolRegistry {
   registry.register(new BashTool());
   registry.register(new GlobTool());
   registry.register(new GrepTool());
+  registry.register(new TaskListTool());
+  registry.register(new TaskCreateTool());
+  registry.register(new TaskGetTool());
+  registry.register(new TaskUpdateTool());
   return registry;
 }
 
@@ -72,3 +80,7 @@ export { editTool, EditTool } from './edit';
 export { bashTool, BashTool } from './bash';
 export { globTool, GlobTool } from './glob';
 export { grepTool, GrepTool } from './grep';
+export { taskListTool, TaskListTool } from './task-list';
+export { taskCreateTool, TaskCreateTool } from './task-create';
+export { taskGetTool, TaskGetTool } from './task-get';
+export { taskUpdateTool, TaskUpdateTool } from './task-update';
