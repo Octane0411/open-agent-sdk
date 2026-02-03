@@ -7,7 +7,10 @@
   "scripts": {
     "build": "tsc",
     "test": "bun test",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --coverage",
+    "test:e2e": "bun test tests/e2e",
+    "test:e2e:openai": "bun test tests/e2e/providers/openai.test.ts",
+    "test:e2e:google": "bun test tests/e2e/providers/google.test.ts"
   },
   "dependencies": {
     "@google/genai": "^0.10.0",
