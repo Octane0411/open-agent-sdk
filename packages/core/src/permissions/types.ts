@@ -3,6 +3,59 @@
  * Aligned with Claude Agent SDK
  */
 
+// Forward declarations to avoid circular dependencies
+/** Permission behavior - defined in hooks/types.ts */
+export type PermissionBehavior = 'allow' | 'deny' | 'ask';
+
+/** Permission update destination - defined in hooks/types.ts */
+export type PermissionUpdateDestination =
+  | 'userSettings'
+  | 'projectSettings'
+  | 'localSettings'
+  | 'session';
+
+/** Permission rule value - defined in hooks/types.ts */
+export type PermissionRuleValue = {
+  toolName: string;
+  ruleContent?: string;
+};
+
+/** Permission update operations - defined in hooks/types.ts */
+export type PermissionUpdate =
+  | {
+      type: 'addRules';
+      rules: PermissionRuleValue[];
+      behavior: PermissionBehavior;
+      destination: PermissionUpdateDestination;
+    }
+  | {
+      type: 'replaceRules';
+      rules: PermissionRuleValue[];
+      behavior: PermissionBehavior;
+      destination: PermissionUpdateDestination;
+    }
+  | {
+      type: 'removeRules';
+      rules: PermissionRuleValue[];
+      behavior: PermissionBehavior;
+      destination: PermissionUpdateDestination;
+    }
+  | {
+      type: 'setMode';
+      mode: string;
+      destination: PermissionUpdateDestination;
+    }
+  | {
+      type: 'addDirectories';
+      directories: string[];
+      destination: PermissionUpdateDestination;
+    }
+  | {
+      type: 'removeDirectories';
+      directories: string[];
+      destination: PermissionUpdateDestination;
+    };
+
 /**
  * Permission mode for controlling tool execution behavior
  */
@@ -26,6 +79,7 @@ export interface PermissionOptions {
 
 /**
  * Result from a custom permission check callback
+ * Aligned with Claude Agent SDK
  */
 export type PermissionResult =
   | {
@@ -33,22 +87,27 @@ export type PermissionResult =
       behavior: 'allow';
       /** Input to use (may be modified from original) */
       updatedInput: Record<string, unknown>;
+      /** Optional permission updates to apply */
+      updatedPermissions?: PermissionUpdate[];
     }
   | {
       /** Deny the tool execution */
       behavior: 'deny';
       /** Message explaining why (shown to LLM) */
       message: string;
+      /** Whether to interrupt the session */
+      interrupt?: boolean;
     };
 
 /**
  * Custom permission check callback
  * Called when a sensitive tool needs permission verification
+ * Aligned with Claude Agent SDK
  */
 export type CanUseTool = (
   toolName: string,
   input: Record<string, unknown>,
-  context: { signal: AbortSignal }
+  options: { signal: AbortSignal; suggestions?: PermissionUpdate[] }
 ) => Promise<PermissionResult>;
 
 /**

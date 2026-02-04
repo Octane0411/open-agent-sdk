@@ -13,7 +13,6 @@ import {
   type SDKToolResultMessage,
   type ToolCall,
   type UUID,
-  type PermissionMode,
   createUserMessage,
   createSystemMessage,
   createAssistantMessage,
@@ -26,7 +25,11 @@ import {
   createPostToolUseInput,
   createSessionStartInput,
   createSessionEndInput,
+  createPermissionRequestInput,
+  createPostToolUseFailureInput,
 } from '../hooks/inputs';
+import { PermissionManager } from '../permissions/manager';
+import type { PermissionMode, CanUseTool } from '../permissions/types';
 
 /** Generate a simple UUID v4 */
 function generateUUID(): UUID {
@@ -46,7 +49,13 @@ export interface ReActLoopConfig {
   abortController?: AbortController;
   // Additional config options aligned with Claude Agent SDK
   apiKeySource?: 'env' | 'keychain' | 'custom';
+  /** Permission mode for tool execution (default: 'default') */
   permissionMode?: PermissionMode;
+  /** Required to be true when using bypassPermissions mode */
+  allowDangerouslySkipPermissions?: boolean;
+  /** Custom callback for tool permission checks */
+  canUseTool?: CanUseTool;
+  /** MCP servers configuration */
   mcpServers?: Record<string, unknown>;
   /** Hooks manager or config */
   hooks?: HookManager | HooksConfig;
@@ -75,6 +84,7 @@ export class ReActLoop {
   private config: ReActLoopConfig;
   private sessionId: string;
   private hookManager: HookManager;
+  private permissionManager: PermissionManager;
 
   constructor(
     provider: LLMProvider,
@@ -91,6 +101,11 @@ export class ReActLoop {
       cwd: config.cwd ?? process.cwd(),
       env: config.env ?? {},
       abortController: config.abortController,
+      permissionMode: config.permissionMode,
+      allowDangerouslySkipPermissions: config.allowDangerouslySkipPermissions,
+      canUseTool: config.canUseTool,
+      mcpServers: config.mcpServers,
+      hooks: config.hooks,
     };
     this.sessionId = sessionId ?? generateUUID();
 
@@ -102,6 +117,21 @@ export class ReActLoop {
     } else {
       this.hookManager = new HookManager();
     }
+
+    // Initialize PermissionManager
+    this.permissionManager = new PermissionManager({
+      mode: config.permissionMode ?? 'default',
+      allowDangerouslySkipPermissions: config.allowDangerouslySkipPermissions ?? false,
+      canUseTool: config.canUseTool,
+    });
+  }
+
+  /**
+   * Get the permission manager instance
+   * Used for testing and inspection
+   */
+  getPermissionManager(): PermissionManager {
+    return this.permissionManager;
   }
 
   async run(userPrompt: string): Promise<ReActResult> {
@@ -468,24 +498,100 @@ export class ReActLoop {
       };
     }
 
+    const cwd = this.config.cwd ?? process.cwd();
+
     // Trigger PreToolUse hook
     const preToolInput = createPreToolUseInput(
       this.sessionId,
-      this.config.cwd ?? process.cwd(),
+      cwd,
       toolCall.function.name,
       args
     );
-    await this.hookManager.emitForTool('PreToolUse', preToolInput, toolCall.function.name, toolCall.id);
+    const preToolResults = await this.hookManager.emitForTool(
+      'PreToolUse',
+      preToolInput,
+      toolCall.function.name,
+      toolCall.id
+    );
+
+    // Check if any PreToolUse hook denied the tool
+    const hookDenial = preToolResults.find((r): r is {
+      hookSpecificOutput: { hookEventName: 'PreToolUse'; permissionDecision: 'deny'; permissionDecisionReason?: string }
+    } =>
+      r !== null && r !== undefined && typeof r === 'object' && 'hookSpecificOutput' in r &&
+      (r as Record<string, unknown>).hookSpecificOutput !== undefined &&
+      ((r as Record<string, unknown>).hookSpecificOutput as Record<string, unknown>)?.hookEventName === 'PreToolUse' &&
+      ((r as Record<string, unknown>).hookSpecificOutput as Record<string, unknown>)?.permissionDecision === 'deny'
+    );
+
+    if (hookDenial) {
+      const errorMsg = hookDenial.hookSpecificOutput?.permissionDecisionReason || 'Tool denied by PreToolUse hook';
+
+      // Trigger PermissionRequest hook
+      const permissionRequestInput = createPermissionRequestInput(
+        this.sessionId,
+        cwd,
+        toolCall.function.name,
+        args
+      );
+      await this.hookManager.emit('PermissionRequest', permissionRequestInput, toolCall.id);
+
+      return {
+        content: `Error: ${errorMsg}`,
+        isError: true,
+      };
+    }
+
+    // Apply any input modifications from PreToolUse hooks
+    let modifiedInput = args;
+    const inputModification = preToolResults.find((r): r is {
+      hookSpecificOutput: { hookEventName: 'PreToolUse'; updatedInput: Record<string, unknown> }
+    } =>
+      r !== null && r !== undefined && typeof r === 'object' && 'hookSpecificOutput' in r &&
+      (r as Record<string, unknown>).hookSpecificOutput !== undefined &&
+      ((r as Record<string, unknown>).hookSpecificOutput as Record<string, unknown>)?.hookEventName === 'PreToolUse' &&
+      ((r as Record<string, unknown>).hookSpecificOutput as Record<string, unknown>)?.updatedInput !== undefined
+    );
+
+    if (inputModification?.hookSpecificOutput?.updatedInput) {
+      modifiedInput = inputModification.hookSpecificOutput.updatedInput;
+    }
+
+    // Check permissions using PermissionManager
+    const permissionResult = await this.permissionManager.checkPermission(
+      toolCall.function.name,
+      modifiedInput as Record<string, unknown>,
+      { signal: this.config.abortController?.signal ?? new AbortController().signal }
+    );
+
+    if (!permissionResult.approved) {
+      // Trigger PermissionRequest hook on denial
+      const permissionRequestInput = createPermissionRequestInput(
+        this.sessionId,
+        cwd,
+        toolCall.function.name,
+        modifiedInput
+      );
+      await this.hookManager.emit('PermissionRequest', permissionRequestInput, toolCall.id);
+
+      return {
+        content: `Error: ${permissionResult.error || 'Permission denied'}`,
+        isError: true,
+      };
+    }
+
+    // Use modified input from permission check (if any)
+    const finalInput = permissionResult.updatedInput ?? modifiedInput;
 
     try {
-      const result = await tool.handler(args, context);
+      const result = await tool.handler(finalInput, context);
 
       // Trigger PostToolUse hook
       const postToolInput = createPostToolUseInput(
         this.sessionId,
-        this.config.cwd ?? process.cwd(),
+        cwd,
         toolCall.function.name,
-        args,
+        finalInput,
         result
       );
       await this.hookManager.emitForTool('PostToolUse', postToolInput, toolCall.function.name, toolCall.id);
@@ -495,18 +601,20 @@ export class ReActLoop {
         isError: false,
       };
     } catch (error) {
-      // Trigger PostToolUse hook even on error (with error info)
-      const postToolInput = createPostToolUseInput(
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Trigger PostToolUseFailure hook
+      const postToolFailureInput = createPostToolUseFailureInput(
         this.sessionId,
-        this.config.cwd ?? process.cwd(),
+        cwd,
         toolCall.function.name,
-        args,
-        { error: error instanceof Error ? error.message : String(error) }
+        finalInput,
+        errorMessage
       );
-      await this.hookManager.emitForTool('PostToolUse', postToolInput, toolCall.function.name, toolCall.id);
+      await this.hookManager.emit('PostToolUseFailure', postToolFailureInput, toolCall.id);
 
       return {
-        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        content: `Error: ${errorMessage}`,
         isError: true,
       };
     }

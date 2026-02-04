@@ -4,6 +4,7 @@
  */
 
 import { logger, type LogLevel } from './utils/logger';
+import type { PermissionMode } from './permissions/types';
 import { OpenAIProvider } from './providers/openai';
 import { GoogleProvider } from './providers/google';
 import { createDefaultRegistry } from './tools/registry';
@@ -46,8 +47,10 @@ export interface PromptOptions {
   env?: Record<string, string>;
   /** AbortController for cancellation */
   abortController?: AbortController;
-  /** Permission mode for the session */
-  permissionMode?: 'accept' | 'reject' | 'prompt';
+  /** Permission mode for the session (default: 'default') */
+  permissionMode?: PermissionMode;
+  /** Required to be true when using bypassPermissions mode */
+  allowDangerouslySkipPermissions?: boolean;
   /** MCP servers configuration */
   mcpServers?: Record<string, unknown>;
   /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent' (default: 'info') */

@@ -34,11 +34,12 @@ export class PermissionManager {
 
   /**
    * Check if a tool is permitted to execute
+   * Aligned with Claude Agent SDK
    */
   async checkPermission(
     toolName: string,
     input: Record<string, unknown>,
-    context: { signal: AbortSignal }
+    options: { signal: AbortSignal }
   ): Promise<PermissionCheckResult> {
     switch (this.mode) {
       case 'bypassPermissions':
@@ -73,7 +74,10 @@ export class PermissionManager {
     if (isSensitiveTool(toolName)) {
       // If canUseTool callback is provided, use it
       if (this.canUseTool) {
-        const result = await this.canUseTool(toolName, input, context);
+        const result = await this.canUseTool(toolName, input, {
+          signal: options.signal,
+          suggestions: [], // Could be populated based on context
+        });
         return this.resolvePermissionResult(result);
       }
 

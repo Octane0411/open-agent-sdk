@@ -11,6 +11,7 @@ import { Session } from './session';
 import { InMemoryStorage, type SessionStorage, type SessionData } from './storage';
 import { logger, type LogLevel } from '../utils/logger';
 import type { HooksConfig } from '../hooks/types';
+import type { PermissionMode, CanUseTool } from '../permissions/types';
 
 /** Options for creating a new session */
 export interface CreateSessionOptions {
@@ -34,8 +35,12 @@ export interface CreateSessionOptions {
   abortController?: AbortController;
   /** Storage implementation (default: InMemoryStorage) */
   storage?: SessionStorage;
-  /** Permission mode for the session */
-  permissionMode?: 'accept' | 'reject' | 'prompt';
+  /** Permission mode for the session (default: 'default') */
+  permissionMode?: PermissionMode;
+  /** Required to be true when using bypassPermissions mode */
+  allowDangerouslySkipPermissions?: boolean;
+  /** Custom callback for tool permission checks */
+  canUseTool?: CanUseTool;
   /** MCP servers configuration */
   mcpServers?: Record<string, unknown>;
   /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent' (default: 'info') */
@@ -52,6 +57,14 @@ export interface ResumeSessionOptions {
   apiKey?: string;
   /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent' (default: 'info') */
   logLevel?: LogLevel;
+  /** Permission mode override (optional) */
+  permissionMode?: PermissionMode;
+  /** Required to be true when using bypassPermissions mode (optional) */
+  allowDangerouslySkipPermissions?: boolean;
+  /** Custom callback for tool permission checks (optional) */
+  canUseTool?: CanUseTool;
+  /** Hooks configuration (optional) */
+  hooks?: HooksConfig;
 }
 
 /**
@@ -119,6 +132,8 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     env: options.env,
     abortController: options.abortController,
     permissionMode: options.permissionMode,
+    allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
+    canUseTool: options.canUseTool,
     mcpServers: options.mcpServers,
     hooks: options.hooks,
   });
@@ -147,7 +162,9 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
       cwd: options.cwd,
       env: options.env,
       permissionMode: options.permissionMode,
+      allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
       mcpServers: options.mcpServers,
+      hooks: options.hooks,
     },
   };
 
@@ -184,6 +201,8 @@ export async function resumeSession(
   sessionId: string,
   options?: ResumeSessionOptions
 ): Promise<Session> {
+  // Note: The permissionMode, allowDangerouslySkipPermissions, canUseTool, hooks from options
+  // will override the saved session options when passed
   // Set log level from options or environment variable
   const logLevel = options?.logLevel ??
     (process.env.OPEN_AGENT_SDK_LOG_LEVEL as LogLevel) ??
@@ -221,15 +240,18 @@ export async function resumeSession(
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
 
-  // Create ReAct loop with saved options
+  // Create ReAct loop with saved options, overridden by new options
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: sessionData.options.maxTurns ?? 10,
     systemPrompt: sessionData.options.systemPrompt,
     allowedTools: sessionData.options.allowedTools,
     cwd: sessionData.options.cwd,
     env: sessionData.options.env,
-    permissionMode: sessionData.options.permissionMode,
+    permissionMode: options?.permissionMode ?? sessionData.options.permissionMode,
+    allowDangerouslySkipPermissions: options?.allowDangerouslySkipPermissions ?? sessionData.options.allowDangerouslySkipPermissions,
+    canUseTool: options?.canUseTool,
     mcpServers: sessionData.options.mcpServers,
+    hooks: options?.hooks,
   });
 
   // Restore session from storage

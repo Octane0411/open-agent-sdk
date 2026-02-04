@@ -9,7 +9,10 @@ import type {
   PostToolUseHookInput,
   SessionStartHookInput,
   SessionEndHookInput,
+  PermissionRequestHookInput,
+  PostToolUseFailureHookInput,
   ExitReason,
+  PermissionUpdate,
 } from './types';
 
 /**
@@ -100,5 +103,49 @@ export function createSessionEndInput(
     ...createBaseHookInput(sessionId, cwd, transcriptPath, permissionMode),
     hook_event_name: 'SessionEnd',
     reason,
+  };
+}
+
+/**
+ * Create PermissionRequest hook input
+ */
+export function createPermissionRequestInput(
+  sessionId: string,
+  cwd: string,
+  toolName: string,
+  toolInput: unknown,
+  permissionSuggestions?: PermissionUpdate[],
+  transcriptPath?: string,
+  permissionMode?: string
+): PermissionRequestHookInput {
+  return {
+    ...createBaseHookInput(sessionId, cwd, transcriptPath, permissionMode),
+    hook_event_name: 'PermissionRequest',
+    tool_name: toolName,
+    tool_input: toolInput,
+    permission_suggestions: permissionSuggestions,
+  };
+}
+
+/**
+ * Create PostToolUseFailure hook input
+ */
+export function createPostToolUseFailureInput(
+  sessionId: string,
+  cwd: string,
+  toolName: string,
+  toolInput: unknown,
+  error: string,
+  isInterrupt?: boolean,
+  transcriptPath?: string,
+  permissionMode?: string
+): PostToolUseFailureHookInput {
+  return {
+    ...createBaseHookInput(sessionId, cwd, transcriptPath, permissionMode),
+    hook_event_name: 'PostToolUseFailure',
+    tool_name: toolName,
+    tool_input: toolInput,
+    error,
+    is_interrupt: isInterrupt,
   };
 }

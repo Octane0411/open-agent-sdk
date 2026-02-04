@@ -7,6 +7,8 @@
 /// <reference types="bun" />
 
 import type { SDKMessage } from '../types/messages';
+import type { PermissionMode } from '../permissions/types';
+import type { HooksConfig } from '../hooks/types';
 
 /** Session data structure for storage */
 export interface SessionData {
@@ -48,10 +50,14 @@ export interface SessionOptions {
   abortController?: AbortController;
   /** Storage implementation (optional, defaults to InMemoryStorage) */
   storage?: SessionStorage;
-  /** Permission mode for the session (optional) */
-  permissionMode?: 'accept' | 'reject' | 'prompt';
+  /** Permission mode for the session (optional, default: 'default') */
+  permissionMode?: PermissionMode;
+  /** Required to be true when using bypassPermissions mode (optional) */
+  allowDangerouslySkipPermissions?: boolean;
   /** MCP servers configuration (optional) */
   mcpServers?: Record<string, unknown>;
+  /** Hooks configuration (optional) */
+  hooks?: HooksConfig;
 }
 
 /** Storage interface for session persistence */

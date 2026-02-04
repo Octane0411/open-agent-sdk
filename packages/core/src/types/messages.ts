@@ -4,6 +4,8 @@
  * Aligned with Claude Agent SDK V2 API
  */
 
+import type { PermissionMode } from '../permissions/types';
+
 /** UUID type for message identification */
 export type UUID = string;
 
@@ -68,8 +70,6 @@ export interface SDKToolResultMessage extends BaseMessage {
 /** API key source for the session */
 export type ApiKeySource = 'env' | 'keychain' | 'custom';
 
-/** Permission mode for the session */
-export type PermissionMode = 'accept' | 'reject' | 'prompt';
 
 /** MCP server configuration */
 export interface McpServerConfig {
