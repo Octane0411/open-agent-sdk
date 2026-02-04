@@ -19,6 +19,14 @@ import {
   createAssistantMessage,
   createToolResultMessage,
 } from '../types/messages';
+import { HookManager } from '../hooks/manager';
+import type { HooksConfig } from '../hooks/types';
+import {
+  createPreToolUseInput,
+  createPostToolUseInput,
+  createSessionStartInput,
+  createSessionEndInput,
+} from '../hooks/inputs';
 
 /** Generate a simple UUID v4 */
 function generateUUID(): UUID {
@@ -40,6 +48,8 @@ export interface ReActLoopConfig {
   apiKeySource?: 'env' | 'keychain' | 'custom';
   permissionMode?: PermissionMode;
   mcpServers?: Record<string, unknown>;
+  /** Hooks manager or config */
+  hooks?: HookManager | HooksConfig;
 }
 
 export interface ReActResult {
@@ -64,6 +74,7 @@ export class ReActLoop {
   private toolRegistry: ToolRegistry;
   private config: ReActLoopConfig;
   private sessionId: string;
+  private hookManager: HookManager;
 
   constructor(
     provider: LLMProvider,
@@ -82,6 +93,15 @@ export class ReActLoop {
       abortController: config.abortController,
     };
     this.sessionId = sessionId ?? generateUUID();
+
+    // Initialize HookManager
+    if (config.hooks instanceof HookManager) {
+      this.hookManager = config.hooks;
+    } else if (config.hooks) {
+      this.hookManager = new HookManager(config.hooks);
+    } else {
+      this.hookManager = new HookManager();
+    }
   }
 
   async run(userPrompt: string): Promise<ReActResult> {
@@ -215,6 +235,14 @@ export class ReActLoop {
     userPrompt: string,
     history: SDKMessage[] = []
   ): AsyncGenerator<ReActStreamEvent> {
+    // Trigger SessionStart hook
+    const sessionStartInput = createSessionStartInput(
+      this.sessionId,
+      this.config.cwd ?? process.cwd(),
+      history.length > 0 ? 'resume' : 'startup'
+    );
+    await this.hookManager.emit('SessionStart', sessionStartInput, undefined);
+
     // Check if history already has a system message (metadata)
     const hasSystemInHistory = history.some((msg) => msg.type === 'system');
 
@@ -276,6 +304,14 @@ export class ReActLoop {
           type: 'done',
           result: 'Operation aborted',
         };
+
+        // Trigger SessionEnd hook on abort
+        const sessionEndInput = createSessionEndInput(
+          this.sessionId,
+          this.config.cwd ?? process.cwd(),
+          'abort'
+        );
+        await this.hookManager.emit('SessionEnd', sessionEndInput, undefined);
         return;
       }
 
@@ -317,6 +353,14 @@ export class ReActLoop {
         const result = textContent?.text ?? '';
         yield { type: 'usage', usage: { input_tokens: totalInputTokens, output_tokens: totalOutputTokens } };
         yield { type: 'done', result };
+
+        // Trigger SessionEnd hook on successful completion
+        const sessionEndInput = createSessionEndInput(
+          this.sessionId,
+          this.config.cwd ?? process.cwd(),
+          'completed'
+        );
+        await this.hookManager.emit('SessionEnd', sessionEndInput, undefined);
         return;
       }
     }
@@ -324,6 +368,14 @@ export class ReActLoop {
     // Max turns reached
     yield { type: 'usage', usage: { input_tokens: totalInputTokens, output_tokens: totalOutputTokens } };
     yield { type: 'done', result: 'Maximum turns reached without completion' };
+
+    // Trigger SessionEnd hook
+    const sessionEndInput = createSessionEndInput(
+      this.sessionId,
+      this.config.cwd ?? process.cwd(),
+      'max_turns_reached'
+    );
+    await this.hookManager.emit('SessionEnd', sessionEndInput, undefined);
   }
 
   private async callLLM(
@@ -406,14 +458,53 @@ export class ReActLoop {
       };
     }
 
+    let args: unknown;
     try {
-      const args = JSON.parse(toolCall.function.arguments);
+      args = JSON.parse(toolCall.function.arguments);
+    } catch (error) {
+      return {
+        content: `Error: Invalid JSON arguments - ${error instanceof Error ? error.message : String(error)}`,
+        isError: true,
+      };
+    }
+
+    // Trigger PreToolUse hook
+    const preToolInput = createPreToolUseInput(
+      this.sessionId,
+      this.config.cwd ?? process.cwd(),
+      toolCall.function.name,
+      args
+    );
+    await this.hookManager.emitForTool('PreToolUse', preToolInput, toolCall.function.name, toolCall.id);
+
+    try {
       const result = await tool.handler(args, context);
+
+      // Trigger PostToolUse hook
+      const postToolInput = createPostToolUseInput(
+        this.sessionId,
+        this.config.cwd ?? process.cwd(),
+        toolCall.function.name,
+        args,
+        result
+      );
+      await this.hookManager.emitForTool('PostToolUse', postToolInput, toolCall.function.name, toolCall.id);
+
       return {
         content: JSON.stringify(result),
         isError: false,
       };
     } catch (error) {
+      // Trigger PostToolUse hook even on error (with error info)
+      const postToolInput = createPostToolUseInput(
+        this.sessionId,
+        this.config.cwd ?? process.cwd(),
+        toolCall.function.name,
+        args,
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+      await this.hookManager.emitForTool('PostToolUse', postToolInput, toolCall.function.name, toolCall.id);
+
       return {
         content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         isError: true,

@@ -10,6 +10,7 @@ import { ReActLoop } from '../agent/react-loop';
 import { Session } from './session';
 import { InMemoryStorage, type SessionStorage, type SessionData } from './storage';
 import { logger, type LogLevel } from '../utils/logger';
+import type { HooksConfig } from '../hooks/types';
 
 /** Options for creating a new session */
 export interface CreateSessionOptions {
@@ -39,6 +40,8 @@ export interface CreateSessionOptions {
   mcpServers?: Record<string, unknown>;
   /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent' (default: 'info') */
   logLevel?: LogLevel;
+  /** Hooks configuration */
+  hooks?: HooksConfig;
 }
 
 /** Options for resuming an existing session */
@@ -117,6 +120,7 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     abortController: options.abortController,
     permissionMode: options.permissionMode,
     mcpServers: options.mcpServers,
+    hooks: options.hooks,
   });
 
   // Create session

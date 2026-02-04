@@ -152,7 +152,6 @@ export type {
   SDKResultMessage,
   ToolCall,
   ApiKeySource,
-  PermissionMode,
   McpServerConfig,
   CreateSystemMessageOptions,
 } from './types/messages';
@@ -254,3 +253,26 @@ export {
 
 // Re-export logger
 export { logger, type LogLevel } from './utils/logger';
+
+// Re-export hooks
+export {
+  HookManager,
+  type HookEvent,
+  type HookInput,
+  type BaseHookInput,
+  type PreToolUseHookInput,
+  type PostToolUseHookInput,
+  type SessionStartHookInput,
+  type SessionEndHookInput,
+  type ExitReason,
+  type HookCallback,
+  type HookCallbackMatcher,
+  type HooksConfig,
+  type HookJSONOutput,
+  type AsyncHookJSONOutput,
+  type SyncHookJSONOutput,
+  createPreToolUseInput,
+  createPostToolUseInput,
+  createSessionStartInput,
+  createSessionEndInput,
+} from './hooks';
