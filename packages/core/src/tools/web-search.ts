@@ -1,42 +1,47 @@
-import { search } from 'duck-duck-scrape';
 import type { Tool, ToolContext, JSONSchema } from '../types/tools.js';
-
-export interface WebSearchResult {
-  title: string;
-  url: string;
-  snippet: string;
-  metadata?: Record<string, unknown>;
-}
 
 export interface WebSearchInput {
   query: string;
-  allowed_domains?: string[];
-  blocked_domains?: string[];
+  numResults?: number;
+  type?: 'auto' | 'fast' | 'deep';
+  livecrawl?: 'fallback' | 'preferred';
 }
 
 export interface WebSearchOutput {
-  results: WebSearchResult[];
-  total_results: number;
+  content: string;
   query: string;
   error?: string;
 }
+
+const API_CONFIG = {
+  BASE_URL: 'https://mcp.exa.ai',
+  ENDPOINTS: {
+    SEARCH: '/mcp',
+  },
+  DEFAULT_NUM_RESULTS: 8,
+  TIMEOUT_MS: 25000,
+} as const;
 
 const parameters: JSONSchema = {
   type: 'object',
   properties: {
     query: {
       type: 'string',
-      description: 'The search query (at least 2 characters)',
+      description: 'The search query',
     },
-    allowed_domains: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Only include results from these domains',
+    numResults: {
+      type: 'number',
+      description: 'Number of search results to return (default: 8)',
     },
-    blocked_domains: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Exclude results from these domains',
+    type: {
+      type: 'string',
+      enum: ['auto', 'fast', 'deep'],
+      description: "Search type - 'auto': balanced (default), 'fast': quick, 'deep': comprehensive",
+    },
+    livecrawl: {
+      type: 'string',
+      enum: ['fallback', 'preferred'],
+      description: "Live crawl mode - 'fallback': use as backup, 'preferred': prioritize (default: 'fallback')",
     },
   },
   required: ['query'],
@@ -44,60 +49,104 @@ const parameters: JSONSchema = {
 
 export class WebSearchTool implements Tool<WebSearchInput, WebSearchOutput> {
   name = 'WebSearch';
-  description = 'Search the web for information. Returns search results with titles, URLs, and snippets.';
+  description = 'Search the web for information. Returns formatted search results optimized for LLM consumption.';
   parameters = parameters;
 
   handler = async (
     input: WebSearchInput,
-    _context: ToolContext
+    context: ToolContext
   ): Promise<WebSearchOutput> => {
     // Validate query
-    if (!input.query || input.query.trim().length < 2) {
+    if (!input.query || input.query.trim().length === 0) {
       return {
-        results: [],
-        total_results: 0,
+        content: '',
         query: input.query || '',
-        error: 'Query must be at least 2 characters long',
+        error: 'Query is required',
       };
     }
 
-    try {
-      const searchResults = await search(input.query, {
-        safeSearch: 0,
-      });
-
-      let results: WebSearchResult[] = searchResults.results.map((result) => ({
-        title: result.title,
-        url: result.url,
-        snippet: result.description,
-        metadata: {
-          icon: result.icon,
+    const searchRequest = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: {
+        name: 'web_search_exa',
+        arguments: {
+          query: input.query,
+          type: input.type || 'auto',
+          numResults: input.numResults || API_CONFIG.DEFAULT_NUM_RESULTS,
+          livecrawl: input.livecrawl || 'fallback',
         },
-      }));
+      },
+    };
 
-      // Apply domain filters
-      if (input.allowed_domains && input.allowed_domains.length > 0) {
-        results = results.filter((result) =>
-          input.allowed_domains!.some((domain) => result.url.includes(domain))
-        );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT_MS);
+
+    try {
+      const abortSignals: AbortSignal[] = [controller.signal];
+      if (context.abortController?.signal) {
+        abortSignals.push(context.abortController.signal);
       }
 
-      if (input.blocked_domains && input.blocked_domains.length > 0) {
-        results = results.filter(
-          (result) =>
-            !input.blocked_domains!.some((domain) => result.url.includes(domain))
-        );
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SEARCH}`, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(searchRequest),
+        signal: AbortSignal.any(abortSignals),
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          content: '',
+          query: input.query,
+          error: `Search error (${response.status}): ${errorText}`,
+        };
+      }
+
+      const responseText = await response.text();
+
+      // Parse SSE response
+      const lines = responseText.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.substring(6));
+            if (data.result?.content?.length > 0) {
+              return {
+                content: data.result.content[0].text,
+                query: input.query,
+              };
+            }
+          } catch {
+            // Skip invalid JSON lines
+          }
+        }
       }
 
       return {
-        results,
-        total_results: results.length,
+        content: 'No search results found. Please try a different query.',
         query: input.query,
       };
     } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          content: '',
+          query: input.query,
+          error: 'Search request timed out after 25 seconds',
+        };
+      }
+
       return {
-        results: [],
-        total_results: 0,
+        content: '',
         query: input.query,
         error: error instanceof Error ? error.message : 'Search failed',
       };

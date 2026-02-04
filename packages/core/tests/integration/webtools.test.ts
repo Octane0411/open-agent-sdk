@@ -1,19 +1,14 @@
-import { describe, it, expect, jest, beforeEach } from 'bun:test';
+import { describe, it, expect, jest, beforeEach, afterEach } from 'bun:test';
 import { WebSearchTool } from '../../src/tools/web-search.js';
 import { WebFetchTool } from '../../src/tools/web-fetch.js';
 import type { ToolContext } from '../../src/types/tools.js';
 import type { LLMProvider } from '../../src/providers/base.js';
 
-// Mock duck-duck-scrape
-jest.mock('duck-duck-scrape', () => ({
-  search: jest.fn(),
-}));
+// Store original fetch
+const originalFetch = global.fetch;
 
-import { search } from 'duck-duck-scrape';
-
-// Mock fetch globally
+// Mock fetch for mocked tests
 const mockFetch = jest.fn();
-global.fetch = mockFetch;
 
 // Helper to create async iterable
 async function* createAsyncIterable<T>(items: T[]): AsyncIterable<T> {
@@ -22,7 +17,61 @@ async function* createAsyncIterable<T>(items: T[]): AsyncIterable<T> {
   }
 }
 
-describe('WebTools Integration', () => {
+// Real search tests (separate from mocked tests)
+describe('WebSearch Real API Integration', () => {
+  it('should perform real web search via Exa API', async () => {
+    const tool = new WebSearchTool();
+    const ctx: ToolContext = {
+      cwd: '/tmp',
+      env: {},
+    };
+
+    const result = await tool.handler(
+      { query: 'TypeScript programming language' },
+      ctx
+    );
+
+    // Should not have errors
+    expect(result.error).toBeUndefined();
+
+    // Should return content
+    expect(result.content).toBeTruthy();
+    expect(result.content.length).toBeGreaterThan(0);
+
+    // Should contain query
+    expect(result.query).toBe('TypeScript programming language');
+
+    // Content should contain relevant information
+    expect(result.content.length).toBeGreaterThan(50);
+
+    console.log('Real search result preview:', result.content.substring(0, 200) + '...');
+    console.log('Full content length:', result.content.length);
+  }, 30000);
+
+  it('should handle search with numResults parameter', async () => {
+    const tool = new WebSearchTool();
+    const ctx: ToolContext = {
+      cwd: '/tmp',
+      env: {},
+    };
+
+    const result = await tool.handler(
+      {
+        query: 'Rust programming language',
+        numResults: 3,
+      },
+      ctx
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.content).toBeTruthy();
+
+    console.log('Search with numResults=3:', result.content.substring(0, 200) + '...');
+  }, 30000);
+});
+
+// Mocked tests
+describe('WebTools Mocked Integration', () => {
   let searchTool: WebSearchTool;
   let fetchTool: WebFetchTool;
   let context: ToolContext;
@@ -40,25 +89,25 @@ describe('WebTools Integration', () => {
       env: {},
       provider: mockProvider,
     };
-    (search as jest.Mock).mockReset();
+    // Set up mock fetch for mocked tests
+    global.fetch = mockFetch;
     mockFetch.mockReset();
     (mockProvider.chat as jest.Mock).mockReset();
   });
 
+  afterEach(() => {
+    // Restore original fetch
+    global.fetch = originalFetch;
+  });
+
   describe('WebSearch + WebFetch workflow', () => {
     it('should search and then fetch a result', async () => {
-      // Step 1: Search
-      const mockResults = [
-        {
-          title: 'TypeScript Documentation',
-          url: 'https://www.typescriptlang.org/docs/',
-          snippet: 'Official TypeScript documentation.',
-        },
-      ];
+      // Step 1: Mock search response
+      const mockSearchResponse = `data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Search results:\\n\\n1. TypeScript Documentation - https://www.typescriptlang.org/docs/\\n   Official TypeScript documentation."}]}}`;
 
-      (search as jest.Mock).mockResolvedValue({
-        results: mockResults,
-        totalResults: 1,
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(mockSearchResponse),
       });
 
       const searchResult = await searchTool.handler(
@@ -66,10 +115,10 @@ describe('WebTools Integration', () => {
         context
       );
 
-      expect(searchResult.results).toHaveLength(1);
-      expect(searchResult.results[0].url).toBe('https://www.typescriptlang.org/docs/');
+      expect(searchResult.error).toBeUndefined();
+      expect(searchResult.content).toContain('TypeScript Documentation');
 
-      // Step 2: Fetch the first result
+      // Step 2: Fetch the URL from search result
       const htmlContent = `
         <html>
           <head><title>TypeScript Docs</title></head>
@@ -82,7 +131,7 @@ describe('WebTools Integration', () => {
         </html>
       `;
 
-      mockFetch.mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
         url: 'https://www.typescriptlang.org/docs/',
@@ -98,7 +147,7 @@ describe('WebTools Integration', () => {
 
       const fetchResult = await fetchTool.handler(
         {
-          url: searchResult.results[0].url,
+          url: 'https://www.typescriptlang.org/docs/',
           prompt: 'Summarize what TypeScript is',
         },
         context
@@ -110,16 +159,20 @@ describe('WebTools Integration', () => {
   });
 
   describe('Error handling', () => {
-    it('should handle search failure gracefully', async () => {
-      (search as jest.Mock).mockRejectedValue(new Error('Network error'));
+    it('should handle search API failure', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve('Internal Server Error'),
+      });
 
       const result = await searchTool.handler(
         { query: 'test query' },
         context
       );
 
-      expect(result.error).toBeDefined();
-      expect(result.results).toHaveLength(0);
+      expect(result.error).toContain('Search error (500)');
+      expect(result.content).toBe('');
     });
 
     it('should handle fetch without provider', async () => {
@@ -146,19 +199,7 @@ describe('WebTools Integration', () => {
       expect(result.error).toContain('provider');
     });
 
-    it('should handle fetch 404 after successful search', async () => {
-      // First search succeeds
-      (search as jest.Mock).mockResolvedValue({
-        results: [{ title: 'Test', url: 'https://example.com/page', snippet: 'Test' }],
-        totalResults: 1,
-      });
-
-      const searchResult = await searchTool.handler(
-        { query: 'test' },
-        context
-      );
-
-      // Then fetch fails
+    it('should handle fetch 404', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
@@ -169,7 +210,7 @@ describe('WebTools Integration', () => {
 
       const fetchResult = await fetchTool.handler(
         {
-          url: searchResult.results[0].url,
+          url: 'https://example.com/page',
           prompt: 'Extract content',
         },
         context
@@ -177,54 +218,6 @@ describe('WebTools Integration', () => {
 
       expect(fetchResult.error).toContain('404');
       expect(fetchResult.status_code).toBe(404);
-    });
-  });
-
-  describe('Domain filtering', () => {
-    it('should respect allowed_domains in search', async () => {
-      const mockResults = [
-        { title: 'Good', url: 'https://docs.example.com/guide', snippet: 'Good' },
-        { title: 'Bad', url: 'https://spam.com/ad', snippet: 'Bad' },
-      ];
-
-      (search as jest.Mock).mockResolvedValue({
-        results: mockResults,
-        totalResults: 2,
-      });
-
-      const result = await searchTool.handler(
-        {
-          query: 'guide',
-          allowed_domains: ['docs.example.com'],
-        },
-        context
-      );
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].url).toContain('docs.example.com');
-    });
-
-    it('should respect blocked_domains in search', async () => {
-      const mockResults = [
-        { title: 'Good', url: 'https://docs.example.com/guide', snippet: 'Good' },
-        { title: 'Bad', url: 'https://spam.com/ad', snippet: 'Bad' },
-      ];
-
-      (search as jest.Mock).mockResolvedValue({
-        results: mockResults,
-        totalResults: 2,
-      });
-
-      const result = await searchTool.handler(
-        {
-          query: 'guide',
-          blocked_domains: ['spam.com'],
-        },
-        context
-      );
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].url).not.toContain('spam.com');
     });
   });
 });

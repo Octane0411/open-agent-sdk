@@ -1,17 +1,14 @@
-import { describe, it, expect, beforeEach, jest } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, jest } from 'bun:test';
 import { WebSearchTool } from '../../src/tools/web-search.js';
 import type { ToolContext } from '../../src/types/tools.js';
 
-// Mock duck-duck-scrape
-jest.mock('duck-duck-scrape', () => ({
-  search: jest.fn(),
-}));
-
-import { search } from 'duck-duck-scrape';
+// Store original fetch
+const originalFetch = global.fetch;
 
 describe('WebSearchTool', () => {
   let tool: WebSearchTool;
   let context: ToolContext;
+  let fetchMock: jest.Mock;
 
   beforeEach(() => {
     tool = new WebSearchTool();
@@ -19,8 +16,14 @@ describe('WebSearchTool', () => {
       cwd: '/tmp',
       env: {},
     };
-    // Reset mock
-    (search as jest.Mock).mockReset();
+    // Mock fetch
+    fetchMock = jest.fn();
+    global.fetch = fetchMock;
+  });
+
+  afterEach(() => {
+    // Restore original fetch
+    global.fetch = originalFetch;
   });
 
   describe('schema', () => {
@@ -28,114 +31,98 @@ describe('WebSearchTool', () => {
       expect(tool.name).toBe('WebSearch');
     });
 
-    it('should have required parameters', () => {
+    it('should have required query parameter', () => {
       expect(tool.parameters.required).toContain('query');
     });
 
-    it('should have optional domain filters', () => {
-      expect(tool.parameters.properties.allowed_domains).toBeDefined();
-      expect(tool.parameters.properties.blocked_domains).toBeDefined();
+    it('should have optional numResults parameter', () => {
+      expect(tool.parameters.properties.numResults).toBeDefined();
+      expect(tool.parameters.properties.numResults.type).toBe('number');
+    });
+
+    it('should have optional type parameter', () => {
+      expect(tool.parameters.properties.type).toBeDefined();
+      expect(tool.parameters.properties.type.enum).toContain('auto');
+      expect(tool.parameters.properties.type.enum).toContain('fast');
+      expect(tool.parameters.properties.type.enum).toContain('deep');
+    });
+
+    it('should have optional livecrawl parameter', () => {
+      expect(tool.parameters.properties.livecrawl).toBeDefined();
+      expect(tool.parameters.properties.livecrawl.enum).toContain('fallback');
+      expect(tool.parameters.properties.livecrawl.enum).toContain('preferred');
     });
   });
 
   describe('handler', () => {
-    it('should return search results', async () => {
-      const mockResults = [
-        {
-          title: 'TypeScript Documentation',
-          url: 'https://www.typescriptlang.org/docs/',
-          snippet: 'TypeScript is a typed superset of JavaScript.',
-        },
-        {
-          title: 'TypeScript Tutorial',
-          url: 'https://www.example.com/ts-tutorial',
-          snippet: 'Learn TypeScript step by step.',
-        },
-      ];
+    it('should return search results from Exa API', async () => {
+      const mockResponse = `data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Search results for TypeScript:\\n\\n1. TypeScript Documentation - https://www.typescriptlang.org/docs/\\n   TypeScript is a typed superset of JavaScript."}]}}`;
 
-      (search as jest.Mock).mockResolvedValue({
-        results: mockResults,
-        totalResults: 2,
+      fetchMock.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(mockResponse),
       });
 
       const result = await tool.handler(
-        { query: 'TypeScript documentation 2026' },
+        { query: 'TypeScript documentation' },
         context
       );
 
-      expect(result.results).toHaveLength(2);
-      expect(result.total_results).toBe(2);
-      expect(result.query).toBe('TypeScript documentation 2026');
-      expect(result.results[0].title).toBe('TypeScript Documentation');
-      expect(result.results[0].url).toBe('https://www.typescriptlang.org/docs/');
+      expect(result.error).toBeUndefined();
+      expect(result.query).toBe('TypeScript documentation');
+      expect(result.content).toContain('TypeScript Documentation');
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://mcp.exa.ai/mcp',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'content-type': 'application/json',
+          }),
+          body: expect.stringContaining('web_search_exa'),
+        })
+      );
     });
 
-    it('should filter by allowed_domains', async () => {
-      const mockResults = [
-        {
-          title: 'TypeScript Documentation',
-          url: 'https://www.typescriptlang.org/docs/',
-          snippet: 'Official docs.',
-        },
-        {
-          title: 'Unofficial Guide',
-          url: 'https://www.example.com/guide',
-          snippet: 'Third party guide.',
-        },
-      ];
-
-      (search as jest.Mock).mockResolvedValue({
-        results: mockResults,
-        totalResults: 2,
+    it('should use default parameters', async () => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Results"}]}}'),
       });
 
-      const result = await tool.handler(
-        {
-          query: 'TypeScript',
-          allowed_domains: ['typescriptlang.org'],
-        },
-        context
-      );
+      await tool.handler({ query: 'test' }, context);
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].url).toContain('typescriptlang.org');
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.params.arguments.type).toBe('auto');
+      expect(callBody.params.arguments.numResults).toBe(8);
+      expect(callBody.params.arguments.livecrawl).toBe('fallback');
     });
 
-    it('should filter by blocked_domains', async () => {
-      const mockResults = [
-        {
-          title: 'Good Result',
-          url: 'https://www.typescriptlang.org/docs/',
-          snippet: 'Official docs.',
-        },
-        {
-          title: 'Bad Result',
-          url: 'https://www.spam-site.com/',
-          snippet: 'Spam content.',
-        },
-      ];
-
-      (search as jest.Mock).mockResolvedValue({
-        results: mockResults,
-        totalResults: 2,
+    it('should accept custom parameters', async () => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Results"}]}}'),
       });
 
-      const result = await tool.handler(
+      await tool.handler(
         {
-          query: 'TypeScript',
-          blocked_domains: ['spam-site.com'],
+          query: 'test',
+          type: 'deep',
+          numResults: 5,
+          livecrawl: 'preferred',
         },
         context
       );
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].url).not.toContain('spam-site.com');
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.params.arguments.type).toBe('deep');
+      expect(callBody.params.arguments.numResults).toBe(5);
+      expect(callBody.params.arguments.livecrawl).toBe('preferred');
     });
 
     it('should handle empty results', async () => {
-      (search as jest.Mock).mockResolvedValue({
-        results: [],
-        totalResults: 0,
+      fetchMock.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{"content":[]}}'),
       });
 
       const result = await tool.handler(
@@ -143,21 +130,50 @@ describe('WebSearchTool', () => {
         context
       );
 
-      expect(result.results).toHaveLength(0);
-      expect(result.total_results).toBe(0);
+      expect(result.error).toBeUndefined();
+      expect(result.content).toBe('No search results found. Please try a different query.');
     });
 
-    it('should handle search errors', async () => {
-      (search as jest.Mock).mockRejectedValue(new Error('Rate limit exceeded'));
+    it('should handle HTTP errors', async () => {
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve('Internal Server Error'),
+      });
 
       const result = await tool.handler(
-        { query: 'TypeScript' },
+        { query: 'test' },
         context
       );
 
-      expect(result.error).toBeDefined();
-      expect(result.results).toHaveLength(0);
-      expect(result.total_results).toBe(0);
+      expect(result.error).toContain('Search error (500)');
+      expect(result.content).toBe('');
+    });
+
+    it('should handle network errors', async () => {
+      fetchMock.mockRejectedValue(new Error('Network error'));
+
+      const result = await tool.handler(
+        { query: 'test' },
+        context
+      );
+
+      expect(result.error).toBe('Network error');
+      expect(result.content).toBe('');
+    });
+
+    it('should handle timeout', async () => {
+      const abortError = new Error('The operation was aborted');
+      abortError.name = 'AbortError';
+      fetchMock.mockRejectedValue(abortError);
+
+      const result = await tool.handler(
+        { query: 'test' },
+        context
+      );
+
+      expect(result.error).toContain('timed out');
+      expect(result.content).toBe('');
     });
 
     it('should require query parameter', async () => {
@@ -166,16 +182,23 @@ describe('WebSearchTool', () => {
         context
       );
 
-      expect(result.error).toContain('Query');
+      expect(result.error).toContain('Query is required');
     });
 
-    it('should require query with at least 2 characters', async () => {
-      const result = await tool.handler(
-        { query: 'a' },
-        context
-      );
+    it('should pass abort signal to fetch', async () => {
+      const abortController = new AbortController();
+      context.abortController = abortController;
 
-      expect(result.error).toContain('at least 2 characters');
+      fetchMock.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Results"}]}}'),
+      });
+
+      await tool.handler({ query: 'test' }, context);
+
+      // Verify that fetch was called with a signal
+      const fetchCall = fetchMock.mock.calls[0];
+      expect(fetchCall[1].signal).toBeDefined();
     });
   });
 });
