@@ -48,6 +48,7 @@ bun run build        # 构建
 ## 编码规范
 
 - **TDD**: 先写测试，再写实现
+- **测试目录**: 测试文件放在 `tests/` 目录下（与 `src/` 同级），例如 `tests/permissions/manager.test.ts`
 - **覆盖率**: > 80%
 - **类型**: 所有公共 API 必须完整类型
 - **结构**: `types/` (类型), `tools/` (工具), `providers/` (提供商), `agent/` (核心逻辑)
