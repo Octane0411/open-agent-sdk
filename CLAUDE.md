@@ -1,60 +1,66 @@
-# Open Agent SDK - Claude Code 项目上下文
+# Open Agent SDK - Claude Code Project Context
 
-## 快速导航
+## Quick Navigation
 
-| 文档 | 内容 |
-|------|------|
-| [架构决策记录](docs/adr/) | 技术决策背景 |
-| [产品需求](REQUIREMENTS.md) | 功能需求、版本规划 |
+| Document | Content |
+|----------|---------|
+| [Architecture Decision Records](docs/adr/) | Technical decision background |
+| [Requirements](REQUIREMENTS.md) | Feature requirements, version planning |
+| [Gap Analysis](docs/gap-analysis.md) | Comparison with Claude Agent SDK |
 
-## 项目结构
+## Project Structure
 
 ```
 open-agent-sdk/
-├── CLAUDE.md              # 本文件：项目上下文入口
-├── package.json           # Bun workspaces 配置
-├── REQUIREMENTS.md        # 产品需求文档
+├── CLAUDE.md              # This file: project context entry
+├── README.md              # Project documentation
+├── package.json           # Bun workspaces configuration
+├── REQUIREMENTS.md        # Product requirements
 └── packages/
-    └── core/              # 核心 SDK
+    └── core/              # Core SDK
         ├── src/
-        │   ├── index.ts      # 公开 API
-        │   ├── types/        # 消息、工具类型
-        │   ├── tools/        # Read/Write/Edit/Bash
-        │   ├── providers/    # OpenAI Provider
-        │   └── agent/        # ReAct 循环
+        │   ├── index.ts      # Public API
+        │   ├── types/        # Message, tool types
+        │   ├── tools/        # Read/Write/Edit/Bash/Glob/Grep/WebSearch/WebFetch/Task
+        │   ├── providers/    # OpenAI/Google providers
+        │   ├── agent/        # ReAct loop, subagent system
+        │   ├── session/      # Session management
+        │   ├── permissions/  # Permission system
+        │   └── hooks/        # Hooks framework
         └── tests/
 ```
 
-## 架构决策
+## Architecture Decisions
 
-项目采用**内核+扩展**的分包策略。详见 [ADR 001](docs/adr/001-monorepo-structure.md)
+The project uses a **core + extensions** packaging strategy. See [ADR 001](docs/adr/001-monorepo-structure.md) for details.
 
-## 技术栈
+## Tech Stack
 
-- **语言**: TypeScript 5.x (strict mode)
-- **运行时**: Bun
-- **测试**: Bun 内置测试框架
-- **核心依赖**: `openai`, `zod`
+- **Language**: TypeScript 5.x (strict mode)
+- **Runtime**: Bun
+- **Testing**: Bun built-in test framework
+- **Core Dependencies**: `ai` (Vercel AI SDK), `@ai-sdk/google`, `zod`
 
-## 常用命令
+## Common Commands
 
 ```bash
-bun install          # 安装依赖
-bun test             # 运行测试
-bun test --coverage  # 带覆盖率
-bun run build        # 构建
+bun install          # Install dependencies
+bun test             # Run tests
+bun test --coverage  # Run tests with coverage
+bun run build        # Build
 ```
 
-## 编码规范
+## Coding Standards
 
-- **TDD**: 先写测试，再写实现
-- **测试目录**: 测试文件放在 `tests/` 目录下（与 `src/` 同级），例如 `tests/permissions/manager.test.ts`
-- **覆盖率**: > 80%
-- **类型**: 所有公共 API 必须完整类型
-- **结构**: `types/` (类型), `tools/` (工具), `providers/` (提供商), `agent/` (核心逻辑)
+- **TDD**: Write tests first, then implementation
+- **Test Directory**: Test files go in `tests/` directory (sibling to `src/`), e.g., `tests/permissions/manager.test.ts`
+- **Coverage**: > 80%
+- **Types**: All public APIs must have complete types
+- **Structure**: `types/` (types), `tools/` (tools), `providers/` (providers), `agent/` (core logic), `session/` (session management), `permissions/` (permission system), `hooks/` (hooks framework)
 
-## 相关文档
+## Related Documents
 
-- [产品需求](REQUIREMENTS.md) - 完整功能需求
-- [Claude Agent SDK 参考](docs/dev/claude-agent-sdk-ts.md) - 对标产品 API
-- [Claude Agent SDK V2 Preview](docs/dev/claude-agent-sdk-ts-v2) - V2 接口设计参考
+- [Requirements](REQUIREMENTS.md) - Complete feature requirements
+- [Claude Agent SDK Reference](docs/dev/claude-agent-sdk-ts.md) - Reference product API
+- [Claude Agent SDK V2 Preview](docs/dev/claude-agent-sdk-ts-v2/) - V2 interface design reference
+- [Gap Analysis](docs/gap-analysis.md) - Feature gap analysis with Claude Agent SDK
