@@ -1,8 +1,16 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, type ModelMessage } from 'ai';
+import { streamText, type ModelMessage, jsonSchema } from 'ai';
 import { LLMProvider, type ProviderConfig, type LLMChunk, type ChatOptions } from './base';
 import type { SDKMessage, AssistantContentBlock } from '../types/messages';
 import type { ToolDefinition } from '../types/tools';
+
+/** Vercel AI SDK tool definition format
+ * Note: Vercel AI SDK expects 'inputSchema' to be a Schema object from jsonSchema()
+ */
+interface VercelTool {
+  description: string;
+  inputSchema: ReturnType<typeof jsonSchema>;
+}
 
 export interface OpenAIConfig extends ProviderConfig {
   // OpenAI-specific config
@@ -21,12 +29,27 @@ export class OpenAIProvider extends LLMProvider {
 
   async *chat(
     messages: SDKMessage[],
-    _tools?: ToolDefinition[],
+    tools?: ToolDefinition[],
     signal?: AbortSignal,
     options?: ChatOptions
   ): AsyncIterable<LLMChunk> {
     // Convert message format
     const coreMessages = this.convertToCoreMessages(messages);
+
+    // Convert tools to Vercel AI SDK format
+    // ToolDefinition format: { type: 'function', function: { name, description, parameters } }
+    // Vercel AI SDK expects: { [name]: { description, inputSchema: Schema } }
+    const vercelTools: Record<string, VercelTool> | undefined = tools?.length
+      ? Object.fromEntries(
+          tools.map((toolDef) => [
+            toolDef.function.name,
+            {
+              description: toolDef.function.description,
+              inputSchema: jsonSchema(toolDef.function.parameters),
+            },
+          ])
+        )
+      : undefined;
 
     // Use Vercel AI SDK's streamText
     const result = streamText({
@@ -36,11 +59,26 @@ export class OpenAIProvider extends LLMProvider {
       maxOutputTokens: this.config.maxTokens,
       temperature: this.config.temperature,
       abortSignal: signal,
+      tools: vercelTools,
     });
 
     // Process stream response
     for await (const textDelta of result.textStream) {
       yield { type: 'content', delta: textDelta };
+    }
+
+    // Get tool calls after stream completes (they are complete at this point)
+    const toolCalls = await result.toolCalls;
+    for (const toolCall of toolCalls) {
+      yield {
+        type: 'tool_call',
+        tool_call: {
+          id: toolCall.toolCallId,
+          name: toolCall.toolName,
+          // input can be undefined if the tool has no parameters, default to empty object
+          arguments: JSON.stringify(toolCall.input ?? {}),
+        },
+      };
     }
 
     // Get usage stats

@@ -20,5 +20,9 @@
   },
   "engines": {
     "bun": ">=1.0.0"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.21",
+    "ai": "^6.0.70"
   }
 }

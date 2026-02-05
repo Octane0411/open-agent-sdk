@@ -4,8 +4,19 @@
 
 import readline from 'readline';
 import chalk from 'chalk';
-import type { SDKMessage, SDKAssistantMessage, SDKToolResultMessage } from '@open-agent-sdk/core';
-import { Session, createSession, FileStorage } from '@open-agent-sdk/core';
+import type { SDKMessage, SDKAssistantMessage, SDKToolResultMessage, PermissionResult } from '@open-agent-sdk/core';
+import { Session, createSession, FileStorage, SENSITIVE_TOOLS } from '@open-agent-sdk/core';
+
+/** Permission choice type */
+type PermissionChoice = 'allow' | 'deny' | 'always';
+
+/** Tool permissions tracking */
+interface ToolPermissions {
+  /** Tools that are always allowed */
+  alwaysAllowed: Set<string>;
+  /** Whether to allow all tools this session */
+  allowAll: boolean;
+}
 import {
   printHeader,
   printHelp,
@@ -20,6 +31,7 @@ import {
 } from './utils.js';
 import { executeCommand } from './commands.js';
 import { ToolManager, TerminalRenderer } from './utils/index.js';
+import { createBuiltInHooksConfig } from './hooks/index.js';
 
 /** CLI class managing the interactive session */
 export class CLI {
@@ -32,6 +44,10 @@ export class CLI {
   private toolManager: ToolManager;
   private terminalRenderer: TerminalRenderer;
   private hasDisplayedTools = false;
+  private toolPermissions: ToolPermissions = {
+    alwaysAllowed: new Set(),
+    allowAll: false,
+  };
 
   constructor() {
     this.rl = readline.createInterface({
@@ -75,6 +91,8 @@ export class CLI {
         apiKey,
         maxTurns: 10,
         logLevel: 'silent',
+        canUseTool: this.createCanUseToolCallback(),
+        hooks: createBuiltInHooksConfig(),
         systemPrompt: `You are a helpful code assistant with access to file, shell, and web tools.
 
 Available tools:
@@ -86,14 +104,24 @@ Available tools:
 - Grep: Search for text in files
 - WebSearch: Search the web for information
 - WebFetch: Fetch and analyze webpage content
+- TaskList: List all tasks
+- TaskCreate: Create a new task
+- TaskGet: Get task details
+- TaskUpdate: Update task status
+
+IMPORTANT: When the user asks you to do something, you MUST use the appropriate tools to accomplish the task. Do not ask the user for permission to use tools - just use them directly.
 
 When using tools:
-1. Explain what you're doing before calling tools
-2. Show the results clearly
-3. If an error occurs, explain what went wrong
-4. Always confirm destructive operations (writes/edits) with the user first
-5. For web searches, use WebSearch to find relevant information
-6. For analyzing specific webpages, use WebFetch with a clear prompt
+1. **ALWAYS** use tools proactively to help the user - don't ask for permission
+2. Use Glob with pattern "*" to list files in the current directory
+3. Use Read to examine file contents when needed
+4. Use Bash to execute commands when appropriate
+5. Use WebSearch to find up-to-date information
+6. Use TaskCreate/TaskUpdate to track multi-step tasks
+7. Explain what you're doing before calling tools
+8. Show the results clearly after tools complete
+9. If an error occurs, explain what went wrong
+10. For destructive operations (writes/edits), the system will ask the user for confirmation
 
 Be concise but thorough in your responses.`,
         storage: this.storage,
@@ -289,6 +317,83 @@ Be concise but thorough in your responses.`,
     // The session messages are cleared by creating a new session
     // But we keep the same session object, so we just note it
     printInfo('Note: History will be cleared on next message');
+  }
+
+  /**
+   * Ask user for permission to execute a sensitive tool
+   * @returns Promise resolving to 'allow', 'deny', or 'always'
+   */
+  private async askForPermission(toolName: string, input: Record<string, unknown>): Promise<PermissionChoice> {
+    console.log();
+    console.log(chalk.yellow(`  Claude 想要执行 ${chalk.bold(toolName)}:`));
+
+    // Show relevant input parameters
+    if (toolName === 'Bash' && input.command) {
+      console.log(chalk.gray(`  命令: ${input.command}`));
+    } else if ((toolName === 'Write' || toolName === 'Edit') && input.file_path) {
+      console.log(chalk.gray(`  文件: ${input.file_path}`));
+    } else if (toolName === 'WebSearch' && input.query) {
+      console.log(chalk.gray(`  搜索: ${input.query}`));
+    } else if (toolName === 'WebFetch' && input.url) {
+      console.log(chalk.gray(`  URL: ${input.url}`));
+    }
+
+    return new Promise((resolve) => {
+      this.rl.question(chalk.cyan('  允许这次操作吗? (Y/n/a): '), (answer) => {
+        const normalized = answer.trim().toLowerCase();
+        if (normalized === 'a' || normalized === 'always') {
+          resolve('always');
+        } else if (normalized === 'n' || normalized === 'no' || normalized === 'deny') {
+          resolve('deny');
+        } else {
+          // Default to allow (Y or empty)
+          resolve('allow');
+        }
+      });
+    });
+  }
+
+  /**
+   * Create the canUseTool callback for session options
+   */
+  private createCanUseToolCallback(): (toolName: string, input: Record<string, unknown>) => Promise<PermissionResult> {
+    return async (toolName: string, input: Record<string, unknown>) => {
+      // Check if all tools are allowed this session
+      if (this.toolPermissions.allowAll) {
+        return { behavior: 'allow', updatedInput: input };
+      }
+
+      // Check if this specific tool is always allowed
+      if (this.toolPermissions.alwaysAllowed.has(toolName)) {
+        return { behavior: 'allow', updatedInput: input };
+      }
+
+      // Only ask for sensitive tools
+      if (!SENSITIVE_TOOLS.includes(toolName)) {
+        return { behavior: 'allow', updatedInput: input };
+      }
+
+      // Ask user for permission
+      const choice = await this.askForPermission(toolName, input);
+
+      switch (choice) {
+        case 'always':
+          this.toolPermissions.alwaysAllowed.add(toolName);
+          console.log(chalk.gray(`  ✓ 已记住对 ${toolName} 的允许设置`));
+          return { behavior: 'allow', updatedInput: input };
+        case 'deny':
+          console.log(chalk.red(`  ✗ 已拒绝 ${toolName} 操作`));
+          return {
+            behavior: 'deny',
+            message: `User denied permission to execute ${toolName}`,
+            interrupt: false,
+          };
+        case 'allow':
+        default:
+          console.log(chalk.green(`  ✓ 已允许`));
+          return { behavior: 'allow', updatedInput: input };
+      }
+    };
   }
 
   /** Shutdown the CLI */

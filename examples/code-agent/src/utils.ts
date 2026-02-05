@@ -73,6 +73,7 @@ export function printHelp(): void {
   console.log('  ' + chalk.green('/list') + '              List all saved sessions');
   console.log('  ' + chalk.green('/clear') + '             Clear current conversation history');
   console.log('  ' + chalk.green('/info') + '              Show current session info');
+  console.log('  ' + chalk.green('/tasks') + '             Show current task list');
   console.log();
   console.log(chalk.yellow.bold('Tips:'));
   console.log('  • Type any message to chat with the AI');

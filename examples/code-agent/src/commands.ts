@@ -2,8 +2,8 @@
  * Command handlers for the CLI Code Agent Demo
  */
 
-import type { FileStorage, InMemoryStorage } from '@open-agent-sdk/core';
-import { Session, resumeSession } from '@open-agent-sdk/core';
+import type { FileStorage, InMemoryStorage, ToolContext } from '@open-agent-sdk/core';
+import { Session, resumeSession, taskListTool } from '@open-agent-sdk/core';
 import { printSuccess, printError, printInfo, printSessionItem, printHelp } from './utils.js';
 
 /** Storage type - can be either FileStorage or InMemoryStorage */
@@ -159,6 +159,38 @@ registerCommand('/info', async (_, context) => {
   console.log(`  Messages: ${context.session.getMessages().length}`);
   console.log(`  Created:  ${new Date(context.session.createdAt).toLocaleString()}`);
   console.log();
+  return true;
+});
+
+/** Handle the /tasks command */
+registerCommand('/tasks', async () => {
+  try {
+    // Create minimal tool context
+    const toolContext: ToolContext = {
+      cwd: process.cwd(),
+      env: process.env as Record<string, string>,
+    };
+
+    const result = await taskListTool.handler({}, toolContext);
+
+    if (result.error) {
+      printError(`获取任务列表失败: ${result.error}`);
+      return true;
+    }
+
+    if (!result.tasks || result.tasks === 'No tasks found') {
+      printInfo('当前没有任务');
+      return true;
+    }
+
+    console.log();
+    console.log('任务列表:');
+    console.log();
+    console.log(result.tasks);
+    console.log();
+  } catch (error) {
+    printError(`获取任务列表失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
   return true;
 });
 
