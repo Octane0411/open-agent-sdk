@@ -15,6 +15,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.21",
     "@ai-sdk/openai": "^3.0.25",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@mozilla/readability": "^0.6.0",
     "ai": "^6.0.70",
     "jsdom": "^28.0.0",

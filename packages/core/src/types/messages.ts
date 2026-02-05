@@ -71,8 +71,8 @@ export interface SDKToolResultMessage extends BaseMessage {
 export type ApiKeySource = 'env' | 'keychain' | 'custom';
 
 
-/** MCP server configuration */
-export interface McpServerConfig {
+/** MCP server info in system message */
+export interface McpServerInfo {
   name: string;
   status: string;
 }
@@ -89,7 +89,7 @@ export interface SDKSystemMessage extends BaseMessage {
   tools: string[];
   cwd: string;
   apiKeySource?: ApiKeySource;
-  mcp_servers?: McpServerConfig[];
+  mcp_servers?: McpServerInfo[];
   permissionMode?: PermissionMode;
   slash_commands?: string[];
   output_style?: string;
@@ -137,7 +137,7 @@ export function createUserMessage(
 /** Options for creating system message */
 export interface CreateSystemMessageOptions {
   apiKeySource?: ApiKeySource;
-  mcp_servers?: McpServerConfig[];
+  mcp_servers?: McpServerInfo[];
   permissionMode?: PermissionMode;
   slash_commands?: string[];
   output_style?: string;

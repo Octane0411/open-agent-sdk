@@ -5,6 +5,7 @@
 
 import { logger, type LogLevel } from './utils/logger';
 import type { PermissionMode } from './permissions/types';
+import type { McpServersConfig } from './mcp/types';
 import { OpenAIProvider } from './providers/openai';
 import { GoogleProvider } from './providers/google';
 import { createDefaultRegistry } from './tools/registry';
@@ -52,7 +53,7 @@ export interface PromptOptions {
   /** Required to be true when using bypassPermissions mode */
   allowDangerouslySkipPermissions?: boolean;
   /** MCP servers configuration */
-  mcpServers?: Record<string, unknown>;
+  mcpServers?: McpServersConfig;
   /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent' (default: 'info') */
   logLevel?: LogLevel;
 }
@@ -155,7 +156,7 @@ export type {
   SDKResultMessage,
   ToolCall,
   ApiKeySource,
-  McpServerConfig,
+  McpServerInfo,
   CreateSystemMessageOptions,
 } from './types/messages';
 
@@ -310,3 +311,6 @@ export {
   createSubagentStartInput,
   createSubagentStopInput,
 } from './hooks';
+
+// Re-export MCP module
+export * from './mcp';
