@@ -1,211 +1,86 @@
-/**
- * Google Gemini Provider implementation using @google/genai
- */
-
-import { GoogleGenAI, type Content, type Part, type Schema } from '@google/genai';
-import { LLMProvider, type LLMChunk, type ChatOptions } from './base';
-import type { SDKMessage } from '../types/messages';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { streamText, type ModelMessage } from 'ai';
+import { LLMProvider, type ProviderConfig, type LLMChunk, type ChatOptions } from './base';
+import type { SDKMessage, AssistantContentBlock } from '../types/messages';
 import type { ToolDefinition } from '../types/tools';
-import { logger } from '../utils/logger';
 
-export interface GoogleConfig {
-  apiKey: string;
-  model: string;
-  maxTokens?: number;
-  temperature?: number;
+export interface GoogleConfig extends ProviderConfig {
+  // Google-specific config
 }
 
 export class GoogleProvider extends LLMProvider {
-  private client: GoogleGenAI;
+  private googleAI: ReturnType<typeof createGoogleGenerativeAI>;
 
   constructor(config: GoogleConfig) {
-    super({
+    super(config);
+    this.googleAI = createGoogleGenerativeAI({
       apiKey: config.apiKey,
-      model: config.model,
-      maxTokens: config.maxTokens,
-      temperature: config.temperature,
     });
-
-    this.client = new GoogleGenAI({ apiKey: config.apiKey });
   }
 
   async *chat(
     messages: SDKMessage[],
-    tools?: ToolDefinition[],
+    _tools?: ToolDefinition[],
     signal?: AbortSignal,
     options?: ChatOptions
   ): AsyncIterable<LLMChunk> {
-    try {
-      logger.debug('[GoogleProvider] Received messages:', messages.length);
+    // Convert message format
+    const coreMessages = this.convertToCoreMessages(messages);
 
-      // System instruction comes from options, not from SDKSystemMessage
-      const systemInstruction = options?.systemInstruction;
-      const history: Content[] = [];
-
-      for (const msg of messages) {
-        // Skip SDKSystemMessage - it's metadata only, no content
-        if (msg.type === 'system') {
-          continue;
-        }
-        const content = this.convertMessage(msg);
-        logger.debug(`[GoogleProvider] Converted ${msg.type}:`, content);
-        if (content) {
-          history.push(content);
-        }
-      }
-
-      logger.debug('[GoogleProvider] Converted history:', JSON.stringify(history, null, 2));
-
-    // Convert tools to Google format
-    const googleTools = tools?.map((tool) => ({
-      functionDeclarations: [
-        {
-          name: tool.function.name,
-          description: tool.function.description,
-          parameters: tool.function.parameters as unknown as Schema,
-        },
-      ],
-    }));
-
-    const config: {
-      maxOutputTokens?: number;
-      temperature?: number;
-      systemInstruction?: string;
-      tools?: Array<{ functionDeclarations: Array<{
-        name: string;
-        description: string;
-        parameters?: Schema;
-      }> }>;
-    } = {
+    // Use Vercel AI SDK's streamText
+    const result = streamText({
+      model: this.googleAI(this.config.model),
+      messages: coreMessages,
+      system: options?.systemInstruction,
       maxOutputTokens: this.config.maxTokens,
       temperature: this.config.temperature,
-    };
-
-    if (systemInstruction) {
-      config.systemInstruction = systemInstruction;
-    }
-
-    if (googleTools && googleTools.length > 0) {
-      config.tools = googleTools;
-    }
-
-    // Check signal before making request
-    if (signal?.aborted) {
-      yield { type: 'done' };
-      return;
-    }
-
-    // Use generateContentStream with full history
-    const response = await this.client.models.generateContentStream({
-      model: this.config.model,
-      contents: history,
-      config,
+      abortSignal: signal,
     });
 
-    for await (const chunk of response) {
-      // Check for abort signal after receiving each chunk
-      if (signal?.aborted) {
-        yield { type: 'done' };
-        return;
-      }
-      // Handle text content
-      if (chunk.text) {
-        yield {
-          type: 'content',
-          delta: chunk.text,
-        };
-      }
-
-      // Handle function calls (tool calls)
-      if (chunk.functionCalls && chunk.functionCalls.length > 0) {
-        for (const funcCall of chunk.functionCalls) {
-          yield {
-            type: 'tool_call',
-            tool_call: {
-              id: funcCall.id || `call_${Date.now()}`,
-              name: funcCall.name || '',
-              arguments: JSON.stringify(funcCall.args || {}),
-            },
-          };
-        }
-      }
-
-      // Handle usage metadata
-      if (chunk.usageMetadata) {
-        yield {
-          type: 'usage',
-          usage: {
-            input_tokens: chunk.usageMetadata.promptTokenCount || 0,
-            output_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
-          },
-        };
-      }
+    // Process stream response
+    for await (const textDelta of result.textStream) {
+      yield { type: 'content', delta: textDelta };
     }
+
+    // Get usage stats
+    const usage = await result.usage;
+    yield {
+      type: 'usage',
+      usage: {
+        input_tokens: usage.inputTokens ?? 0,
+        output_tokens: usage.outputTokens ?? 0,
+      },
+    };
 
     yield { type: 'done' };
-    } catch (error) {
-      logger.error('[GoogleProvider] Error:', error);
-      yield {
-        type: 'content',
-        delta: `Error: ${error instanceof Error ? error.message : String(error)}`,
-      };
-      yield { type: 'done' };
-    }
   }
 
-  private convertMessage(msg: SDKMessage): Content | null {
-    switch (msg.type) {
-      case 'user':
-        return {
-          role: 'user',
-          parts: [{ text: msg.message.content }],
-        };
-
-      case 'assistant': {
-        const parts: Part[] = [];
-        const textContent = msg.message.content.find((c) => c.type === 'text');
-
-        if (textContent) {
-          parts.push({ text: textContent.text });
-        }
-
-        const toolCalls = msg.message.tool_calls;
-        if (toolCalls) {
-          for (const tc of toolCalls) {
-            parts.push({
-              functionCall: {
-                name: tc.function.name,
-                args: JSON.parse(tc.function.arguments),
-              },
-            });
+  private convertToCoreMessages(messages: SDKMessage[]): ModelMessage[] {
+    return messages
+      .filter((msg) => msg.type !== 'system')
+      .map((msg) => {
+        switch (msg.type) {
+          case 'user':
+            return { role: 'user', content: msg.message.content };
+          case 'assistant': {
+            const text = msg.message.content
+              .filter((c: AssistantContentBlock) => c.type === 'text')
+              .map((c: AssistantContentBlock & { type: 'text' }) => c.text)
+              .join('');
+            return { role: 'assistant', content: text };
           }
+          case 'tool_result':
+            return {
+              role: 'tool',
+              toolCallId: msg.tool_use_id,
+              content: typeof msg.result === 'string'
+                ? msg.result
+                : JSON.stringify(msg.result),
+            } as unknown as ModelMessage;
+          default:
+            return null;
         }
-
-        return { role: 'model', parts };
-      }
-
-      case 'tool_result': {
-        const resultText =
-          typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
-        return {
-          role: 'user',
-          parts: [
-            {
-              functionResponse: {
-                name: msg.tool_name,
-                response: { result: resultText },
-              },
-            },
-          ],
-        };
-      }
-
-      default:
-        return null;
-    }
+      })
+      .filter((m): m is ModelMessage => m !== null);
   }
 }
-
-// Register with provider registry
-import { providerRegistry } from './base';
-providerRegistry.register('google', (config) => new GoogleProvider(config as GoogleConfig));
