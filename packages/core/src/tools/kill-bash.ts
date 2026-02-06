@@ -10,11 +10,8 @@ export interface KillBashInput {
 }
 
 export interface KillBashOutput {
-  shellId: string;
-  pid: number;
   success: boolean;
   message: string;
-  error?: string;
 }
 
 const parameters: JSONSchema = {
@@ -28,10 +25,6 @@ const parameters: JSONSchema = {
   required: ['shellId'],
 };
 
-// Constants for kill behavior
-const KILL_TIMEOUT_MS = 5000;
-const KILL_CHECK_INTERVAL_MS = 100;
-const SIGKILL_WAIT_MS = 100;
 
 export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
   name = 'KillBash';
@@ -45,79 +38,50 @@ export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
   ): Promise<KillBashOutput> => {
     const { shellId } = input;
 
-    const process = backgroundProcesses.get(shellId);
+    const bgProcess = backgroundProcesses.get(shellId);
 
-    if (!process) {
+    if (!bgProcess) {
       return {
-        shellId,
-        pid: -1,
         success: false,
-        message: '',
-        error: `Background process with ID '${shellId}' not found`,
+        message: `No background process found with ID: ${shellId}`,
       };
     }
 
     // Check if process has already exited
-    if (process.exitCode !== null) {
+    if (bgProcess.exitCode !== null) {
       return {
-        shellId,
-        pid: process.pid,
-        success: false,
-        message: `Process ${shellId} (PID: ${process.pid}) has already exited with code ${process.exitCode}`,
+        success: true,
+        message: `Process ${shellId} already exited with code ${bgProcess.exitCode}`,
       };
     }
 
     // Send SIGTERM
-    try {
-      process.process.kill('SIGTERM');
-    } catch (err) {
-      return {
-        shellId,
-        pid: process.pid,
-        success: false,
-        message: '',
-        error: `Failed to send SIGTERM: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      };
-    }
+    bgProcess.process.kill('SIGTERM');
 
-    // Wait up to 5 seconds for process to exit
-    const startTime = Date.now();
+    // Wait up to 5 seconds for graceful exit, then SIGKILL
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (bgProcess.exitCode !== null) {
+          clearInterval(checkInterval);
+          clearTimeout(forceKillTimeout);
+          resolve({
+            success: true,
+            message: `Process ${shellId} terminated with exit code ${bgProcess.exitCode}`,
+          });
+        }
+      }, 100);
 
-    while (Date.now() - startTime < KILL_TIMEOUT_MS) {
-      if (process.exitCode !== null) {
-        // Process exited after SIGTERM
-        return {
-          shellId,
-          pid: process.pid,
-          success: true,
-          message: `Process ${shellId} (PID: ${process.pid}) terminated successfully`,
-        };
-      }
-      await new Promise((resolve) => setTimeout(resolve, KILL_CHECK_INTERVAL_MS));
-    }
-
-    // Process still running, send SIGKILL
-    try {
-      process.process.kill('SIGKILL');
-    } catch (err) {
-      return {
-        shellId,
-        pid: process.pid,
-        success: false,
-        message: '',
-        error: `Failed to send SIGKILL: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      };
-    }
-
-    // Wait a bit more for SIGKILL to take effect
-    await new Promise((resolve) => setTimeout(resolve, SIGKILL_WAIT_MS));
-
-    return {
-      shellId,
-      pid: process.pid,
-      success: true,
-      message: `Process ${shellId} (PID: ${process.pid}) force killed`,
-    };
+      const forceKillTimeout = setTimeout(() => {
+        clearInterval(checkInterval);
+        if (bgProcess.exitCode === null) {
+          bgProcess.process.kill('SIGKILL');
+          resolve({
+            success: true,
+            message: `Process ${shellId} force-killed with SIGKILL`,
+          });
+        }
+      }, 5000);
+    });
   };
 }
 

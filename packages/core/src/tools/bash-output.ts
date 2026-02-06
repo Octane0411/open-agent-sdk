@@ -10,12 +10,10 @@ export interface BashOutputInput {
 }
 
 export interface BashOutputOutput {
-  shellId: string;
-  pid: number;
-  running: boolean;
-  exitCode: number | null;
   stdout: string;
   stderr: string;
+  exitCode: number | null;
+  running: boolean;
   error?: string;
 }
 
@@ -46,13 +44,11 @@ export class BashOutputTool implements Tool<BashOutputInput, BashOutputOutput> {
 
     if (!process) {
       return {
-        shellId,
-        pid: -1,
-        running: false,
-        exitCode: null,
         stdout: '',
         stderr: '',
-        error: `Background process with ID '${shellId}' not found`,
+        exitCode: null,
+        running: false,
+        error: `No background process found with ID: ${shellId}`,
       };
     }
 
@@ -60,12 +56,10 @@ export class BashOutputTool implements Tool<BashOutputInput, BashOutputOutput> {
     const running = process.exitCode === null;
 
     return {
-      shellId,
-      pid: process.pid,
-      running,
-      exitCode: process.exitCode,
       stdout: process.stdout,
       stderr: process.stderr,
+      exitCode: process.exitCode,
+      running,
     };
   };
 }

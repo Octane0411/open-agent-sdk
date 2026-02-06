@@ -38,9 +38,8 @@ describe('KillBashTool', () => {
       context
     );
 
-    expect(result.error).toBeDefined();
-    expect(result.error).toContain('not found');
     expect(result.success).toBe(false);
+    expect(result.message).toContain('No background process');
   });
 
   test('should kill a running background process', async () => {
@@ -62,7 +61,6 @@ describe('KillBashTool', () => {
     // Kill the process
     const result = await tool.handler({ shellId }, context);
 
-    expect(result.shellId).toBe(shellId);
     expect(result.success).toBe(true);
     expect(result.message).toContain('terminated');
 
@@ -92,30 +90,7 @@ describe('KillBashTool', () => {
     // Try to kill the already exited process
     const result = await tool.handler({ shellId }, context);
 
-    expect(result.shellId).toBe(shellId);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
     expect(result.message).toContain('already exited');
-  });
-
-  test('should include pid in output', async () => {
-    const bashResult = await bashTool.handler(
-      {
-        command: 'sleep 30',
-        run_in_background: true,
-      },
-      context
-    );
-
-    const shellId = bashResult.shellId!;
-
-    const result = await tool.handler({ shellId }, context);
-
-    expect(result.pid).toBeGreaterThan(0);
-
-    // Clean up
-    const bgProcess = backgroundProcesses.get(shellId);
-    if (bgProcess) {
-      bgProcess.process.kill('SIGTERM');
-    }
   });
 });

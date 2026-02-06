@@ -39,7 +39,7 @@ describe('BashOutputTool', () => {
     );
 
     expect(result.error).toBeDefined();
-    expect(result.error).toContain('not found');
+    expect(result.error).toContain('No background process');
   });
 
   test('should return running status for active process', async () => {
@@ -56,7 +56,6 @@ describe('BashOutputTool', () => {
 
     const result = await tool.handler({ shellId }, context);
 
-    expect(result.shellId).toBe(shellId);
     expect(result.running).toBe(true);
     expect(result.exitCode).toBeNull();
 
@@ -83,7 +82,6 @@ describe('BashOutputTool', () => {
 
     const result = await tool.handler({ shellId }, context);
 
-    expect(result.shellId).toBe(shellId);
     expect(result.running).toBe(false);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('hello world');
@@ -128,19 +126,4 @@ describe('BashOutputTool', () => {
     expect(result.running).toBe(false);
   });
 
-  test('should include pid in output', async () => {
-    const bashResult = await bashTool.handler(
-      {
-        command: 'echo "test"',
-        run_in_background: true,
-      },
-      context
-    );
-
-    const shellId = bashResult.shellId!;
-
-    const result = await tool.handler({ shellId }, context);
-
-    expect(result.pid).toBeGreaterThan(0);
-  });
 });
