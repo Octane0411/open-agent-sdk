@@ -5,6 +5,7 @@
 
 import { OpenAIProvider } from '../providers/openai';
 import { GoogleProvider } from '../providers/google';
+import { AnthropicProvider } from '../providers/anthropic';
 import { createDefaultRegistry } from '../tools/registry';
 import { ReActLoop } from '../agent/react-loop';
 import { Session } from './session';
@@ -17,8 +18,8 @@ import type { PermissionMode, CanUseTool } from '../permissions/types';
 export interface CreateSessionOptions {
   /** Model identifier (e.g., 'gpt-4o', 'gemini-2.0-flash') */
   model: string;
-  /** Provider to use: 'openai' or 'google' (auto-detected from model name if not specified) */
-  provider?: 'openai' | 'google';
+  /** Provider to use: 'openai', 'google', or 'anthropic' (auto-detected from model name if not specified) */
+  provider?: 'openai' | 'google' | 'anthropic';
   /** API key (defaults to OPENAI_API_KEY or GEMINI_API_KEY env var based on provider) */
   apiKey?: string;
   /** Maximum conversation turns (default: 10) */
@@ -98,15 +99,19 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
   logger.setLevel(logLevel);
 
   // Auto-detect provider from model name if not specified
+  const modelLower = options.model.toLowerCase();
   const providerType = options.provider ??
-    (options.model.toLowerCase().includes('gemini') ? 'google' : 'openai');
+    (modelLower.includes('gemini') ? 'google' :
+     modelLower.includes('claude') ? 'anthropic' : 'openai');
 
   // Get API key based on provider
   const apiKey = options.apiKey ??
-    (providerType === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY);
+    (providerType === 'google' ? process.env.GEMINI_API_KEY :
+     providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY);
 
   if (!apiKey) {
-    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
+    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' :
+                    providerType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
     throw new Error(
       `${providerType} API key is required. Provide it via options.apiKey or ${keyName} environment variable.`
     );
@@ -116,9 +121,14 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
   const storage = options.storage ?? new InMemoryStorage();
 
   // Create provider
-  const provider = providerType === 'google'
-    ? new GoogleProvider({ apiKey, model: options.model })
-    : new OpenAIProvider({ apiKey, model: options.model });
+  let provider;
+  if (providerType === 'google') {
+    provider = new GoogleProvider({ apiKey, model: options.model });
+  } else if (providerType === 'anthropic') {
+    provider = new AnthropicProvider({ apiKey, model: options.model });
+  } else {
+    provider = new OpenAIProvider({ apiKey, model: options.model });
+  }
 
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
@@ -220,22 +230,29 @@ export async function resumeSession(
   }
 
   // Get API key (use override or from options, or env var)
-  const providerType = sessionData.provider as 'openai' | 'google';
+  const providerType = sessionData.provider as 'openai' | 'google' | 'anthropic';
   const apiKey = options?.apiKey ??
     sessionData.options.apiKey ??
-    (providerType === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY);
+    (providerType === 'google' ? process.env.GEMINI_API_KEY :
+     providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY);
 
   if (!apiKey) {
-    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
+    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' :
+                    providerType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
     throw new Error(
       `${providerType} API key is required. Provide it via options.apiKey, saved session options, or ${keyName} environment variable.`
     );
   }
 
   // Create provider
-  const provider = providerType === 'google'
-    ? new GoogleProvider({ apiKey, model: sessionData.model })
-    : new OpenAIProvider({ apiKey, model: sessionData.model });
+  let provider;
+  if (providerType === 'google') {
+    provider = new GoogleProvider({ apiKey, model: sessionData.model });
+  } else if (providerType === 'anthropic') {
+    provider = new AnthropicProvider({ apiKey, model: sessionData.model });
+  } else {
+    provider = new OpenAIProvider({ apiKey, model: sessionData.model });
+  }
 
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();

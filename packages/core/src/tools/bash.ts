@@ -2,8 +2,17 @@
  * Bash tool - Execute shell commands with timeout and background support
  */
 
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import type { Tool, ToolContext, JSONSchema } from '../types/tools';
+
+export interface BackgroundProcess {
+  pid: number;
+  startTime: number;
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  process: ChildProcess;
+}
 
 export interface BashInput {
   command: string;
@@ -45,7 +54,7 @@ const parameters: JSONSchema = {
 
 // Track background processes
 let backgroundProcessId = 0;
-const backgroundProcesses = new Map<string, { pid: number; startTime: number }>();
+export const backgroundProcesses = new Map<string, BackgroundProcess>();
 
 export class BashTool implements Tool<BashInput, BashOutput> {
   name = 'Bash';
@@ -97,9 +106,28 @@ export class BashTool implements Tool<BashInput, BashOutput> {
       // Handle background execution
       if (run_in_background) {
         const shellId = `shell_${++backgroundProcessId}`;
-        backgroundProcesses.set(shellId, {
+        const bgProcess: BackgroundProcess = {
           pid: child.pid!,
           startTime: Date.now(),
+          stdout: '',
+          stderr: '',
+          exitCode: null,
+          process: child,
+        };
+        backgroundProcesses.set(shellId, bgProcess);
+
+        // Capture stdout/stderr
+        child.stdout?.on('data', (data) => {
+          bgProcess.stdout += data.toString();
+        });
+
+        child.stderr?.on('data', (data) => {
+          bgProcess.stderr += data.toString();
+        });
+
+        // Set exit code when process exits (don't delete from map)
+        child.on('exit', (code) => {
+          bgProcess.exitCode = code ?? -1;
         });
 
         // Don't wait for completion
@@ -107,11 +135,6 @@ export class BashTool implements Tool<BashInput, BashOutput> {
           output: `Command running in background with ID: ${shellId}`,
           exitCode: 0,
           shellId,
-        });
-
-        // Clean up when process exits
-        child.on('exit', () => {
-          backgroundProcesses.delete(shellId);
         });
 
         return;

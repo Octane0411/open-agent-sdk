@@ -8,6 +8,7 @@ import type { PermissionMode } from './permissions/types';
 import type { McpServersConfig } from './mcp/types';
 import { OpenAIProvider } from './providers/openai';
 import { GoogleProvider } from './providers/google';
+import { AnthropicProvider } from './providers/anthropic';
 import { createDefaultRegistry } from './tools/registry';
 import { ReActLoop } from './agent/react-loop';
 // ToolRegistry type used indirectly through createDefaultRegistry
@@ -32,8 +33,8 @@ export interface PromptOptions {
   model: string;
   /** API key (defaults to OPENAI_API_KEY or GEMINI_API_KEY env var based on provider) */
   apiKey?: string;
-  /** Provider to use: 'openai' or 'google' (auto-detected from model name if not specified) */
-  provider?: 'openai' | 'google';
+  /** Provider to use: 'openai', 'google', or 'anthropic' (auto-detected from model name if not specified) */
+  provider?: 'openai' | 'google' | 'anthropic';
   /** Base URL for API (OpenAI only) */
   baseURL?: string;
   /** Maximum conversation turns (default: 10) */
@@ -98,24 +99,33 @@ export async function prompt(
   const startTime = Date.now();
 
   // Auto-detect provider from model name if not specified
+  const modelLower = options.model.toLowerCase();
   const providerType = options.provider ??
-    (options.model.toLowerCase().includes('gemini') ? 'google' : 'openai');
+    (modelLower.includes('gemini') ? 'google' :
+     modelLower.includes('claude') ? 'anthropic' : 'openai');
 
   // Get API key based on provider
   const apiKey = options.apiKey ??
-    (providerType === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY);
+    (providerType === 'google' ? process.env.GEMINI_API_KEY :
+     providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY);
 
   if (!apiKey) {
-    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
+    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' :
+                    providerType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
     throw new Error(
       `${providerType} API key is required. Provide it via options.apiKey or ${keyName} environment variable.`
     );
   }
 
   // Create provider
-  const provider = providerType === 'google'
-    ? new GoogleProvider({ apiKey, model: options.model })
-    : new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
+  let provider;
+  if (providerType === 'google') {
+    provider = new GoogleProvider({ apiKey, model: options.model });
+  } else if (providerType === 'anthropic') {
+    provider = new AnthropicProvider({ apiKey, model: options.model });
+  } else {
+    provider = new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
+  }
 
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
@@ -183,6 +193,8 @@ export type { TaskGetInput, TaskGetOutput } from './tools/task-get';
 export type { TaskUpdateInput, TaskUpdateOutput } from './tools/task-update';
 export type { WebSearchInput, WebSearchOutput } from './tools/web-search';
 export type { WebFetchInput, WebFetchOutput } from './tools/web-fetch';
+export type { BashOutputInput, BashOutputOutput } from './tools/bash-output';
+export type { KillBashInput, KillBashOutput } from './tools/kill-bash';
 
 // Re-export task types
 export type { Task, TaskStatus, TaskStorage } from './types/task';
@@ -191,6 +203,7 @@ export type { Task, TaskStatus, TaskStorage } from './types/task';
 export { LLMProvider, type LLMChunk, type ProviderConfig, type ChatOptions, type TokenUsage } from './providers/base';
 export { OpenAIProvider, type OpenAIConfig } from './providers/openai';
 export { GoogleProvider, type GoogleConfig } from './providers/google';
+export { AnthropicProvider, type AnthropicConfig } from './providers/anthropic';
 
 // Re-export tools
 export {
@@ -220,6 +233,10 @@ export {
   webSearchTool,
   WebFetchTool,
   webFetchTool,
+  BashOutputTool,
+  bashOutputTool,
+  KillBashTool,
+  killBashTool,
 } from './tools/registry';
 
 // Re-export agent
@@ -293,10 +310,14 @@ export {
   type BaseHookInput,
   type PreToolUseHookInput,
   type PostToolUseHookInput,
+  type NotificationHookInput,
+  type UserPromptSubmitHookInput,
   type SessionStartHookInput,
   type SessionEndHookInput,
+  type StopHookInput,
   type SubagentStartHookInput,
   type SubagentStopHookInput,
+  type PreCompactHookInput,
   type ExitReason,
   type HookCallback,
   type HookCallbackMatcher,
@@ -310,6 +331,10 @@ export {
   createSessionEndInput,
   createSubagentStartInput,
   createSubagentStopInput,
+  createNotificationInput,
+  createStopInput,
+  createPreCompactInput,
+  createUserPromptSubmitInput,
 } from './hooks';
 
 // Re-export MCP module

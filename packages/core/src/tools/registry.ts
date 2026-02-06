@@ -15,6 +15,8 @@ import { TaskGetTool } from './task-get';
 import { TaskUpdateTool } from './task-update';
 import { WebSearchTool } from './web-search';
 import { WebFetchTool } from './web-fetch';
+import { BashOutputTool } from './bash-output';
+import { KillBashTool } from './kill-bash';
 
 export class ToolRegistry {
   private tools = new Map<string, Tool<any, any>>();
@@ -75,6 +77,8 @@ export function createDefaultRegistry(): ToolRegistry {
   registry.register(new TaskUpdateTool());
   registry.register(new WebSearchTool());
   registry.register(new WebFetchTool());
+  registry.register(new BashOutputTool());
+  registry.register(new KillBashTool());
   return registry;
 }
 
@@ -94,3 +98,5 @@ export { taskGetTool, TaskGetTool } from './task-get';
 export { taskUpdateTool, TaskUpdateTool } from './task-update';
 export { webSearchTool, WebSearchTool } from './web-search';
 export { webFetchTool, WebFetchTool } from './web-fetch';
+export { bashOutputTool, BashOutputTool } from './bash-output';
+export { killBashTool, KillBashTool } from './kill-bash';
