@@ -2,6 +2,7 @@ import { describe, it, expect } from 'bun:test';
 import { ReActLoop, type ReActLoopConfig } from '../../src/agent/react-loop';
 import { ToolRegistry } from '../../src/tools/registry';
 import { ReadTool } from '../../src/tools/read';
+import { AskUserQuestionTool } from '../../src/tools/ask-user-question';
 import { LLMProvider, type LLMChunk } from '../../src/providers/base';
 import type { SDKMessage } from '../../src/types/messages';
 import type { ToolDefinition } from '../../src/types/tools';
@@ -207,6 +208,141 @@ describe('ReAct Loop', () => {
 
     const result = await loop.run('Hello');
     expect(result.result).toBe('Done');
+  });
+
+  describe('AskUserQuestion special handling', () => {
+    it('should return error when AskUserQuestion is called without canUseTool callback', async () => {
+      const registry = new ToolRegistry();
+      registry.register(new AskUserQuestionTool());
+
+      const mockProvider = new MockProvider({ apiKey: 'test', model: 'test' });
+
+      mockProvider.setResponses([
+        [
+          {
+            type: 'assistant',
+            content: '',
+            tool_calls: [
+              {
+                id: 'call_1',
+                type: 'function',
+                function: {
+                  name: 'AskUserQuestion',
+                  arguments: JSON.stringify({
+                    questions: [
+                      {
+                        question: 'Which option?',
+                        header: 'Option',
+                        options: [
+                          { label: 'A', description: 'Option A' },
+                          { label: 'B', description: 'Option B' },
+                        ],
+                        multiSelect: false,
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          },
+        ],
+        [
+          {
+            type: 'assistant',
+            content: 'Received error',
+          },
+        ],
+      ]);
+
+      const loop = new ReActLoop(mockProvider, registry, {
+        maxTurns: 5,
+        allowedTools: ['AskUserQuestion'],
+        // No canUseTool callback provided
+      });
+
+      const result = await loop.run('Ask a question');
+
+      // The tool should fail with an error about missing canUseTool
+      const toolResultMsg = result.messages.find(
+        (m) => m.type === 'tool_result' && m.tool_name === 'AskUserQuestion'
+      ) as { type: 'tool_result'; tool_use_id: string; tool_name: string; result: unknown; is_error: boolean } | undefined;
+      expect(toolResultMsg).toBeDefined();
+      expect(toolResultMsg?.is_error).toBe(true);
+      expect(toolResultMsg?.result).toContain(
+        'requires a canUseTool callback'
+      );
+    });
+
+    it('should allow AskUserQuestion when canUseTool callback is provided', async () => {
+      const registry = new ToolRegistry();
+      registry.register(new AskUserQuestionTool());
+
+      const mockProvider = new MockProvider({ apiKey: 'test', model: 'test' });
+
+      mockProvider.setResponses([
+        [
+          {
+            type: 'assistant',
+            content: '',
+            tool_calls: [
+              {
+                id: 'call_1',
+                type: 'function',
+                function: {
+                  name: 'AskUserQuestion',
+                  arguments: JSON.stringify({
+                    questions: [
+                      {
+                        question: 'Which option?',
+                        header: 'Option',
+                        options: [
+                          { label: 'A', description: 'Option A' },
+                          { label: 'B', description: 'Option B' },
+                        ],
+                        multiSelect: false,
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          },
+        ],
+        [
+          {
+            type: 'assistant',
+            content: 'Got answer: A',
+          },
+        ],
+      ]);
+
+      const loop = new ReActLoop(mockProvider, registry, {
+        maxTurns: 5,
+        allowedTools: ['AskUserQuestion'],
+        canUseTool: async (toolName, input) => {
+          if (toolName === 'AskUserQuestion') {
+            return {
+              behavior: 'allow',
+              updatedInput: {
+                ...input,
+                answers: { 'Which option?': 'A' },
+              },
+            };
+          }
+          return { behavior: 'allow', updatedInput: input };
+        },
+      });
+
+      const result = await loop.run('Ask a question');
+
+      // The tool should succeed
+      const toolResultMsg = result.messages.find(
+        (m) => m.type === 'tool_result' && m.tool_name === 'AskUserQuestion'
+      ) as { type: 'tool_result'; tool_use_id: string; tool_name: string; result: unknown; is_error: boolean } | undefined;
+      expect(toolResultMsg).toBeDefined();
+      expect(toolResultMsg?.is_error).toBe(false);
+      expect(toolResultMsg?.result).toContain('A');
+    });
   });
 });
 

@@ -100,3 +100,4 @@ export { webSearchTool, WebSearchTool } from './web-search';
 export { webFetchTool, WebFetchTool } from './web-fetch';
 export { bashOutputTool, BashOutputTool } from './bash-output';
 export { killBashTool, KillBashTool } from './kill-bash';
+export { askUserQuestionTool, AskUserQuestionTool } from './ask-user-question';

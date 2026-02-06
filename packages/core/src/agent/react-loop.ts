@@ -32,7 +32,7 @@ import {
 } from '../hooks/inputs';
 import type { SyncHookJSONOutput } from '../hooks/types';
 import { PermissionManager } from '../permissions/manager';
-import type { PermissionMode, CanUseTool } from '../permissions/types';
+import type { PermissionMode, CanUseTool, PermissionCheckResult } from '../permissions/types';
 
 /** Generate a simple UUID v4 */
 function generateUUID(): UUID {
@@ -570,6 +570,19 @@ export class ReActLoop {
 
     const cwd = this.config.cwd ?? process.cwd();
 
+    // Special handling for AskUserQuestion tool
+    if (toolCall.function.name === 'AskUserQuestion') {
+      // AskUserQuestion requires canUseTool callback
+      if (!this.config.canUseTool) {
+        return {
+          content: 'Error: AskUserQuestion requires a canUseTool callback to be configured. The tool cannot function without user interaction capability.',
+          isError: true,
+        };
+      }
+      // If canUseTool exists, it will be handled by the normal permission flow
+      // The canUseTool callback will fill in the answers via updatedInput
+    }
+
     // Trigger PreToolUse hook
     const preToolInput = createPreToolUseInput(
       this.sessionId,
@@ -628,11 +641,37 @@ export class ReActLoop {
     }
 
     // Check permissions using PermissionManager
-    const permissionResult = await this.permissionManager.checkPermission(
-      toolCall.function.name,
-      modifiedInput as Record<string, unknown>,
-      { signal: this.config.abortController?.signal ?? new AbortController().signal }
-    );
+    // For AskUserQuestion, add 60-second timeout
+    let permissionResult: PermissionCheckResult;
+
+    if (toolCall.function.name === 'AskUserQuestion') {
+      const timeoutMs = 60_000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AskUserQuestion timed out after 60 seconds')), timeoutMs)
+      );
+
+      try {
+        permissionResult = await Promise.race([
+          this.permissionManager.checkPermission(
+            toolCall.function.name,
+            modifiedInput as Record<string, unknown>,
+            { signal: this.config.abortController?.signal ?? new AbortController().signal }
+          ),
+          timeoutPromise,
+        ]);
+      } catch (error) {
+        return {
+          content: `Error: ${error instanceof Error ? error.message : 'AskUserQuestion timed out'}`,
+          isError: true,
+        };
+      }
+    } else {
+      permissionResult = await this.permissionManager.checkPermission(
+        toolCall.function.name,
+        modifiedInput as Record<string, unknown>,
+        { signal: this.config.abortController?.signal ?? new AbortController().signal }
+      );
+    }
 
     if (!permissionResult.approved) {
       // Trigger PermissionRequest hook on denial
