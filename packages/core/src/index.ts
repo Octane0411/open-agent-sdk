@@ -184,7 +184,7 @@ export type {
 export type { ReadInput, ReadOutput } from './tools/read';
 export type { WriteInput, WriteOutput } from './tools/write';
 export type { EditInput, EditOutput } from './tools/edit';
-export type { BashInput, BashOutput } from './tools/bash';
+export type { BashInput, BashOutput, BackgroundProcess } from './tools/bash';
 export type { GlobInput, GlobOutput } from './tools/glob';
 export type { GrepInput, GrepOutput, GrepMatch } from './tools/grep';
 export type { TaskListInput, TaskListOutput } from './tools/task-list';

@@ -28,6 +28,11 @@ const parameters: JSONSchema = {
   required: ['shellId'],
 };
 
+// Constants for kill behavior
+const KILL_TIMEOUT_MS = 5000;
+const KILL_CHECK_INTERVAL_MS = 100;
+const SIGKILL_WAIT_MS = 100;
+
 export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
   name = 'KillBash';
   description =
@@ -57,20 +62,28 @@ export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
       return {
         shellId,
         pid: process.pid,
-        success: true,
+        success: false,
         message: `Process ${shellId} (PID: ${process.pid}) has already exited with code ${process.exitCode}`,
       };
     }
 
     // Send SIGTERM
-    process.process.kill('SIGTERM');
+    try {
+      process.process.kill('SIGTERM');
+    } catch (err) {
+      return {
+        shellId,
+        pid: process.pid,
+        success: false,
+        message: '',
+        error: `Failed to send SIGTERM: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      };
+    }
 
     // Wait up to 5 seconds for process to exit
-    const waitTime = 5000;
-    const checkInterval = 100;
     const startTime = Date.now();
 
-    while (Date.now() - startTime < waitTime) {
+    while (Date.now() - startTime < KILL_TIMEOUT_MS) {
       if (process.exitCode !== null) {
         // Process exited after SIGTERM
         return {
@@ -80,14 +93,24 @@ export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
           message: `Process ${shellId} (PID: ${process.pid}) terminated successfully`,
         };
       }
-      await new Promise((resolve) => setTimeout(resolve, checkInterval));
+      await new Promise((resolve) => setTimeout(resolve, KILL_CHECK_INTERVAL_MS));
     }
 
     // Process still running, send SIGKILL
-    process.process.kill('SIGKILL');
+    try {
+      process.process.kill('SIGKILL');
+    } catch (err) {
+      return {
+        shellId,
+        pid: process.pid,
+        success: false,
+        message: '',
+        error: `Failed to send SIGKILL: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      };
+    }
 
     // Wait a bit more for SIGKILL to take effect
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, SIGKILL_WAIT_MS));
 
     return {
       shellId,

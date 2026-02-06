@@ -93,7 +93,7 @@ describe('KillBashTool', () => {
     const result = await tool.handler({ shellId }, context);
 
     expect(result.shellId).toBe(shellId);
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
     expect(result.message).toContain('already exited');
   });
 
