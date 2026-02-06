@@ -2,7 +2,8 @@ import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 import TurndownService from 'turndown';
 import type { Tool, ToolContext, JSONSchema } from '../types/tools.js';
-import { createUserMessage, type UUID } from '../types/messages.js';
+import { createUserMessage } from '../types/messages.js';
+import { generateUUID } from '../utils/uuid.js';
 
 export interface WebFetchInput {
   url: string;
@@ -31,15 +32,6 @@ const parameters: JSONSchema = {
   },
   required: ['url', 'prompt'],
 };
-
-// Simple UUID generator for messages
-function generateUUID(): UUID {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 export class WebFetchTool implements Tool<WebFetchInput, WebFetchOutput> {
   name = 'WebFetch';

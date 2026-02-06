@@ -7,12 +7,12 @@ import type { LLMProvider, ChatOptions } from '../providers/base';
 import type { ToolRegistry } from '../tools/registry';
 import type { Tool, ToolContext } from '../types/tools';
 import { logger } from '../utils/logger';
+import { generateUUID } from '../utils/uuid';
 import {
   type SDKMessage,
   type SDKAssistantMessage,
   type SDKToolResultMessage,
   type ToolCall,
-  type UUID,
   createUserMessage,
   createSystemMessage,
   createAssistantMessage,
@@ -33,15 +33,6 @@ import {
 import type { SyncHookJSONOutput } from '../hooks/types';
 import { PermissionManager } from '../permissions/manager';
 import type { PermissionMode, CanUseTool, PermissionCheckResult } from '../permissions/types';
-
-/** Generate a simple UUID v4 */
-function generateUUID(): UUID {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 export interface ReActLoopConfig {
   maxTurns: number;

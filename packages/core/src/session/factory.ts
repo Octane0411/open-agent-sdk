@@ -11,6 +11,7 @@ import { ReActLoop } from '../agent/react-loop';
 import { Session } from './session';
 import { InMemoryStorage, type SessionStorage, type SessionData } from './storage';
 import { logger, type LogLevel } from '../utils/logger';
+import { generateUUID } from '../utils/uuid';
 import type { HooksConfig } from '../hooks/types';
 import type { PermissionMode, CanUseTool } from '../permissions/types';
 
@@ -304,17 +305,6 @@ export async function resumeSession(
 }
 
 /**
- * Generate a simple UUID v4
- */
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-/**
  * Fork an existing session, creating a new session with copied message history
  * The new session can optionally override model, provider, and other options
  *
@@ -402,27 +392,30 @@ export async function forkSession(
     hooks: options.hooks ?? sourceData.options.hooks,
   });
 
-  // Generate new session ID
+  // Generate new session ID and fork timestamp
   const newId = generateUUID();
+  const forkTimestamp = Date.now();
 
-  // Create new Session instance
+  // Create new Session instance with fork metadata
   const session = new Session(loop, {
     id: newId,
     model,
     provider: providerType,
+    parentSessionId: sourceSessionId,
+    forkedAt: forkTimestamp,
   }, storage);
 
   // Copy message history from source session
   (session as unknown as { messages: unknown[] }).messages = [...sourceData.messages];
-  (session as unknown as { createdAt: number }).createdAt = Date.now();
+  (session as unknown as { createdAt: number }).createdAt = forkTimestamp;
 
   // Save forked session data with parent tracking
   const forkedData: SessionData = {
     id: newId,
     model,
     provider: providerType,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+    createdAt: forkTimestamp,
+    updatedAt: forkTimestamp,
     messages: [...sourceData.messages],
     options: {
       ...sourceData.options,
@@ -433,7 +426,7 @@ export async function forkSession(
       hooks: options.hooks ?? sourceData.options.hooks,
     },
     parentSessionId: sourceSessionId,
-    forkedAt: Date.now(),
+    forkedAt: forkTimestamp,
   };
 
   await storage.save(forkedData);

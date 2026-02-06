@@ -65,6 +65,10 @@ export interface SessionOptions {
   provider: string;
   /** Optional session ID (generated if not provided) */
   id?: string;
+  /** Parent session ID if this session was forked */
+  parentSessionId?: string;
+  /** Timestamp when this session was forked */
+  forkedAt?: number;
 }
 
 /** Generate a simple UUID v4 */
@@ -99,6 +103,8 @@ export class Session {
   readonly model: string;
   readonly provider: string;
   readonly createdAt: number;
+  readonly parentSessionId?: string;
+  readonly forkedAt?: number;
 
   private _state: SessionState;
   private loop: ReActLoop;
@@ -113,6 +119,8 @@ export class Session {
     this.provider = options.provider;
     this.createdAt = Date.now();
     this.updatedAt = this.createdAt;
+    this.parentSessionId = options.parentSessionId;
+    this.forkedAt = options.forkedAt;
     this.loop = loop;
     this.messages = [];
     this._state = SessionState.IDLE;
@@ -137,14 +145,16 @@ export class Session {
       return null;
     }
 
-    // Create session with loaded data
+    // Create session with loaded data including fork metadata
     const session = new Session(loop, {
       id: data.id,
       model: data.model,
       provider: data.provider,
+      parentSessionId: data.parentSessionId,
+      forkedAt: data.forkedAt,
     }, storage);
 
-    // Restore message history
+    // Restore message history and timestamps
     (session as unknown as { messages: SDKMessage[] }).messages = [...data.messages];
     (session as unknown as { createdAt: number }).createdAt = data.createdAt;
     (session as unknown as { updatedAt: number }).updatedAt = data.updatedAt;
@@ -174,6 +184,8 @@ export class Session {
         model: this.model,
         provider: this.provider,
       },
+      parentSessionId: this.parentSessionId,
+      forkedAt: this.forkedAt,
     };
 
     await this.storage.save(sessionData);
