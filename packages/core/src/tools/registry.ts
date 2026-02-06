@@ -94,3 +94,4 @@ export { taskGetTool, TaskGetTool } from './task-get';
 export { taskUpdateTool, TaskUpdateTool } from './task-update';
 export { webSearchTool, WebSearchTool } from './web-search';
 export { webFetchTool, WebFetchTool } from './web-fetch';
+export { askUserQuestionTool, AskUserQuestionTool } from './ask-user-question';

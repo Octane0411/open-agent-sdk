@@ -4,7 +4,7 @@
  */
 
 import { logger, type LogLevel } from './utils/logger';
-import type { PermissionMode } from './permissions/types';
+import type { PermissionMode, CanUseTool } from './permissions/types';
 import type { McpServersConfig } from './mcp/types';
 import { OpenAIProvider } from './providers/openai';
 import { GoogleProvider } from './providers/google';
@@ -56,6 +56,8 @@ export interface PromptOptions {
   mcpServers?: McpServersConfig;
   /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent' (default: 'info') */
   logLevel?: LogLevel;
+  /** Custom callback for tool permission checks */
+  canUseTool?: CanUseTool;
 }
 
 export interface PromptResult {
@@ -130,6 +132,7 @@ export async function prompt(
     abortController: options.abortController,
     permissionMode: options.permissionMode,
     mcpServers: options.mcpServers,
+    canUseTool: options.canUseTool,
   });
 
   // Run the loop
@@ -183,6 +186,12 @@ export type { TaskGetInput, TaskGetOutput } from './tools/task-get';
 export type { TaskUpdateInput, TaskUpdateOutput } from './tools/task-update';
 export type { WebSearchInput, WebSearchOutput } from './tools/web-search';
 export type { WebFetchInput, WebFetchOutput } from './tools/web-fetch';
+export type {
+  AskUserQuestionInput,
+  AskUserQuestionOutput,
+  AskUserQuestionItem,
+  AskUserQuestionOption,
+} from './tools/ask-user-question';
 
 // Re-export task types
 export type { Task, TaskStatus, TaskStorage } from './types/task';
@@ -220,6 +229,8 @@ export {
   webSearchTool,
   WebFetchTool,
   webFetchTool,
+  AskUserQuestionTool,
+  askUserQuestionTool,
 } from './tools/registry';
 
 // Re-export agent
