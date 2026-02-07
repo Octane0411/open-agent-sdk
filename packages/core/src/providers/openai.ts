@@ -52,8 +52,13 @@ export class OpenAIProvider extends LLMProvider {
       : undefined;
 
     // Use Vercel AI SDK's streamText
+    // When using a custom baseURL (e.g., Gemini's OpenAI-compatible endpoint),
+    // use openai.chat() to explicitly use Chat Completions API instead of Responses API
+    const model = this.config.baseURL
+      ? this.openAI.chat(this.config.model)
+      : this.openAI(this.config.model);
     const result = streamText({
-      model: this.openAI(this.config.model),
+      model,
       messages: coreMessages,
       system: options?.systemInstruction,
       maxOutputTokens: this.config.maxTokens,
