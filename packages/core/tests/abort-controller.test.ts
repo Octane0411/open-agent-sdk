@@ -171,10 +171,13 @@ describe('AbortController - Agent Layer', () => {
     const loop = new ReActLoop(mockProvider, registry, {
       maxTurns: 5,
       abortController: controller,
+      permissionMode: 'bypassPermissions',
+      allowDangerouslySkipPermissions: true,
     });
 
     // Abort before the second turn starts (after first provider call + tool execution)
-    setTimeout(() => controller.abort(), 100);
+    // Provider takes ~20ms, tool takes ~100ms. Abort at 50ms to catch during tool execution.
+    setTimeout(() => controller.abort(), 50);
 
     const result = await loop.run('Test');
 

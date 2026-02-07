@@ -204,6 +204,21 @@ export class ReActLoop {
 
       turnCount++;
 
+      // Check for abort again after incrementing turn count
+      // This prevents race conditions where abort was triggered between the start of the loop and turnCount++
+      if (this.config.abortController?.signal.aborted) {
+        return {
+          result: 'Operation aborted',
+          messages,
+          turnCount,
+          usage: {
+            input_tokens: totalInputTokens,
+            output_tokens: totalOutputTokens,
+          },
+          isError: true,
+        };
+      }
+
       // Call LLM
       let assistantMessage: SDKAssistantMessage;
       try {

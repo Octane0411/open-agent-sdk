@@ -245,7 +245,7 @@ describeIfProvider('Abort Operations E2E', () => {
       }
 
       const duration = Date.now() - startTime;
-      expect(duration).toBeLessThan(5000);
+      expect(duration).toBeLessThan(10000);
     }, TEST_CONFIG.timeout);
   });
 

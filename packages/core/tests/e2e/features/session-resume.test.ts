@@ -292,8 +292,11 @@ describeIfProvider('Session Persistence E2E', () => {
     test('should handle session not found', async () => {
       const storage = new FileStorage({ directory: sessionsDir });
 
+      // Use a valid UUID format that won't trigger validation errors
+      const nonExistentSessionId = '550e8400-e29b-41d4-a716-446655440000';
+
       await expect(
-        resumeSession('non-existent-session-id', {
+        resumeSession(nonExistentSessionId, {
           storage,
           apiKey: TEST_CONFIG.openai.apiKey || 'dummy',
         })

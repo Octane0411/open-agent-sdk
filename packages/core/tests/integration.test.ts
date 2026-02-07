@@ -211,9 +211,12 @@ describe('AbortController Integration', () => {
     const loop = new ReActLoop(mockProvider, registry, {
       maxTurns: 3,
       abortController: controller,
+      permissionMode: 'bypassPermissions',
+      allowDangerouslySkipPermissions: true,
     });
 
     // Abort after first turn starts but before second turn
+    // Provider takes ~50ms, tool takes ~200ms. Abort at 150ms to catch during tool execution.
     setTimeout(() => controller.abort(), 150);
 
     const result = await loop.run('Test');
