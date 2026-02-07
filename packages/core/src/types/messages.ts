@@ -95,6 +95,18 @@ export interface SDKSystemMessage extends BaseMessage {
   output_style?: string;
 }
 
+/** Compact boundary message - marks a conversation compaction point */
+export interface SDKCompactBoundaryMessage extends BaseMessage {
+  type: 'system';
+  subtype: 'compact_boundary';
+  uuid: UUID;
+  session_id: string;
+  compact_metadata: {
+    trigger: 'manual' | 'auto';
+    pre_tokens: number;
+  };
+}
+
 /** Result message - final output of the agent */
 export interface SDKResultMessage extends BaseMessage {
   type: 'result';
@@ -116,6 +128,7 @@ export type SDKMessage =
   | SDKAssistantMessage
   | SDKToolResultMessage
   | SDKSystemMessage
+  | SDKCompactBoundaryMessage
   | SDKResultMessage;
 
 /** Helper function to create user message */
@@ -233,5 +246,24 @@ export function createResultMessage(
     num_turns: numTurns,
     result,
     usage,
+  };
+}
+
+/** Helper function to create compact boundary message */
+export function createCompactBoundaryMessage(
+  sessionId: string,
+  uuid: UUID,
+  trigger: 'manual' | 'auto',
+  preTokens: number
+): SDKCompactBoundaryMessage {
+  return {
+    type: 'system',
+    subtype: 'compact_boundary',
+    uuid,
+    session_id: sessionId,
+    compact_metadata: {
+      trigger,
+      pre_tokens: preTokens,
+    },
   };
 }

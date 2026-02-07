@@ -17,6 +17,7 @@ import {
   createSystemMessage,
   createAssistantMessage,
   createToolResultMessage,
+  createCompactBoundaryMessage,
 } from '../types/messages';
 import { HookManager } from '../hooks/manager';
 import type { HooksConfig } from '../hooks/types';
@@ -29,6 +30,7 @@ import {
   createPostToolUseFailureInput,
   createUserPromptSubmitInput,
   createStopInput,
+  createPreCompactInput,
 } from '../hooks/inputs';
 import type { SyncHookJSONOutput } from '../hooks/types';
 import { PermissionManager } from '../permissions/manager';
@@ -53,6 +55,10 @@ export interface ReActLoopConfig {
   mcpServers?: Record<string, unknown>;
   /** Hooks manager or config */
   hooks?: HookManager | HooksConfig;
+  /** Auto-compact threshold (token count), undefined means no auto-compaction */
+  autoCompactThreshold?: number;
+  /** Number of recent conversation rounds to preserve during compaction (default: 2) */
+  preserveRecentRounds?: number;
 }
 
 export interface ReActResult {
@@ -249,6 +255,29 @@ export class ReActLoop {
 
       messages.push(assistantMessage);
 
+      // Check for auto-compaction after each LLM call
+      if (
+        this.config.autoCompactThreshold !== undefined &&
+        totalInputTokens > this.config.autoCompactThreshold
+      ) {
+        logger.debug('[ReActLoop] Auto-compaction triggered:', {
+          threshold: this.config.autoCompactThreshold,
+          currentTokens: totalInputTokens,
+        });
+
+        const compactResult = await this.compact(messages, 'auto', totalInputTokens);
+
+        if (compactResult.summaryGenerated) {
+          // Replace messages with compacted version
+          messages.length = 0;
+          messages.push(...compactResult.messages);
+          logger.debug('[ReActLoop] Auto-compaction completed:', {
+            preservedRounds: compactResult.preservedRounds,
+            newMessageCount: messages.length,
+          });
+        }
+      }
+
       // Check if assistant wants to use tools
       const assistantToolCalls = assistantMessage.message.tool_calls;
       if (assistantToolCalls && assistantToolCalls.length > 0) {
@@ -432,6 +461,29 @@ export class ReActLoop {
       messages.push(assistantMessage);
       yield { type: 'assistant', message: assistantMessage };
 
+      // Check for auto-compaction after each LLM call
+      if (
+        this.config.autoCompactThreshold !== undefined &&
+        totalInputTokens > this.config.autoCompactThreshold
+      ) {
+        logger.debug('[ReActLoop] Auto-compaction triggered in stream:', {
+          threshold: this.config.autoCompactThreshold,
+          currentTokens: totalInputTokens,
+        });
+
+        const compactResult = await this.compact(messages, 'auto', totalInputTokens);
+
+        if (compactResult.summaryGenerated) {
+          // Replace messages with compacted version
+          messages.length = 0;
+          messages.push(...compactResult.messages);
+          logger.debug('[ReActLoop] Auto-compaction completed in stream:', {
+            preservedRounds: compactResult.preservedRounds,
+            newMessageCount: messages.length,
+          });
+        }
+      }
+
       // Check if assistant wants to use tools
       const assistantToolCalls = assistantMessage.message.tool_calls;
       if (assistantToolCalls && assistantToolCalls.length > 0) {
@@ -493,6 +545,191 @@ export class ReActLoop {
    */
   getHookManager(): HookManager {
     return this.hookManager;
+  }
+
+  /**
+   * Compact conversation history to reduce token usage.
+   * Generates a summary of older messages and preserves recent rounds.
+   *
+   * @param messages - Current conversation messages
+   * @param trigger - What triggered the compaction ('manual' or 'auto')
+   * @param preTokens - Token count before compaction
+   * @returns Compacted messages and metadata
+   */
+  async compact(
+    messages: SDKMessage[],
+    trigger: 'manual' | 'auto',
+    preTokens: number
+  ): Promise<{
+    messages: SDKMessage[];
+    preTokens: number;
+    trigger: 'manual' | 'auto';
+    preservedRounds: number;
+    summaryGenerated: boolean;
+  }> {
+    const preserveRecentRounds = this.config.preserveRecentRounds ?? 2;
+
+    // Separate system messages from conversation messages
+    const systemInitMsg = messages.find(
+      (m): m is typeof m & { subtype: 'init' } =>
+        m.type === 'system' && 'subtype' in m && m.subtype === 'init'
+    );
+
+    // Get conversation messages (non-system)
+    const conversationMessages = messages.filter(
+      (m) => m.type !== 'system' || ('subtype' in m && m.subtype !== 'init')
+    );
+
+    // Group messages into rounds (user -> assistant -> optional tool results)
+    const rounds: SDKMessage[][] = [];
+    let currentRound: SDKMessage[] = [];
+
+    for (const msg of conversationMessages) {
+      if (msg.type === 'user') {
+        // Start a new round
+        if (currentRound.length > 0) {
+          rounds.push(currentRound);
+        }
+        currentRound = [msg];
+      } else {
+        // Add to current round (assistant or tool_result)
+        currentRound.push(msg);
+      }
+    }
+    // Don't forget the last round
+    if (currentRound.length > 0) {
+      rounds.push(currentRound);
+    }
+
+    // Determine which rounds to preserve and which to summarize
+    const totalRounds = rounds.length;
+    const roundsToPreserve = Math.min(preserveRecentRounds, totalRounds);
+    const roundsToSummarize = totalRounds - roundsToPreserve;
+
+    if (roundsToSummarize <= 0) {
+      // Nothing to compact
+      return {
+        messages,
+        preTokens,
+        trigger,
+        preservedRounds: totalRounds,
+        summaryGenerated: false,
+      };
+    }
+
+    // Trigger PreCompact hook
+    const preCompactInput = createPreCompactInput(
+      this.sessionId,
+      this.config.cwd ?? process.cwd(),
+      trigger,
+      null // custom_instructions - can be modified by hooks in future
+    );
+    const preCompactResults = await this.hookManager.emit('PreCompact', preCompactInput, undefined);
+
+    // Check if any hook blocked the compaction
+    for (const result of preCompactResults) {
+      if (result && typeof result === 'object' && 'stopReason' in result) {
+        const syncResult = result as { stopReason?: string };
+        if (syncResult.stopReason) {
+          logger.debug('[ReActLoop] PreCompact hook blocked compaction:', syncResult.stopReason);
+          return {
+            messages,
+            preTokens,
+            trigger,
+            preservedRounds: totalRounds,
+            summaryGenerated: false,
+          };
+        }
+      }
+    }
+
+    // Messages to summarize (older rounds)
+    const messagesToSummarize = rounds.slice(0, roundsToSummarize).flat();
+
+    // Generate summary
+    const summary = await this.generateSummary(messagesToSummarize);
+
+    // Create compact boundary message
+    const boundaryMessage = createCompactBoundaryMessage(
+      this.sessionId,
+      generateUUID(),
+      trigger,
+      preTokens
+    );
+
+    // Create summary message as an assistant message
+    const summaryMessage = createAssistantMessage(
+      [{ type: 'text', text: `Summary of previous conversation:\n${summary}` }],
+      this.sessionId,
+      generateUUID()
+    );
+
+    // Messages to preserve (recent rounds)
+    const preservedMessages = rounds.slice(roundsToSummarize).flat();
+
+    // Build compacted message list
+    const compactedMessages: SDKMessage[] = [
+      ...(systemInitMsg ? [systemInitMsg as SDKMessage] : []),
+      boundaryMessage,
+      summaryMessage,
+      ...preservedMessages,
+    ];
+
+    return {
+      messages: compactedMessages,
+      preTokens,
+      trigger,
+      preservedRounds: roundsToPreserve,
+      summaryGenerated: true,
+    };
+  }
+
+  /**
+   * Generate a summary of conversation messages using the LLM.
+   */
+  private async generateSummary(messages: SDKMessage[]): Promise<string> {
+    const summaryPrompt = `Please summarize the following conversation history, keeping key information:
+1. The user's original request/goal
+2. Major steps completed so far
+3. Important file modifications or code changes
+4. Current pending tasks or unfinished work
+5. Any significant errors and their solutions
+
+Conversation history:
+${JSON.stringify(messages, null, 2)}
+
+Generate a concise but comprehensive summary.`;
+
+    try {
+      // Use the provider to generate summary
+      const chatOptions = {
+        systemInstruction: 'You are a helpful assistant that summarizes conversations concisely.',
+      };
+
+      // Create a minimal message list for summary generation
+      const summaryMessages: SDKMessage[] = [
+        createUserMessage(summaryPrompt, this.sessionId, generateUUID()),
+      ];
+
+      const stream = this.provider.chat(
+        summaryMessages,
+        [],
+        this.config.abortController?.signal,
+        chatOptions
+      );
+
+      let summary = '';
+      for await (const chunk of stream) {
+        if (chunk.type === 'content' && chunk.delta) {
+          summary += chunk.delta;
+        }
+      }
+
+      return summary.trim() || 'No summary available.';
+    } catch (error) {
+      logger.warn('[ReActLoop] Failed to generate summary:', error);
+      return 'Summary generation failed. Continuing with preserved context.';
+    }
   }
 
   /**

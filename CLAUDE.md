@@ -79,17 +79,7 @@ env $(cat /path/to/.env | xargs) bun test tests/providers/openai.test.ts
 - [Claude Agent SDK V2 Preview](docs/dev/claude-agent-sdk-ts-v2/) - V2 interface design reference
 - [Gap Analysis](docs/gap-analysis.md) - Feature gap analysis with Claude Agent SDK
 
-## Known Issues
-
-### Test Status
-
-All tests are currently passing. The following issues have been resolved:
-
-- ✅ **Google Provider Tool Tests** - Fixed by updating default model from `gemini-2.0-flash` to `gemini-3-flash-preview`
-- ✅ **AbortController Race Conditions** - Fixed by improving abort signal handling
-- ✅ **E2E Timeout Issues** - Fixed by adjusting timeout thresholds
-
-### Provider Compatibility Notes
+## Provider Compatibility Notes
 
 1. **Google Provider (Gemini)**
    - Works correctly with Google native API

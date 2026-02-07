@@ -323,4 +323,65 @@ export class Session {
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close();
   }
+
+  /**
+   * Compact the conversation history to reduce token usage.
+   * Generates a summary of older messages and preserves recent rounds.
+   *
+   * @returns Result of the compaction operation
+   * @throws {SessionClosedError} If session is closed
+   */
+  async compact(): Promise<{
+    success: boolean;
+    preTokens?: number;
+    preservedRounds?: number;
+    reason?: string;
+  }> {
+    if (this._state === SessionState.CLOSED) {
+      throw new SessionClosedError();
+    }
+
+    // Estimate token count (rough approximation)
+    const estimatedTokens = this.messages.reduce((total, msg) => {
+      if ('message' in msg && msg.message) {
+        if ('content' in msg.message) {
+          if (typeof msg.message.content === 'string') {
+            return total + msg.message.content.length / 4; // Rough estimate: 4 chars per token
+          } else if (Array.isArray(msg.message.content)) {
+            return total + msg.message.content.reduce((sum, c) => {
+              if (c.type === 'text') return sum + c.text.length / 4;
+              return sum + 50; // Tool calls estimate
+            }, 0);
+          }
+        }
+      }
+      return total + 50; // Default estimate for system/tool messages
+    }, 0);
+
+    const preTokens = Math.floor(estimatedTokens);
+
+    // Call the loop's compact method
+    const result = await this.loop.compact(this.messages, 'manual', preTokens);
+
+    if (!result.summaryGenerated) {
+      return {
+        success: false,
+        reason: 'nothing_to_compact',
+      };
+    }
+
+    // Update session messages with compacted version
+    this.messages = result.messages;
+
+    // Save to storage
+    if (this.storage) {
+      await this.saveToStorage();
+    }
+
+    return {
+      success: true,
+      preTokens: result.preTokens,
+      preservedRounds: result.preservedRounds,
+    };
+  }
 }

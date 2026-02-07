@@ -298,6 +298,7 @@ export type {
   SDKAssistantMessage,
   SDKToolResultMessage,
   SDKSystemMessage,
+  SDKCompactBoundaryMessage,
   SDKResultMessage,
   ToolCall,
   ApiKeySource,
@@ -419,6 +420,7 @@ export {
   createAssistantMessage,
   createToolResultMessage,
   createResultMessage,
+  createCompactBoundaryMessage,
 } from './types/messages';
 
 // Re-export session
