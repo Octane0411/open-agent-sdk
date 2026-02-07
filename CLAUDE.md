@@ -81,24 +81,25 @@ env $(cat /path/to/.env | xargs) bun test tests/providers/openai.test.ts
 
 ## Known Issues
 
-### Test Failures (Non-Critical)
+### Test Status
 
-The following test failures are known and tracked but not critical for core functionality:
+All tests are currently passing. The following issues have been resolved:
 
-1. **AbortController Race Conditions** (2 tests)
-   - `abort-controller.test.ts`: `should check abort signal at start of each turn`
-   - `integration.test.ts`: `should abort operation when signal is triggered`
-   - **Cause**: Timing-sensitive tests with race conditions between abort signal and tool execution
-   - **Impact**: Low - abort functionality works correctly in real usage
+- ✅ **Google Provider Tool Tests** - Fixed by updating default model from `gemini-2.0-flash` to `gemini-3-flash-preview`
+- ✅ **AbortController Race Conditions** - Fixed by improving abort signal handling
+- ✅ **E2E Timeout Issues** - Fixed by adjusting timeout thresholds
 
-2. **Google Provider Tool Message Format** (3 tests)
-   - `tools.test.ts`: 2 Google Provider tool tests
-   - `streaming.test.ts`: 1 Google Provider stream test
-   - **Cause**: Vercel AI SDK message format incompatibility with Google Gemini API for tool results
-   - **Impact**: Low - Read/Write tools work; complex tool chains may have issues
+### Provider Compatibility Notes
 
-3. **E2E Timeout Issues** (2 tests)
-   - `abort.test.ts`: `should abort Google session stream` (timeout threshold too strict)
-   - `session-resume.test.ts`: `should handle session not found` (needs investigation)
-   - **Cause**: API latency variability and test timing assumptions
-   - **Impact**: Low - functionality works, tests need adjustment
+1. **Google Provider (Gemini)**
+   - Works correctly with Google native API
+   - Default model: `gemini-3-flash-preview`
+
+2. **OpenAI Provider with Gemini OpenAI-Compatible Endpoint**
+   - **Status**: Partially compatible
+   - **Issue**: Gemini's OpenAI-compatible endpoint returns tool calls without the `index` field required by Vercel AI SDK
+   - **Workaround**: Use Google Provider for Gemini models
+
+3. **OpenAI Provider with Other Compatible Endpoints**
+   - Should work with DeepSeek, OpenRouter, etc.
+   - Automatically uses Chat Completions API when `baseURL` is configured
