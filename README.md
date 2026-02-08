@@ -84,16 +84,6 @@ console.log(`Duration: ${result.duration_ms}ms`);
 console.log(`Tokens: ${result.usage.input_tokens} in / ${result.usage.output_tokens} out`);
 ```
 
-### Using Gemini
-
-```typescript
-const result = await prompt("Explain quantum computing", {
-  model: 'your-model',
-  provider: 'google',
-  apiKey: process.env.GEMINI_API_KEY,
-});
-```
-
 ### Session-Based Conversations
 
 ```typescript
@@ -123,92 +113,20 @@ for await (const message of session.stream()) {
 session.close();
 ```
 
-### Advanced Options
-
-```typescript
-const result = await prompt("Analyze the codebase", {
-  model: 'your-model',
-  apiKey: process.env.OPENAI_API_KEY,
-  systemPrompt: "You are a code review assistant.",
-  maxTurns: 15,
-  allowedTools: ['Read', 'Glob', 'Grep'],
-  cwd: './src',
-  env: { NODE_ENV: 'development' },
-  permissionMode: 'default', // 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan'
-});
-```
-
-### With Cancellation
-
-```typescript
-const abortController = new AbortController();
-
-setTimeout(() => abortController.abort(), 30000);
-
-const result = await prompt("Long running analysis...", {
-  model: 'your-model',
-  apiKey: process.env.OPENAI_API_KEY,
-  abortController,
-});
-```
-
 ## API Reference
 
-### `prompt(prompt, options)`
+See the full [API Reference](./docs/api-reference.md) for detailed documentation on:
 
-Execute a single prompt with the agent using the ReAct loop.
+- `prompt()` - Execute single prompts with the agent
+- `createSession()` / `resumeSession()` - Manage persistent conversations
+- All configuration options and types
 
-**Parameters:**
-- `prompt` (`string`): User's question or task
-- `options` (`PromptOptions`): Configuration object
-  - `model` (`string`, **required**): Model identifier
-  - `apiKey` (`string`): API key (defaults to env var)
-  - `provider` (`'openai' | 'google' | 'anthropic'`): Provider (auto-detected if not specified)
-  - `baseURL` (`string`): Base URL for API (OpenAI-compatible)
-  - `maxTurns` (`number`): Maximum conversation turns (default: 10)
-  - `allowedTools` (`string[]`): Allowed tools whitelist
-  - `systemPrompt` (`string`): System prompt
-  - `cwd` (`string`): Working directory (default: `process.cwd()`)
-  - `env` (`Record<string, string>`): Environment variables
-  - `abortController` (`AbortController`): Cancellation support
-  - `permissionMode` (`PermissionMode`): Permission mode
-  - `hooks` (`HooksConfig`): Event hooks configuration
+## Documentation
 
-**Returns:** `Promise<PromptResult>`
-- `result` (`string`): Final result text
-- `duration_ms` (`number`): Execution time in milliseconds
-- `usage` (`object`): Token usage statistics
-
-### `createSession(options)` / `resumeSession(id, options)`
-
-Create or resume a persistent conversation session.
-
-**Methods:**
-- `send(message: string): Promise<void>`
-- `stream(): AsyncGenerator<SDKMessage>`
-- `close(): void`
-
-## Built-in Tools
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `Read` | Read file contents, supports images | `file_path`, `offset?`, `limit?` |
-| `Write` | Write content to a file | `file_path`, `content` |
-| `Edit` | Edit file with search/replace | `file_path`, `old_string`, `new_string` |
-| `Bash` | Execute shell commands | `command`, `timeout?`, `run_in_background?` |
-| `Glob` | Find files matching patterns | `pattern`, `path?` |
-| `Grep` | Search code with regex | `pattern`, `path?`, `output_mode?` |
-| `WebSearch` | Search the web | `query`, `numResults?` |
-| `WebFetch` | Fetch webpage content | `url`, `prompt?` |
-| `Task` | Delegate to subagent (includes task management) | `description`, `prompt`, `subagent_type` |
-
-## Provider Support
-
-| Provider | Status |
-|----------|--------|
-| OpenAI | ✅ Supported |
-| Google Gemini | ✅ Supported |
-| Anthropic | ✅ Supported |
+- [Built-in Tools](./docs/api-reference.md#built-in-tools) - File operations, shell execution, code search, web access
+- [Provider Support](./docs/api-reference.md#providers) - OpenAI, Google Gemini, Anthropic
+- [Permissions](./docs/api-reference.md#permissions) - Permission modes and management
+- [Hooks](./docs/api-reference.md#hooks) - Event-driven extensibility
 
 ## Architecture
 

@@ -87,16 +87,6 @@ console.log(`耗时: ${result.duration_ms}ms`);
 console.log(`Token: ${result.usage.input_tokens} 输入 / ${result.usage.output_tokens} 输出`);
 ```
 
-### 使用 Gemini
-
-```typescript
-const result = await prompt("解释量子计算", {
-  model: 'your-model',
-  provider: 'google',
-  apiKey: process.env.GEMINI_API_KEY,
-});
-```
-
 ### 基于会话的对话
 
 ```typescript
@@ -126,93 +116,20 @@ for await (const message of session.stream()) {
 session.close();
 ```
 
-### 高级选项
-
-```typescript
-const result = await prompt("分析代码库", {
-  model: 'your-model',
-  apiKey: process.env.OPENAI_API_KEY,
-  systemPrompt: "你是一个代码审查助手。",
-  maxTurns: 15,
-  allowedTools: ['Read', 'Glob', 'Grep'],
-  cwd: './src',
-  env: { NODE_ENV: 'development' },
-  permissionMode: 'default', // 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan'
-});
-```
-
-### 取消操作
-
-```typescript
-const abortController = new AbortController();
-
-// 30 秒后取消
-setTimeout(() => abortController.abort(), 30000);
-
-const result = await prompt("长时间运行的分析...", {
-  model: 'your-model',
-  apiKey: process.env.OPENAI_API_KEY,
-  abortController,
-});
-```
-
 ## API 参考
 
-### `prompt(prompt, options)`
+查看完整的 [API 参考文档](./docs/api-reference.zh.md) 了解：
 
-使用 Agent 循环执行单个提示。
+- `prompt()` - 使用 Agent 执行单轮对话
+- `createSession()` / `resumeSession()` - 管理持久化会话
+- 所有配置选项和类型定义
 
-**参数：**
-- `prompt` (`string`): 用户的问题或任务
-- `options` (`PromptOptions`): 配置对象
-  - `model` (`string`, **必需**): 模型标识符
-  - `apiKey` (`string`): API 密钥（默认从环境变量读取）
-  - `provider` (`'openai' | 'google' | 'anthropic'`): 供应商（未指定时自动检测）
-  - `baseURL` (`string`): API 基础 URL（OpenAI 兼容）
-  - `maxTurns` (`number`): 最大对话轮数（默认：10）
-  - `allowedTools` (`string[]`): 允许使用的工具白名单
-  - `systemPrompt` (`string`): 系统提示词
-  - `cwd` (`string`): 工作目录（默认：`process.cwd()`）
-  - `env` (`Record<string, string>`): 环境变量
-  - `abortController` (`AbortController`): 取消支持
-  - `permissionMode` (`PermissionMode`): 权限模式
-  - `hooks` (`HooksConfig`): 事件钩子配置
+## 文档
 
-**返回：** `Promise<PromptResult>`
-- `result` (`string`): 最终结果文本
-- `duration_ms` (`number`): 执行时间（毫秒）
-- `usage` (`object`): Token 使用统计
-
-### `createSession(options)` / `resumeSession(id, options)`
-
-创建或恢复持久化对话会话。
-
-**方法：**
-- `send(message: string): Promise<void>`
-- `stream(): AsyncGenerator<SDKMessage>`
-- `close(): void`
-
-## 内置工具
-
-| 工具 | 描述 | 参数 |
-|------|------|------|
-| `Read` | 读取文件内容，支持图片 | `file_path`, `offset?`, `limit?` |
-| `Write` | 写入内容到文件 | `file_path`, `content` |
-| `Edit` | 使用查找替换编辑文件 | `file_path`, `old_string`, `new_string` |
-| `Bash` | 执行 Shell 命令 | `command`, `timeout?`, `run_in_background?` |
-| `Glob` | 查找匹配模式的文件 | `pattern`, `path?` |
-| `Grep` | 使用正则搜索代码 | `pattern`, `path?`, `output_mode?` |
-| `WebSearch` | 网页搜索 | `query`, `numResults?` |
-| `WebFetch` | 获取网页内容 | `url`, `prompt?` |
-| `Task` | 委托给子 Agent（包含任务管理） | `description`, `prompt`, `subagent_type` |
-
-## 供应商支持
-
-| 供应商 | 状态 |
-|--------|------|
-| OpenAI | ✅ 已支持 |
-| Google Gemini | ✅ 已支持 |
-| Anthropic | ✅ 已支持 |
+- [内置工具](./docs/api-reference.zh.md#内置工具) - 文件操作、Shell 执行、代码搜索、网页访问
+- [供应商支持](./docs/api-reference.zh.md#供应商) - OpenAI、Google Gemini、Anthropic
+- [权限系统](./docs/api-reference.zh.md#权限) - 权限模式和管理
+- [Hooks](./docs/api-reference.zh.md#钩子) - 事件驱动的可扩展性
 
 ## 架构
 
