@@ -1,19 +1,15 @@
 {
-  "name": "open-agent-sdk",
-  "version": "0.1.0-alpha.0",
-  "description": "Open source agent SDK compatible with Claude Agent SDK",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "name": "open-agent-sdk-monorepo",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Open source agent SDK compatible with Claude Agent SDK (monorepo root)",
   "scripts": {
-    "build": "cd packages/core && bun run build && mkdir -p ../../dist && cp -r dist/* ../../dist/",
+    "build": "cd packages/core && bun run build",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "typecheck": "cd packages/core && npx tsc --noEmit",
     "prepare": "husky install",
-    "prepublishOnly": "bun run build"
+    "publish:core": "cd packages/core && npm publish --access public"
   },
   "workspaces": [
     "packages/*",
@@ -27,12 +23,5 @@
   },
   "engines": {
     "bun": ">=1.0.0"
-  },
-  "dependencies": {
-    "@ai-sdk/google": "^3.0.21",
-    "ai": "^6.0.70"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

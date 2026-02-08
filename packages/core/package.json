@@ -1,9 +1,12 @@
 {
-  "name": "@open-agent-sdk/core",
-  "version": "0.1.0-alpha.0",
-  "description": "Core SDK for Open Agent",
+  "name": "open-agent-sdk",
+  "version": "0.1.0-alpha.1",
+  "description": "Open source agent SDK compatible with Claude Agent SDK",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "bun test",
@@ -33,5 +36,12 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

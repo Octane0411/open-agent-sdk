@@ -4,7 +4,7 @@
  */
 
 import { readFile } from 'fs/promises';
-import { logger } from '@open-agent-sdk/core';
+import { logger } from 'open-agent-sdk';
 
 /**
  * 文件内容缓存管理器

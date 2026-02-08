@@ -2,8 +2,8 @@
  * Command handlers for the CLI Code Agent Demo
  */
 
-import type { FileStorage, InMemoryStorage, ToolContext } from '@open-agent-sdk/core';
-import { Session, resumeSession, taskListTool } from '@open-agent-sdk/core';
+import type { FileStorage, InMemoryStorage, ToolContext } from 'open-agent-sdk';
+import { Session, resumeSession, taskListTool } from 'open-agent-sdk';
 import { printSuccess, printError, printInfo, printSessionItem, printHelp } from './utils.js';
 
 /** Storage type - can be either FileStorage or InMemoryStorage */

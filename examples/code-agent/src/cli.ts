@@ -4,8 +4,8 @@
 
 import readline from 'readline';
 import chalk from 'chalk';
-import type { SDKMessage, SDKAssistantMessage, SDKToolResultMessage, SDKResultMessage, PermissionResult } from '@open-agent-sdk/core';
-import { Session, createSession, FileStorage, SENSITIVE_TOOLS } from '@open-agent-sdk/core';
+import type { SDKMessage, SDKAssistantMessage, SDKToolResultMessage, SDKResultMessage, PermissionResult } from 'open-agent-sdk';
+import { Session, createSession, FileStorage, SENSITIVE_TOOLS } from 'open-agent-sdk';
 import type { FileCache, FileChangeTracker } from './utils/index.js';
 import { ToolManager, TerminalRenderer, createFileCache, createFileChangeTracker } from './utils/index.js';
 

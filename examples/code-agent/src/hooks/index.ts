@@ -10,7 +10,7 @@ import type {
   SessionEndHookInput,
   PreToolUseHookInput,
   PostToolUseHookInput,
-} from '@open-agent-sdk/core';
+} from 'open-agent-sdk';
 import chalk from 'chalk';
 
 /** Store tool execution start times for duration calculation */
