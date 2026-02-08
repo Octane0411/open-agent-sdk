@@ -6,13 +6,39 @@
 
 Claude Agent SDK 的开源替代品 —— 轻量、可定制、无供应商锁定。
 
-[English Documentation](./README.md)
+**📚 文档**
+- [项目介绍](./docs/introduction.zh.md) - 了解核心概念和架构
+- [API 参考](./docs/api-reference.zh.md) - 完整的 API 文档
+- [English Documentation](./README.md) - English README
 
 ---
 
 ## 这是什么？
 
 Open Agent SDK 是一个用于构建 AI Agent 的 TypeScript 框架。它提供了与 Claude Agent SDK 类似的开发体验，但完全开源透明，没有供应商锁定。
+
+## 为什么选择它？
+
+### 🎯 API 与 Claude Agent SDK 对齐
+- **API 设计对齐** - 可直接替换大多数 Claude Agent SDK 使用场景
+- **功能对齐** - 完整支持 ReAct 循环、工具、会话、权限和 Hooks 等核心功能
+- **熟悉的开发体验** - 相同的概念、相似的模式、学习成本低
+
+### 🔓 开源透明
+- **完整源码访问** - 清楚了解 Agent 的工作原理
+- **MIT 许可证** - 可自由用于商业项目
+- **社区驱动** - 可直接贡献功能和修复
+
+### 🔌 供应商无关
+- **无供应商锁定** - 支持 OpenAI、Google Gemini 和 Anthropic
+- **易于扩展** - 通过简单接口添加自定义 Provider
+- **成本灵活** - 根据价格和性能在不同 Provider 间切换
+
+### 🛠️ 高度可定制
+- **自定义工具** - 通过简单 API 注册自己的工具
+- **Hook 系统** - 在 9 个不同生命周期点扩展行为
+- **权限控制** - 细粒度控制 Agent 的操作权限
+- **无 Claude Code 依赖** - 纯 TypeScript 实现，不需要 Claude Code 进程
 
 **核心特性：**
 - **ReAct 循环** —— 观察-思考-行动的自主 Agent 循环
@@ -30,24 +56,26 @@ Open Agent SDK 是一个用于构建 AI Agent 的 TypeScript 框架。它提供�
 ## 安装
 
 ```bash
-npm install open-agent-sdk
+npm install open-agent-sdk@alpha
 ```
 
 或指定包管理器：
 
 ```bash
 # npm
-npm install open-agent-sdk
+npm install open-agent-sdk@alpha
 
 # yarn
-yarn add open-agent-sdk
+yarn add open-agent-sdk@alpha
 
 # pnpm
-pnpm add open-agent-sdk
+pnpm add open-agent-sdk@alpha
 
 # bun
-bun add open-agent-sdk
+bun add open-agent-sdk@alpha
 ```
+
+> **注意**：当前为 alpha 版本。使用 `@alpha` 标签安装最新的 alpha 版本。
 
 **环境要求：**
 - Bun >= 1.0.0（主要运行环境）
@@ -245,6 +273,20 @@ const result = await prompt("长时间运行的分析...", {
 | v0.1.0 | 稳定版本 | 📋 计划中 |
 | v0.2.0 | 浏览器自动化、Skill 系统、Query 类 | 📋 计划中 |
 | v1.0.0 | 完整的 Claude Agent SDK 兼容、Python SDK | 📋 计划中 |
+
+### 性能对比
+
+我们正在准备全面的性能对比测试，对比 Open Agent SDK 与 Claude Agent SDK 在各种真实场景下的表现：
+
+- **代码理解** - 分析和解释复杂代码库
+- **文件操作** - 高效读取、写入和编辑文件
+- **任务完成** - 多步骤任务执行和推理
+- **工具使用** - 内置工具的使用效率
+- **性能指标** - 响应时间、Token 使用量和准确性
+
+**状态**：📋 即将发布
+
+结果将发布在 [`docs/benchmarks/`](./docs/benchmarks/) 目录中，包含完整的方法论和可复现的测试用例。
 
 ## 开发
 

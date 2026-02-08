@@ -14,6 +14,29 @@ An open-source alternative to Claude Agent SDK — lightweight, customizable, an
 
 Open Agent SDK is a TypeScript framework for building AI agents. It provides a developer experience similar to Claude Agent SDK but with full transparency and no vendor lock-in.
 
+## Why Choose This?
+
+### 🎯 API Compatible with Claude Agent SDK
+- **Aligned API Design** - Drop-in replacement for most Claude Agent SDK use cases
+- **Feature Parity** - Core features like ReAct loop, tools, sessions, permissions, and hooks
+- **Familiar DX** - Same concepts, similar patterns, minimal learning curve
+
+### 🔓 Open Source & Transparent
+- **Full Source Access** - Understand exactly how your agent works
+- **MIT License** - Use freely in commercial projects
+- **Community-Driven** - Contribute features and fixes directly
+
+### 🔌 Provider Agnostic
+- **No Vendor Lock-in** - Works with OpenAI, Google Gemini, and Anthropic
+- **Easy to Extend** - Add custom providers with a simple interface
+- **Cost Flexibility** - Switch between providers based on pricing and performance
+
+### 🛠️ Highly Customizable
+- **Custom Tools** - Register your own tools with simple API
+- **Hook System** - Extend behavior at 9 different lifecycle points
+- **Permission Control** - Fine-grained control over what agents can do
+- **No Claude Code Dependencies** - Pure TypeScript implementation, doesn't require Claude Code process
+
 **Key features:**
 - **ReAct Loop** — Observation-thought-action cycle for autonomous agents
 - **Built-in Tools** — File operations (read/write/edit), shell execution, code search (glob/grep), web search
@@ -30,24 +53,26 @@ Open Agent SDK is a TypeScript framework for building AI agents. It provides a d
 ## Installation
 
 ```bash
-npm install open-agent-sdk
+npm install open-agent-sdk@alpha
 ```
 
 Or with specific package manager:
 
 ```bash
 # npm
-npm install open-agent-sdk
+npm install open-agent-sdk@alpha
 
 # yarn
-yarn add open-agent-sdk
+yarn add open-agent-sdk@alpha
 
 # pnpm
-pnpm add open-agent-sdk
+pnpm add open-agent-sdk@alpha
 
 # bun
-bun add open-agent-sdk
+bun add open-agent-sdk@alpha
 ```
+
+> **Note**: Currently in alpha. Use `@alpha` tag to install the latest alpha version.
 
 **Requirements:**
 - Bun >= 1.0.0 (primary runtime)
@@ -244,6 +269,20 @@ This project is being developed in public. Follow our progress:
 | v0.1.0 | Stable release | 📋 Planned |
 | v0.2.0 | Browser automation, Skill system, Query class | 📋 Planned |
 | v1.0.0 | Full Claude Agent SDK compatibility, Python SDK | 📋 Planned |
+
+### Benchmarks
+
+We're preparing comprehensive benchmarks comparing Open Agent SDK with Claude Agent SDK across various real-world scenarios:
+
+- **Code Understanding** - Analyze and explain complex codebases
+- **File Operations** - Read, write, and edit files efficiently
+- **Task Completion** - Multi-step task execution and reasoning
+- **Tool Usage** - Effectiveness in using built-in tools
+- **Performance** - Response time, token usage, and accuracy
+
+**Status**: 📋 Coming Soon
+
+Results will be published in the [`docs/benchmarks/`](./docs/benchmarks/) directory with full methodology and reproducible test cases.
 
 ## Development
 

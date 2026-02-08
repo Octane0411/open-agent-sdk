@@ -38,12 +38,16 @@ coverage/
 .husky/_/
 
 # External reference docs (not for version control)
+docs/adr/
 docs/dev/
 docs/release/
 
 # Legacy files
 claude-agent-sdk-ts*
 REQUIREMENTS.md
+
+# Release notes (managed separately)
+RELEASE_NOTES.md
 
 # Worktrees
 .worktrees/
