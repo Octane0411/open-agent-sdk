@@ -17,35 +17,23 @@ Open Agent SDK is a TypeScript framework for building AI agents. It provides a d
 ## Why Choose This?
 
 ### 🎯 API Compatible with Claude Agent SDK
-- **Aligned API Design** - Drop-in replacement for most Claude Agent SDK use cases
-- **Feature Parity** - Core features like ReAct loop, tools, sessions, permissions, and hooks
-- **Familiar DX** - Same concepts, similar patterns, minimal learning curve
+Drop-in replacement with feature parity — same Agent loop, tools, sessions, permissions, and hooks. Minimal learning curve for existing Claude Agent SDK users.
 
-### 🔓 Open Source & Transparent
-- **Full Source Access** - Understand exactly how your agent works
-- **MIT License** - Use freely in commercial projects
-- **Community-Driven** - Contribute features and fixes directly
+### 🔓 Open Source & Extensible
+Full MIT-licensed source code. Easily customize and extend with custom tools, providers, and hooks.
 
-### 🔌 Provider Agnostic
-- **No Vendor Lock-in** - Works with OpenAI, Google Gemini, and Anthropic
-- **Easy to Extend** - Add custom providers with a simple interface
-- **Cost Flexibility** - Switch between providers based on pricing and performance
-
-### 🛠️ Highly Customizable
-- **Custom Tools** - Register your own tools with simple API
-- **Hook System** - Extend behavior at 9 different lifecycle points
-- **Permission Control** - Fine-grained control over what agents can do
-- **No Claude Code Dependencies** - Pure TypeScript implementation, doesn't require Claude Code process
+### 🚀 No Claude Code Dependency
+Pure TypeScript implementation that runs independently. No need to install or run Claude Code — works with any LLM provider directly.
 
 **Key features:**
-- **ReAct Loop** — Observation-thought-action cycle for autonomous agents
+- **Agent Loop** — Observation-thought-action cycle for autonomous agents
 - **Built-in Tools** — File operations (read/write/edit), shell execution, code search (glob/grep), web search
 - **Streaming Support** — Real-time response streaming with token usage tracking
 - **Multi-Provider** — Works with OpenAI, Google Gemini, and Anthropic
 - **Provider Extensibility** — Add custom providers with a simple interface
 - **Session Management** — Persistent conversations with InMemory and File storage
 - **Permission System** — 4 permission modes (default/acceptEdits/bypassPermissions/plan)
-- **Hooks Framework** — Event-driven extensibility (9 hook events)
+- **Hooks Framework** — Event-driven extensibility (10 hook events)
 - **Subagent System** — Delegate tasks to specialized agents
 - **Type Safety** — Full TypeScript support with strict type constraints
 - **Cancellation** — AbortController support for interrupting long-running operations
@@ -225,30 +213,31 @@ Create or resume a persistent conversation session.
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Open Agent SDK                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   prompt()   │  │   Session    │  │  ReActLoop       │  │
-│  │  (One-shot)  │  │ (Persistent) │  │ (Reason + Act)   │  │
-│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
-│         └─────────────────┴───────────────────┘            │
-│                           │                                │
-│         ┌─────────────────┼─────────────────┐              │
-│         ▼                 ▼                 ▼              │
-│  ┌────────────┐   ┌──────────────┐   ┌──────────────┐     │
-│  │  Provider  │   │ ToolRegistry │   │  Permission  │     │
-│  │(OpenAI/    │   │(Read/Write/  │   │   Manager    │     │
-│  │ Google)    │   │ Bash/Web...) │   │(4 modes)     │     │
-│  └────────────┘   └──────────────┘   └──────────────┘     │
-│         │                 │                 │              │
-│         └─────────────────┴─────────────────┘              │
-│                           │                                │
-│                    ┌──────▼──────┐                         │
-│                    │HookManager  │                         │
-│                    │(9 events)   │                         │
-│                    └─────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Open Agent SDK                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   User Code              Core SDK                      External              │
+│  ┌─────────┐           ┌─────────┐                   ┌─────────┐            │
+│  │ prompt()│──────────►│ Agent   │──────────────────►│ OpenAI  │            │
+│  └─────────┘           │  Loop   │                   │ Google  │            │
+│  ┌─────────┐           │         │                   │Anthropic│            │
+│  │ Session │──────────►│ ┌─────┐ │                   └─────────┘            │
+│  └─────────┘           │ │Tools│ │                                          │
+│                        │ │(14) │ │                   ┌─────────┐            │
+│                        │ └─────┘ │──────────────────►│  File   │            │
+│                        │ ┌─────┐ │                   │  Edit   │            │
+│                        │ │Hooks│ │                   │ Search  │            │
+│                        │ │(10) │ │                   │  Web    │            │
+│                        │ └─────┘ │                   │ Tasks   │            │
+│                        └────┬────┘                   └─────────┘            │
+│                             │                                               │
+│                        ┌────┴────┐         ┌─────────┐                      │
+│                        │ Session │◄───────►│Storage  │                      │
+│                        │ Manager │         │Memory/  │                      │
+│                        └─────────┘         │File     │                      │
+│                                            └─────────┘                      │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Project Status
@@ -264,7 +253,7 @@ This project is being developed in public. Follow our progress:
 
 | Version | Features | Status |
 |---------|----------|--------|
-| v0.1.0-alpha | Core ReAct loop, 17 tools, 3 providers, Session, Hooks, Permissions | ✅ Released |
+| v0.1.0-alpha | Core Agent loop, 14 tools, 3 providers, Session, Hooks, Permissions | ✅ Released |
 | v0.1.0-beta | Structured outputs, File checkpointing, Session forking enhancements | 🚧 In Progress |
 | v0.1.0 | Stable release | 📋 Planned |
 | v0.2.0 | Browser automation, Skill system, Query class | 📋 Planned |
@@ -314,7 +303,7 @@ Claude Agent SDK is excellent but closed-source. We wanted:
 1. **Full transparency** — Open code, free to customize
 2. **Provider independence** — No lock-in to a single vendor
 3. **Lightweight core** — Focused, understandable architecture
-4. **Interview-friendly** — Every design decision is explainable
+4. **No Claude Code dependency** — Pure TypeScript, runs independently
 
 ## Contributing
 
