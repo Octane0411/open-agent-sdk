@@ -38,3 +38,21 @@ export {
   preprocessContent,
   createPreprocessorContext,
 } from './preprocessor';
+
+// Export matcher
+export {
+  exactMatch,
+  findByDescription,
+  parseSkillCommand,
+  isSkillCommand,
+  type MatchResult,
+} from './matcher';
+
+// Export executor
+export {
+  executeSkill,
+  getSkillContent,
+  buildSkillSystemPrompt,
+  createSkillPreprocessorContext,
+  type SkillExecutionResult,
+} from './executor';

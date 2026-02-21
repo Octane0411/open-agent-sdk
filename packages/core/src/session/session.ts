@@ -6,8 +6,10 @@
 import type { ReActLoop } from '../agent/react-loop';
 import type { SDKMessage } from '../types/messages';
 import type { SessionStorage, SessionData } from './storage';
+import type { SkillCatalogItem } from '../skills/types';
 import { logger } from '../utils/logger';
 import { generateUUID } from '../utils/uuid';
+import { createSkillRegistry } from '../skills/registry';
 
 /** Session states following a state machine pattern */
 export enum SessionState {
@@ -104,6 +106,8 @@ export class Session {
   private isStreaming: boolean;
   private storage?: SessionStorage;
   private updatedAt: number;
+  private skillCatalog: SkillCatalogItem[];
+  private skillsLoaded: boolean;
 
   constructor(loop: ReActLoop, options: SessionOptions, storage?: SessionStorage) {
     this.id = options.id ?? generateUUID();
@@ -118,6 +122,72 @@ export class Session {
     this._state = SessionState.IDLE;
     this.isStreaming = false;
     this.storage = storage;
+    this.skillCatalog = [];
+    this.skillsLoaded = false;
+
+    // Load skills asynchronously
+    this.loadSkills();
+  }
+
+  /**
+   * Load skills from registry
+   * @private
+   */
+  private async loadSkills(): Promise<void> {
+    try {
+      const registry = createSkillRegistry();
+      await registry.loadAll();
+      this.skillCatalog = registry.getAll();
+      this.skillsLoaded = true;
+      logger.debug('[Session] Loaded skills:', this.skillCatalog.length);
+    } catch (error) {
+      logger.warn('[Session] Failed to load skills:', error);
+      this.skillsLoaded = false;
+    }
+  }
+
+  /**
+   * Get skill catalog
+   * @returns Array of skill catalog items
+   */
+  getSkillCatalog(): SkillCatalogItem[] {
+    return [...this.skillCatalog];
+  }
+
+  /**
+   * Check if skills are loaded
+   * @returns True if skills have been loaded
+   */
+  areSkillsLoaded(): boolean {
+    return this.skillsLoaded;
+  }
+
+  /**
+   * Build system prompt with skill catalog
+   * @param basePrompt - Base system prompt
+   * @returns System prompt with skill information
+   */
+  getSystemPromptWithSkills(basePrompt?: string): string {
+    const parts: string[] = [];
+
+    if (basePrompt) {
+      parts.push(basePrompt);
+    }
+
+    if (this.skillCatalog.length > 0) {
+      parts.push('\n\n## Available Skills');
+      parts.push('You can invoke the following skills by typing /skill-name:');
+      parts.push('');
+
+      for (const skill of this.skillCatalog) {
+        parts.push(`- /${skill.name}: ${skill.description}`);
+      }
+
+      parts.push('');
+      parts.push('To use a skill, start your message with /skill-name followed by any arguments.');
+    }
+
+    return parts.join('\n');
   }
 
   /**
