@@ -9,6 +9,9 @@
 import type { SkillDefinition, PreprocessorContext } from './types';
 import { preprocessContent, createPreprocessorContext } from './preprocessor';
 import { parseSkillCommand, exactMatch } from './matcher';
+import type { AgentDefinition } from '../agent/agent-definition';
+import type { SubagentContext, SubagentResult } from '../agent/subagent-runner';
+import { runSubagent } from '../agent/subagent-runner';
 
 /**
  * Skill execution result
@@ -139,4 +142,77 @@ export function createSkillPreprocessorContext(
     CLAUDE_SESSION_ID: sessionId,
     CLAUDE_CWD: cwd,
   } as Record<string, string>);
+}
+
+/**
+ * Check if skill should be executed in a subagent (fork context)
+ *
+ * @param skill - Skill definition
+ * @returns True if skill has context: 'fork'
+ */
+export function shouldUseSubagent(skill: SkillDefinition): boolean {
+  return skill.frontmatter.context === 'fork';
+}
+
+/**
+ * Build AgentDefinition from skill definition
+ *
+ * @param skill - Skill definition
+ * @returns AgentDefinition for subagent execution
+ */
+export function buildAgentDefinitionFromSkill(skill: SkillDefinition): AgentDefinition {
+  const agent: AgentDefinition = {
+    description: skill.frontmatter.description,
+    prompt: skill.content,
+  };
+
+  // Use skill's model if specified
+  if (skill.frontmatter.model) {
+    const model = skill.frontmatter.model;
+    if (['sonnet', 'opus', 'haiku', 'inherit'].includes(model)) {
+      agent.model = model as 'sonnet' | 'opus' | 'haiku' | 'inherit';
+    }
+  }
+
+  // Use skill's allowedTools if specified
+  if (skill.frontmatter.allowedTools && skill.frontmatter.allowedTools.length > 0) {
+    agent.tools = skill.frontmatter.allowedTools;
+  }
+
+  return agent;
+}
+
+/**
+ * Execute skill in a subagent (fork context)
+ *
+ * @param skill - Skill definition
+ * @param args - Command arguments
+ * @param subagentContext - Subagent execution context
+ * @returns Subagent execution result
+ */
+export async function executeSkillInSubagent(
+  skill: SkillDefinition,
+  args: string[],
+  subagentContext: SubagentContext
+): Promise<SubagentResult> {
+  // Process skill content with parameter substitution
+  const context = createSkillPreprocessorContext(
+    args,
+    subagentContext.parentSessionId,
+    subagentContext.parentContext.cwd
+  );
+
+  const processedContent = preprocessContent(skill.content, context);
+
+  // Build agent definition from skill
+  const agentDef = buildAgentDefinitionFromSkill({
+    ...skill,
+    content: processedContent,
+  });
+
+  // Use skill name as agent type
+  const agentType = skill.frontmatter.name;
+
+  // Run subagent
+  return runSubagent(agentDef, processedContent, agentType, subagentContext);
 }

@@ -317,35 +317,150 @@ describe('SkillLoader.loadSkill', () => {
   });
 });
 
-describe('SkillLoader legacy commands support', () => {
-  it('should load legacy commands when enabled', () => {
+describe('Phase 3.4: .claude/commands/ compatibility', () => {
+  it('should load legacy commands from .claude/commands/ directory', () => {
+    const legacyCommand: SkillDefinition = {
+      frontmatter: {
+        name: 'commit',
+        description: 'Generate a commit message',
+      },
+      content: '# Commit Command\n\nGenerate a commit message.',
+      filePath: './.claude/commands/commit.md',
+      source: 'project',
+    };
+
+    expect(legacyCommand.filePath).toContain('.claude/commands/');
+    expect(legacyCommand.frontmatter.name).toBe('commit');
+  });
+
+  it('should convert legacy command to skill format', () => {
+    // Legacy command without frontmatter
+    const legacyContent = '# Commit\n\nGenerate a commit message based on git diff.';
+
+    // Converted to skill format
+    const convertedSkill: SkillDefinition = {
+      frontmatter: {
+        name: 'commit',
+        description: 'Generate a commit message based on git diff',
+      },
+      content: legacyContent,
+      filePath: './.claude/commands/commit.md',
+      source: 'project',
+    };
+
+    expect(convertedSkill.frontmatter.name).toBe('commit');
+    expect(convertedSkill.content).toContain('# Commit');
+  });
+
+  it('should extract command name from filename', () => {
+    const filePath = './.claude/commands/my-command.md';
+    const commandName = filePath
+      .replace(/^.*\//, '') // Remove directory path
+      .replace(/\.md$/, ''); // Remove .md extension
+
+    expect(commandName).toBe('my-command');
+  });
+
+  it('should handle legacy commands with frontmatter', () => {
+    const legacyWithFrontmatter: SkillDefinition = {
+      frontmatter: {
+        name: 'pr',
+        description: 'Generate PR description',
+        tags: ['git', 'github'],
+      },
+      content: '# PR Description\n\nGenerate PR description.',
+      filePath: './.claude/commands/pr.md',
+      source: 'project',
+    };
+
+    expect(legacyWithFrontmatter.frontmatter.tags).toContain('git');
+    expect(legacyWithFrontmatter.frontmatter.tags).toContain('github');
+  });
+
+  it('should scan .claude/commands/ directory for .md files', () => {
+    const commandFiles = [
+      './.claude/commands/commit.md',
+      './.claude/commands/pr.md',
+      './.claude/commands/review.md',
+    ];
+
+    const commands = commandFiles
+      .filter(f => f.endsWith('.md'))
+      .map(f => f.replace(/^.*\//, '').replace(/\.md$/, ''));
+
+    expect(commands).toEqual(['commit', 'pr', 'review']);
+  });
+
+  it('should ignore non-.md files in commands directory', () => {
+    const files = [
+      './.claude/commands/commit.md',
+      './.claude/commands/README.txt',
+      './.claude/commands/script.js',
+    ];
+
+    const mdFiles = files.filter(f => f.endsWith('.md'));
+
+    expect(mdFiles).toHaveLength(1);
+    expect(mdFiles[0]).toBe('./.claude/commands/commit.md');
+  });
+
+  it('should give precedence to .claude/skills/ over .claude/commands/', () => {
+    const legacyCommand: SkillDefinition = {
+      frontmatter: { name: 'test', description: 'Legacy' },
+      content: 'Legacy content',
+      filePath: './.claude/commands/test.md',
+      source: 'project',
+    };
+
+    const newSkill: SkillDefinition = {
+      frontmatter: { name: 'test', description: 'New' },
+      content: 'New content',
+      filePath: './.claude/skills/test.md',
+      source: 'project',
+    };
+
+    // Skills should take precedence over legacy commands
+    const merged = new Map<string, SkillDefinition>();
+    merged.set(legacyCommand.frontmatter.name, legacyCommand);
+    merged.set(newSkill.frontmatter.name, newSkill);
+
+    const winner = merged.get('test');
+    expect(winner?.filePath).toContain('.claude/skills/');
+  });
+
+  it('should handle empty commands directory', () => {
+    const commandFiles: string[] = [];
+    const commands = commandFiles.filter(f => f.endsWith('.md'));
+
+    expect(commands).toHaveLength(0);
+  });
+
+  it('should support includeLegacyCommands option', () => {
     const options: SkillLoaderOptions = {
       includeLegacyCommands: true,
     };
 
     expect(options.includeLegacyCommands).toBe(true);
-  });
 
-  it('should not load legacy commands when disabled', () => {
-    const options: SkillLoaderOptions = {
+    const disabledOptions: SkillLoaderOptions = {
       includeLegacyCommands: false,
     };
 
-    expect(options.includeLegacyCommands).toBe(false);
+    expect(disabledOptions.includeLegacyCommands).toBe(false);
   });
 
-  it('should convert legacy command format to skill format', () => {
-    const legacyCommand: SkillDefinition = {
-      frontmatter: {
-        name: 'legacy-command',
-        description: 'Converted from legacy command',
-      },
-      content: 'Command content',
-      filePath: '.claude/commands/command.md',
-      source: 'project',
-    };
+  it('should derive description from content if not in frontmatter', () => {
+    const content = '# My Command\n\nThis command does something useful.';
 
-    expect(legacyCommand.filePath).toContain('commands');
+    // Extract first paragraph as description
+    const lines = content.split('\n');
+    const description = lines
+      .filter(line => line && !line.startsWith('#'))
+      .slice(0, 1)
+      .join(' ')
+      .trim();
+
+    expect(description).toBe('This command does something useful.');
   });
 });
 

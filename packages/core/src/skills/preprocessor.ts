@@ -5,7 +5,11 @@
  * performing argument and environment variable substitution.
  */
 
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import type { PreprocessorContext } from './types';
+
+const execAsync = promisify(exec);
 
 /**
  * Preprocess skill content by substituting variables
@@ -14,6 +18,7 @@ import type { PreprocessorContext } from './types';
  * - $0, $1, $2, ... - Positional arguments
  * - $ARGUMENTS - All arguments joined as string
  * - $ENV_VAR - Environment variables
+ * - !`command` - Dynamic command injection (async only)
  *
  * @param content - The skill content to preprocess
  * @param context - Preprocessor context with args and env
@@ -54,6 +59,61 @@ export function preprocessContent(
     }
     return match; // Keep original if variable not found
   });
+
+  return result;
+}
+
+/**
+ * Preprocess skill content asynchronously with dynamic command injection
+ *
+ * Supports all features of preprocessContent plus:
+ * - !`command` - Execute command and replace with output
+ *
+ * @param content - The skill content to preprocess
+ * @param context - Preprocessor context with args and env
+ * @param options - Optional configuration
+ * @returns Processed content with substitutions applied
+ */
+export async function preprocessContentAsync(
+  content: string,
+  context: PreprocessorContext,
+  options: {
+    /** Command timeout in milliseconds (default: 30000) */
+    commandTimeout?: number;
+    /** Current working directory for command execution */
+    cwd?: string;
+  } = {}
+): Promise<string> {
+  // First apply synchronous substitutions
+  let result = preprocessContent(content, context);
+
+  // Replace dynamic commands !`command`
+  const commandRegex = /!`([^`]+)`/g;
+  const matches = Array.from(result.matchAll(commandRegex));
+
+  // Process commands sequentially to maintain order
+  for (const match of matches) {
+    const fullMatch = match[0];
+    const command = match[1].trim();
+
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        timeout: options.commandTimeout ?? 30000,
+        cwd: options.cwd,
+        env: { ...process.env, ...context.env },
+      });
+
+      // Use stdout if available, otherwise stderr
+      const output = stdout.trim() || stderr.trim() || '';
+
+      // Replace only the first occurrence to handle multiple commands
+      result = result.replace(fullMatch, output);
+    } catch (error) {
+      // Command failed - replace with error message but don't interrupt
+      const errorMessage = `[Command failed: ${(error as Error).message}]`;
+      result = result.replace(fullMatch, errorMessage);
+    }
+  }
 
   return result;
 }

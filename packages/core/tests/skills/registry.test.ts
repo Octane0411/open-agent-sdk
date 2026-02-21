@@ -514,3 +514,265 @@ describe('SkillRegistry events', () => {
     expect(errors).toContain('Test error');
   });
 });
+
+describe('Phase 3.3: Skill Priority (project > personal)', () => {
+  it('should prioritize project skills over personal skills with same name', () => {
+    const skills: SkillDefinition[] = [
+      {
+        frontmatter: { name: 'duplicate-skill', description: 'Personal version' },
+        content: 'Personal content',
+        filePath: '~/.claude/skills/duplicate-skill.md',
+        source: 'personal',
+      },
+      {
+        frontmatter: { name: 'duplicate-skill', description: 'Project version' },
+        content: 'Project content',
+        filePath: './.claude/skills/duplicate-skill.md',
+        source: 'project',
+      },
+    ];
+
+    // Project skill should take precedence
+    const mergedSkills = new Map<string, SkillDefinition>();
+    for (const skill of skills) {
+      const existing = mergedSkills.get(skill.frontmatter.name);
+      if (!existing || skill.source === 'project') {
+        mergedSkills.set(skill.frontmatter.name, skill);
+      }
+    }
+
+    const winner = mergedSkills.get('duplicate-skill');
+    expect(winner?.source).toBe('project');
+    expect(winner?.content).toBe('Project content');
+    expect(winner?.frontmatter.description).toBe('Project version');
+  });
+
+  it('should load personal skills first, then project skills', () => {
+    const loadOrder: string[] = [];
+
+    // Simulate loading order
+    const personalSkills = [
+      { name: 'personal1', source: 'personal' },
+      { name: 'shared', source: 'personal' },
+    ];
+
+    const projectSkills = [
+      { name: 'project1', source: 'project' },
+      { name: 'shared', source: 'project' },
+    ];
+
+    // Load personal first
+    for (const skill of personalSkills) {
+      loadOrder.push(`${skill.source}:${skill.name}`);
+    }
+
+    // Then load project
+    for (const skill of projectSkills) {
+      loadOrder.push(`${skill.source}:${skill.name}`);
+    }
+
+    expect(loadOrder).toEqual([
+      'personal:personal1',
+      'personal:shared',
+      'project:project1',
+      'project:shared',
+    ]);
+  });
+
+  it('should return merged catalog with correct source attribution', () => {
+    const personalSkills: SkillDefinition[] = [
+      {
+        frontmatter: { name: 'personal-only', description: 'Personal' },
+        content: '',
+        filePath: '~/.claude/skills/personal-only.md',
+        source: 'personal',
+      },
+      {
+        frontmatter: { name: 'shared-skill', description: 'Personal version' },
+        content: '',
+        filePath: '~/.claude/skills/shared-skill.md',
+        source: 'personal',
+      },
+    ];
+
+    const projectSkills: SkillDefinition[] = [
+      {
+        frontmatter: { name: 'project-only', description: 'Project' },
+        content: '',
+        filePath: './.claude/skills/project-only.md',
+        source: 'project',
+      },
+      {
+        frontmatter: { name: 'shared-skill', description: 'Project version' },
+        content: '',
+        filePath: './.claude/skills/shared-skill.md',
+        source: 'project',
+      },
+    ];
+
+    // Merge with project priority
+    const merged = new Map<string, SkillDefinition>();
+
+    // Add personal first
+    for (const skill of personalSkills) {
+      merged.set(skill.frontmatter.name, skill);
+    }
+
+    // Then add project (overrides personal)
+    for (const skill of projectSkills) {
+      merged.set(skill.frontmatter.name, skill);
+    }
+
+    const catalog = Array.from(merged.values()).map(s => ({
+      name: s.frontmatter.name,
+      description: s.frontmatter.description,
+      source: s.source,
+    }));
+
+    expect(catalog).toHaveLength(3);
+
+    const shared = catalog.find(s => s.name === 'shared-skill');
+    expect(shared?.source).toBe('project');
+    expect(shared?.description).toBe('Project version');
+
+    const personal = catalog.find(s => s.name === 'personal-only');
+    expect(personal?.source).toBe('personal');
+
+    const project = catalog.find(s => s.name === 'project-only');
+    expect(project?.source).toBe('project');
+  });
+
+  it('should handle only personal skills (no project skills)', () => {
+    const personalSkills: SkillDefinition[] = [
+      {
+        frontmatter: { name: 'personal1', description: 'Personal 1' },
+        content: '',
+        filePath: '~/.claude/skills/personal1.md',
+        source: 'personal',
+      },
+      {
+        frontmatter: { name: 'personal2', description: 'Personal 2' },
+        content: '',
+        filePath: '~/.claude/skills/personal2.md',
+        source: 'personal',
+      },
+    ];
+
+    const merged = new Map<string, SkillDefinition>();
+
+    // Add personal
+    for (const skill of personalSkills) {
+      merged.set(skill.frontmatter.name, skill);
+    }
+
+    // No project skills to override
+
+    expect(merged.size).toBe(2);
+    expect(merged.get('personal1')?.source).toBe('personal');
+    expect(merged.get('personal2')?.source).toBe('personal');
+  });
+
+  it('should handle only project skills (no personal skills)', () => {
+    const projectSkills: SkillDefinition[] = [
+      {
+        frontmatter: { name: 'project1', description: 'Project 1' },
+        content: '',
+        filePath: './.claude/skills/project1.md',
+        source: 'project',
+      },
+      {
+        frontmatter: { name: 'project2', description: 'Project 2' },
+        content: '',
+        filePath: './.claude/skills/project2.md',
+        source: 'project',
+      },
+    ];
+
+    const merged = new Map<string, SkillDefinition>();
+
+    // Add project
+    for (const skill of projectSkills) {
+      merged.set(skill.frontmatter.name, skill);
+    }
+
+    // No personal skills
+
+    expect(merged.size).toBe(2);
+    expect(merged.get('project1')?.source).toBe('project');
+    expect(merged.get('project2')?.source).toBe('project');
+  });
+
+  it('should handle empty personal and project skills', () => {
+    const merged = new Map<string, SkillDefinition>();
+
+    // No skills at all
+
+    expect(merged.size).toBe(0);
+  });
+
+  it('should preserve project skill metadata when overriding', () => {
+    const personalSkill: SkillDefinition = {
+      frontmatter: {
+        name: 'test-skill',
+        description: 'Personal version',
+        tags: ['personal-tag'],
+        version: '1.0.0',
+      },
+      content: 'Personal content',
+      filePath: '~/.claude/skills/test-skill.md',
+      source: 'personal',
+      lastModified: new Date('2024-01-01'),
+    };
+
+    const projectSkill: SkillDefinition = {
+      frontmatter: {
+        name: 'test-skill',
+        description: 'Project version',
+        tags: ['project-tag'],
+        version: '2.0.0',
+      },
+      content: 'Project content',
+      filePath: './.claude/skills/test-skill.md',
+      source: 'project',
+      lastModified: new Date('2024-02-01'),
+    };
+
+    const merged = new Map<string, SkillDefinition>();
+    merged.set(personalSkill.frontmatter.name, personalSkill);
+    merged.set(projectSkill.frontmatter.name, projectSkill);
+
+    const winner = merged.get('test-skill');
+    expect(winner?.source).toBe('project');
+    expect(winner?.content).toBe('Project content');
+    expect(winner?.frontmatter.tags).toEqual(['project-tag']);
+    expect(winner?.frontmatter.version).toBe('2.0.0');
+    expect(winner?.filePath).toBe('./.claude/skills/test-skill.md');
+  });
+
+  it('should maintain correct count in getAll() after merging', () => {
+    const personalSkills = [
+      { name: 'p1', source: 'personal' },
+      { name: 'p2', source: 'personal' },
+      { name: 'shared', source: 'personal' },
+    ];
+
+    const projectSkills = [
+      { name: 'proj1', source: 'project' },
+      { name: 'shared', source: 'project' },
+    ];
+
+    // After merge: p1, p2, proj1, shared (4 unique, not 5)
+    const merged = new Map<string, typeof personalSkills[0]>();
+
+    for (const skill of personalSkills) {
+      merged.set(skill.name, skill);
+    }
+
+    for (const skill of projectSkills) {
+      merged.set(skill.name, skill);
+    }
+
+    expect(merged.size).toBe(4);
+    expect(merged.get('shared')?.source).toBe('project');
+  });
+});

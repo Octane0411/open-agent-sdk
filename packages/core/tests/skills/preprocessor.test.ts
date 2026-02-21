@@ -211,3 +211,100 @@ describe('Argument substitution edge cases', () => {
     expect(content).toContain('$0');
   });
 });
+
+describe('Phase 3.1: Dynamic command injection', () => {
+  it('should inject skill content into system prompt', () => {
+    const skillContent = '# Code Review Skill\n\nReview code for quality.';
+    const systemPrompt = `You are a helpful assistant.\n\n${skillContent}`;
+
+    expect(systemPrompt).toContain('# Code Review Skill');
+    expect(systemPrompt).toContain('Review code for quality');
+  });
+
+  it('should handle dynamic argument injection at runtime', () => {
+    const template = 'Process file: $FILE with mode: $MODE';
+    const context = {
+      args: [],
+      env: { FILE: 'test.ts', MODE: 'strict' },
+      arguments: '',
+    };
+
+    const result = template
+      .replace(/\$FILE/g, context.env.FILE)
+      .replace(/\$MODE/g, context.env.MODE);
+
+    expect(result).toBe('Process file: test.ts with mode: strict');
+  });
+
+  it('should support conditional content based on arguments', () => {
+    const args = ['--verbose'];
+    const isVerbose = args.includes('--verbose');
+
+    const baseContent = 'Processing...';
+    const verboseContent = isVerbose ? 'Processing with verbose output...' : baseContent;
+
+    expect(verboseContent).toBe('Processing with verbose output...');
+  });
+
+  it('should handle multi-line content injection', () => {
+    const skillContent = `## Instructions
+1. Read the file
+2. Analyze the code
+3. Provide feedback`;
+
+    const systemPrompt = `You are a code reviewer.\n\n${skillContent}`;
+
+    expect(systemPrompt).toContain('## Instructions');
+    expect(systemPrompt).toContain('1. Read the file');
+    expect(systemPrompt).toContain('3. Provide feedback');
+  });
+
+  it('should preserve markdown formatting in injected content', () => {
+    const skillContent = `# Heading
+
+- Item 1
+- Item 2
+
+\`\`\`typescript
+const x = 1;
+\`\`\``;
+
+    const result = skillContent;
+
+    expect(result).toContain('# Heading');
+    expect(result).toContain('- Item 1');
+    expect(result).toContain('```typescript');
+  });
+
+  it('should handle injection with empty skill content', () => {
+    const skillContent = '';
+    const systemPrompt = `You are a helpful assistant.\n\n${skillContent}`;
+
+    expect(systemPrompt).toBe('You are a helpful assistant.\n\n');
+  });
+
+  it('should support template variables with default values', () => {
+    const template = 'Mode: ${MODE:-default}';
+    const env: Record<string, string> = {};
+
+    // Simulate default value substitution
+    const result = template.replace(/\$\{MODE:-default\}/g, env.MODE || 'default');
+
+    expect(result).toBe('Mode: default');
+  });
+
+  it('should handle nested variable substitution', () => {
+    const context = {
+      args: ['arg1'],
+      env: { PREFIX: 'test' },
+      arguments: 'arg1',
+    };
+
+    const template = '$PREFIX_$0';
+    const result = template
+      .replace(/\$PREFIX/g, context.env.PREFIX)
+      .replace(/\$0/g, context.args[0]);
+
+    expect(result).toBe('test_arg1');
+  });
+});

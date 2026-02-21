@@ -247,10 +247,16 @@ export class SkillLoader {
             continue;
           }
 
+          // Extract description from first line of content
+          const firstLine = content.trim().split('\n')[0].trim();
+          const description = firstLine.startsWith('#')
+            ? firstLine.replace(/^#+\s*/, '').trim()
+            : firstLine.substring(0, 100);
+
           const skill: SkillDefinition = {
             frontmatter: {
               name,
-              description: `Legacy command: ${name}`,
+              description: description || `Legacy command: ${name}`,
             },
             content,
             filePath,

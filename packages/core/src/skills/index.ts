@@ -36,6 +36,7 @@ export { createSkillRegistry } from './registry';
 // Export preprocessor
 export {
   preprocessContent,
+  preprocessContentAsync,
   createPreprocessorContext,
 } from './preprocessor';
 
@@ -54,5 +55,8 @@ export {
   getSkillContent,
   buildSkillSystemPrompt,
   createSkillPreprocessorContext,
+  shouldUseSubagent,
+  buildAgentDefinitionFromSkill,
+  executeSkillInSubagent,
   type SkillExecutionResult,
 } from './executor';
