@@ -486,3 +486,6 @@ export {
 
 // Re-export MCP module
 export * from './mcp';
+
+// Re-export skills module
+export * from './skills';

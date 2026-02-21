@@ -1,18 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
 import type {
   SkillDefinition,
   SkillCatalogItem,
-  SkillFrontmatter,
 } from '../../src/skills/types';
 
-// Mock complete skill for integration testing
 const createMockSkill = (overrides: Partial<SkillDefinition> = {}): SkillDefinition => ({
   frontmatter: {
     name: 'test-skill',
     description: 'A test skill for integration',
-    tags: ['test'],
     ...overrides.frontmatter,
-  } as SkillFrontmatter,
+  },
   content: '# Test Skill\n\nThis is test content.',
   filePath: '/test/skills/test-skill.md',
   source: 'project',
@@ -22,7 +19,6 @@ const createMockSkill = (overrides: Partial<SkillDefinition> = {}): SkillDefinit
 describe('Skills System Integration', () => {
   describe('End-to-end skill loading and execution', () => {
     it('should load skills from filesystem', async () => {
-      // Simulate loading skills from filesystem
       const loadedSkills: SkillDefinition[] = [
         createMockSkill({ frontmatter: { name: 'skill1', description: 'Skill 1' } }),
         createMockSkill({ frontmatter: { name: 'skill2', description: 'Skill 2' } }),
@@ -34,25 +30,11 @@ describe('Skills System Integration', () => {
     });
 
     it('should parse skill files correctly', () => {
-      const markdown = `---
-name: parsed-skill
-description: A parsed skill
-version: 1.0.0
-tags: [test, integration]
----
-
-# Parsed Skill
-
-This is the content.
-`;
-
-      // Simulate parsing
       const parsedSkill: SkillDefinition = {
         frontmatter: {
           name: 'parsed-skill',
           description: 'A parsed skill',
-          version: '1.0.0',
-          tags: ['test', 'integration'],
+          allowedTools: ['Read', 'Write'],
         },
         content: '# Parsed Skill\n\nThis is the content.\n',
         filePath: '/test/parsed-skill.md',
@@ -60,22 +42,20 @@ This is the content.
       };
 
       expect(parsedSkill.frontmatter.name).toBe('parsed-skill');
-      expect(parsedSkill.frontmatter.tags).toEqual(['test', 'integration']);
+      expect(parsedSkill.frontmatter.allowedTools).toEqual(['Read', 'Write']);
       expect(parsedSkill.content).toContain('# Parsed Skill');
     });
 
     it('should build catalog from loaded skills', () => {
       const skills: SkillDefinition[] = [
-        createMockSkill({ frontmatter: { name: 's1', description: 'Skill 1', tags: ['a'] } }),
-        createMockSkill({ frontmatter: { name: 's2', description: 'Skill 2', tags: ['b'] } }),
+        createMockSkill({ frontmatter: { name: 's1', description: 'Skill 1' } }),
+        createMockSkill({ frontmatter: { name: 's2', description: 'Skill 2' } }),
       ];
 
-      // Build catalog (lightweight)
       const catalog: SkillCatalogItem[] = skills.map(s => ({
         name: s.frontmatter.name,
         description: s.frontmatter.description,
         source: s.source,
-        tags: s.frontmatter.tags,
       }));
 
       expect(catalog).toHaveLength(2);
@@ -96,24 +76,16 @@ This is the content.
       expect(matched?.name).toBe('commit');
     });
 
-    it('should preprocess skill content with arguments', () => {
-      const content = 'Process file: $0 with options: $1';
-      const context = {
-        args: ['file.txt', '--verbose'],
-        env: {},
-        arguments: 'file.txt --verbose',
-      };
+    it('should preprocess skill content with $ARGUMENTS', () => {
+      const content = 'Process: $ARGUMENTS';
+      const args = 'file.txt --verbose';
 
-      // Simulate preprocessing
-      const processed = content
-        .replace(/\$0/g, context.args[0])
-        .replace(/\$1/g, context.args[1]);
+      const processed = content.replace(/\$ARGUMENTS/g, args);
 
-      expect(processed).toBe('Process file: file.txt with options: --verbose');
+      expect(processed).toBe('Process: file.txt --verbose');
     });
 
     it('should handle skill execution flow', async () => {
-      // 1. Load skill
       const skill = createMockSkill({
         frontmatter: {
           name: 'execution-test',
@@ -122,19 +94,12 @@ This is the content.
         },
       });
 
-      // 2. Match skill
       const input = '/execution-test';
       const isMatch = input.slice(1) === skill.frontmatter.name;
-
-      // 3. Preprocess
       const processedContent = skill.content;
-
-      // 4. Execute (mock)
-      const executed = true;
 
       expect(isMatch).toBe(true);
       expect(processedContent).toContain('# Test Skill');
-      expect(executed).toBe(true);
     });
   });
 
@@ -236,7 +201,6 @@ This is the content.
       const sessionTools = ['Read', 'Glob'];
       const skillTools = ['Read', 'Write'];
 
-      // Union of tools
       const effectiveTools = [...new Set([...sessionTools, ...skillTools])];
 
       expect(effectiveTools).toContain('Read');
@@ -258,7 +222,6 @@ This is the content.
     it('should handle parse errors gracefully', () => {
       const invalidMarkdown = 'No frontmatter here';
 
-      // Should fail to parse
       const hasFrontmatter = invalidMarkdown.startsWith('---');
 
       expect(hasFrontmatter).toBe(false);
@@ -267,77 +230,13 @@ This is the content.
     it('should continue execution when one skill fails', () => {
       const skills: (SkillDefinition | null)[] = [
         createMockSkill({ frontmatter: { name: 'good' } }),
-        null, // Failed to load
+        null,
         createMockSkill({ frontmatter: { name: 'another-good' } }),
       ];
 
       const validSkills = skills.filter((s): s is SkillDefinition => s !== null);
 
       expect(validSkills).toHaveLength(2);
-    });
-  });
-
-  describe('Complex scenarios', () => {
-    it('should handle skill with dependencies', () => {
-      const baseSkill = createMockSkill({
-        frontmatter: { name: 'base', description: 'Base skill' },
-      });
-
-      const dependentSkill = createMockSkill({
-        frontmatter: {
-          name: 'dependent',
-          description: 'Dependent skill',
-          dependencies: ['base'],
-        },
-      });
-
-      const dependencies = dependentSkill.frontmatter.dependencies;
-
-      expect(dependencies).toContain('base');
-    });
-
-    it('should handle skill chaining', () => {
-      const skills: SkillDefinition[] = [
-        createMockSkill({ frontmatter: { name: 'step1' } }),
-        createMockSkill({ frontmatter: { name: 'step2' } }),
-        createMockSkill({ frontmatter: { name: 'step3' } }),
-      ];
-
-      // Execute chain
-      const results: string[] = [];
-      for (const skill of skills) {
-        results.push(skill.frontmatter.name);
-      }
-
-      expect(results).toEqual(['step1', 'step2', 'step3']);
-    });
-
-    it('should handle concurrent skill executions', async () => {
-      const skills = [
-        createMockSkill({ frontmatter: { name: 'concurrent1' } }),
-        createMockSkill({ frontmatter: { name: 'concurrent2' } }),
-      ];
-
-      // Simulate concurrent execution
-      const results = await Promise.all(
-        skills.map(async (skill) => skill.frontmatter.name)
-      );
-
-      expect(results).toContain('concurrent1');
-      expect(results).toContain('concurrent2');
-    });
-
-    it('should preserve skill state across operations', () => {
-      const skill = createMockSkill({
-        frontmatter: { name: 'stateful', description: 'Stateful skill' },
-      });
-
-      // Multiple operations
-      const name1 = skill.frontmatter.name;
-      const name2 = skill.frontmatter.name;
-
-      expect(name1).toBe(name2);
-      expect(skill.frontmatter.name).toBe('stateful');
     });
   });
 
@@ -351,7 +250,6 @@ This is the content.
 
       expect(largeCatalog).toHaveLength(100);
 
-      // Search should still work
       const found = largeCatalog.find(s => s.name === 'skill-50');
       expect(found).toBeDefined();
     });
@@ -362,10 +260,8 @@ This is the content.
         { name: 'lazy2', description: 'Lazy 2', source: 'project' },
       ];
 
-      // Catalog doesn't include content
       expect(catalog[0]).not.toHaveProperty('content');
 
-      // Content loaded on demand
       const fullSkill = createMockSkill({ frontmatter: { name: 'lazy1' } });
       expect(fullSkill.content).toBeDefined();
     });

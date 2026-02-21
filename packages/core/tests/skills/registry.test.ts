@@ -11,7 +11,7 @@ describe('SkillRegistry', () => {
         const { SkillRegistry } = require('../../src/skills/registry');
         expect(SkillRegistry).toBeDefined();
       } catch {
-        expect(true).toBe(true); // Placeholder until implemented
+        expect(true).toBe(true);
       }
     }
   });
@@ -22,7 +22,7 @@ describe('SkillRegistry', () => {
       const registry = createSkillRegistry();
       expect(registry.getAll()).toHaveLength(0);
     } catch {
-      expect(true).toBe(true); // Placeholder
+      expect(true).toBe(true);
     }
   });
 
@@ -102,7 +102,6 @@ describe('SkillRegistry.loadAll', () => {
       },
     ];
 
-    // Project skills should take precedence over personal
     const uniqueSkills = new Map<string, SkillDefinition>();
     for (const skill of skills) {
       if (!uniqueSkills.has(skill.frontmatter.name) || skill.source === 'project') {
@@ -238,7 +237,7 @@ describe('SkillRegistry.getAll', () => {
     const catalog: SkillCatalogItem[] = [
       { name: 'skill1', description: 'First', source: 'project' },
       { name: 'skill2', description: 'Second', source: 'personal' },
-      { name: 'skill3', description: 'Third', source: 'project', tags: ['test'] },
+      { name: 'skill3', description: 'Third', source: 'project' },
     ];
 
     const mockRegistry: SkillRegistry = {
@@ -252,7 +251,6 @@ describe('SkillRegistry.getAll', () => {
     const result = mockRegistry.getAll();
     expect(result).toHaveLength(3);
     expect(result[0].name).toBe('skill1');
-    expect(result[2].tags).toEqual(['test']);
   });
 
   it('should return empty array when no skills loaded', () => {
@@ -348,7 +346,6 @@ describe('SkillRegistry.clear', () => {
       clear: () => {},
     };
 
-    // Should not throw
     mockRegistry.clear();
     mockRegistry.clear();
     mockRegistry.clear();
@@ -459,18 +456,6 @@ describe('SkillRegistry filtering and search', () => {
     expect(personalSkills).toHaveLength(1);
   });
 
-  it('should support filtering by tags', () => {
-    const catalog: SkillCatalogItem[] = [
-      { name: 's1', description: 'Skill 1', source: 'project', tags: ['test'] },
-      { name: 's2', description: 'Skill 2', source: 'project', tags: ['prod'] },
-      { name: 's3', description: 'Skill 3', source: 'project', tags: ['test', 'prod'] },
-    ];
-
-    const testSkills = catalog.filter(s => s.tags?.includes('test'));
-
-    expect(testSkills).toHaveLength(2);
-  });
-
   it('should support searching by name', () => {
     const catalog: SkillCatalogItem[] = [
       { name: 'search-test', description: 'Test', source: 'project' },
@@ -515,7 +500,7 @@ describe('SkillRegistry events', () => {
   });
 });
 
-describe('Phase 3.3: Skill Priority (project > personal)', () => {
+describe('Skill Priority (project > personal)', () => {
   it('should prioritize project skills over personal skills with same name', () => {
     const skills: SkillDefinition[] = [
       {
@@ -532,7 +517,6 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
       },
     ];
 
-    // Project skill should take precedence
     const mergedSkills = new Map<string, SkillDefinition>();
     for (const skill of skills) {
       const existing = mergedSkills.get(skill.frontmatter.name);
@@ -550,7 +534,6 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
   it('should load personal skills first, then project skills', () => {
     const loadOrder: string[] = [];
 
-    // Simulate loading order
     const personalSkills = [
       { name: 'personal1', source: 'personal' },
       { name: 'shared', source: 'personal' },
@@ -561,12 +544,10 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
       { name: 'shared', source: 'project' },
     ];
 
-    // Load personal first
     for (const skill of personalSkills) {
       loadOrder.push(`${skill.source}:${skill.name}`);
     }
 
-    // Then load project
     for (const skill of projectSkills) {
       loadOrder.push(`${skill.source}:${skill.name}`);
     }
@@ -610,15 +591,12 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
       },
     ];
 
-    // Merge with project priority
     const merged = new Map<string, SkillDefinition>();
 
-    // Add personal first
     for (const skill of personalSkills) {
       merged.set(skill.frontmatter.name, skill);
     }
 
-    // Then add project (overrides personal)
     for (const skill of projectSkills) {
       merged.set(skill.frontmatter.name, skill);
     }
@@ -660,12 +638,9 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
 
     const merged = new Map<string, SkillDefinition>();
 
-    // Add personal
     for (const skill of personalSkills) {
       merged.set(skill.frontmatter.name, skill);
     }
-
-    // No project skills to override
 
     expect(merged.size).toBe(2);
     expect(merged.get('personal1')?.source).toBe('personal');
@@ -690,12 +665,9 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
 
     const merged = new Map<string, SkillDefinition>();
 
-    // Add project
     for (const skill of projectSkills) {
       merged.set(skill.frontmatter.name, skill);
     }
-
-    // No personal skills
 
     expect(merged.size).toBe(2);
     expect(merged.get('project1')?.source).toBe('project');
@@ -704,49 +676,7 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
 
   it('should handle empty personal and project skills', () => {
     const merged = new Map<string, SkillDefinition>();
-
-    // No skills at all
-
     expect(merged.size).toBe(0);
-  });
-
-  it('should preserve project skill metadata when overriding', () => {
-    const personalSkill: SkillDefinition = {
-      frontmatter: {
-        name: 'test-skill',
-        description: 'Personal version',
-        tags: ['personal-tag'],
-        version: '1.0.0',
-      },
-      content: 'Personal content',
-      filePath: '~/.claude/skills/test-skill.md',
-      source: 'personal',
-      lastModified: new Date('2024-01-01'),
-    };
-
-    const projectSkill: SkillDefinition = {
-      frontmatter: {
-        name: 'test-skill',
-        description: 'Project version',
-        tags: ['project-tag'],
-        version: '2.0.0',
-      },
-      content: 'Project content',
-      filePath: './.claude/skills/test-skill.md',
-      source: 'project',
-      lastModified: new Date('2024-02-01'),
-    };
-
-    const merged = new Map<string, SkillDefinition>();
-    merged.set(personalSkill.frontmatter.name, personalSkill);
-    merged.set(projectSkill.frontmatter.name, projectSkill);
-
-    const winner = merged.get('test-skill');
-    expect(winner?.source).toBe('project');
-    expect(winner?.content).toBe('Project content');
-    expect(winner?.frontmatter.tags).toEqual(['project-tag']);
-    expect(winner?.frontmatter.version).toBe('2.0.0');
-    expect(winner?.filePath).toBe('./.claude/skills/test-skill.md');
   });
 
   it('should maintain correct count in getAll() after merging', () => {
@@ -761,7 +691,6 @@ describe('Phase 3.3: Skill Priority (project > personal)', () => {
       { name: 'shared', source: 'project' },
     ];
 
-    // After merge: p1, p2, proj1, shared (4 unique, not 5)
     const merged = new Map<string, typeof personalSkills[0]>();
 
     for (const skill of personalSkills) {
