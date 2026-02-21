@@ -18,6 +18,7 @@ export class PermissionManager {
   private allowDangerouslySkipPermissions: boolean;
   private canUseTool?: CanUseTool;
   private planLog: PlanLogEntry[] = [];
+  private skillAllowedTools: string[] | undefined;
 
   constructor(options: PermissionOptions) {
     this.mode = options.mode;
@@ -30,6 +31,31 @@ export class PermissionManager {
         'allowDangerouslySkipPermissions must be true to use bypassPermissions mode'
       );
     }
+  }
+
+  /**
+   * Set skill-specific allowed tools
+   * This temporarily extends the allowed tools list for skill execution
+   */
+  setSkillAllowedTools(toolNames: string[] | undefined): void {
+    this.skillAllowedTools = toolNames;
+  }
+
+  /**
+   * Get skill-specific allowed tools
+   */
+  getSkillAllowedTools(): string[] | undefined {
+    return this.skillAllowedTools;
+  }
+
+  /**
+   * Check if a tool is allowed by skill configuration
+   */
+  isToolAllowedBySkill(toolName: string): boolean {
+    if (!this.skillAllowedTools || this.skillAllowedTools.length === 0) {
+      return true; // No restrictions
+    }
+    return this.skillAllowedTools.includes(toolName);
   }
 
   /**
@@ -68,6 +94,14 @@ export class PermissionManager {
       case 'default':
         // Continue to default behavior
         break;
+    }
+
+    // Check if tool is allowed by skill configuration
+    if (!this.isToolAllowedBySkill(toolName)) {
+      return {
+        approved: false,
+        error: `Tool "${toolName}" is not allowed by the current skill configuration`,
+      };
     }
 
     // Default behavior: check if tool is sensitive
