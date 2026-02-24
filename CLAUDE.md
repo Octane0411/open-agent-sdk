@@ -26,6 +26,7 @@ open-agent-sdk/
         │   ├── agent/        # ReAct loop, subagent system
         │   ├── session/      # Session management
         │   ├── permissions/  # Permission system
+        │   ├── skills/       # Skill system (auto-load from ~/.claude/skills/)
         │   └── hooks/        # Hooks framework
         └── tests/
 ```

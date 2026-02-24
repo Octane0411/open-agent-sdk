@@ -22,6 +22,8 @@ export interface SkillExecutionResult {
   content?: string;
   /** Arguments passed to the skill */
   args?: string[];
+  /** User message (without skill command prefix) */
+  userMessage?: string;
   /** Error message (if execution failed) */
   error?: string;
 }
@@ -68,6 +70,7 @@ export function executeSkill(
     skill,
     content: processedContent,
     args: command.args,
+    userMessage: command.userMessage,
   };
 }
 
@@ -81,7 +84,7 @@ export function executeSkill(
 export function getSkillContent(
   input: string,
   skills: SkillDefinition[]
-): { content: string; skill: SkillDefinition; args: string[] } | null {
+): { content: string; skill: SkillDefinition; args: string[]; userMessage: string } | null {
   const result = executeSkill(input, skills);
 
   if (result.executed && result.content && result.skill) {
@@ -89,33 +92,11 @@ export function getSkillContent(
       content: result.content,
       skill: result.skill,
       args: result.args || [],
+      userMessage: result.userMessage || '',
     };
   }
 
   return null;
-}
-
-/**
- * Build system prompt with skill instructions
- *
- * @param basePrompt - Base system prompt
- * @param skillContent - Skill content to inject
- * @returns Combined system prompt
- */
-export function buildSkillSystemPrompt(
-  basePrompt: string | undefined,
-  skillContent: string
-): string {
-  const parts: string[] = [];
-
-  if (basePrompt) {
-    parts.push(basePrompt);
-  }
-
-  parts.push('## Skill Instructions');
-  parts.push(skillContent);
-
-  return parts.join('\n\n');
 }
 
 /**

@@ -6,6 +6,7 @@
 import { logger, type LogLevel } from './utils/logger';
 import type { PermissionMode, CanUseTool } from './permissions/types';
 import type { McpServersConfig } from './mcp/types';
+import type { OutputFormat } from './types/output-format';
 import { OpenAIProvider } from './providers/openai';
 import { GoogleProvider } from './providers/google';
 import { AnthropicProvider } from './providers/anthropic';
@@ -62,6 +63,8 @@ export interface PromptOptions {
   logLevel?: LogLevel;
   /** Custom callback for tool permission checks */
   canUseTool?: CanUseTool;
+  /** Output format for structured responses */
+  outputFormat?: OutputFormat;
 
   // Session persistence options
   /** Storage implementation for session persistence. If provided, session will be saved and can be resumed later */
@@ -84,6 +87,8 @@ export interface PromptResult {
   };
   /** Session ID for this conversation. Can be used to resume or fork later */
   session_id?: string;
+  /** Structured output when outputFormat is configured */
+  structured_output?: unknown;
 }
 
 /**
@@ -188,6 +193,8 @@ export async function prompt(
         output_tokens: outputTokens,
       },
       session_id: sessionId,
+      // Note: structured output not currently available in resume/fork mode
+      structured_output: undefined,
     };
   }
 
@@ -235,6 +242,7 @@ export async function prompt(
     permissionMode: options.permissionMode,
     mcpServers: options.mcpServers,
     canUseTool: options.canUseTool,
+    outputFormat: options.outputFormat,
   });
 
   // Run the loop
@@ -276,6 +284,7 @@ export async function prompt(
     duration_ms,
     usage: result.usage,
     session_id: sessionId,
+    structured_output: result.structuredOutput,
   };
 }
 
@@ -305,6 +314,15 @@ export type {
   McpServerInfo,
   CreateSystemMessageOptions,
 } from './types/messages';
+
+// Export output format types
+export type { OutputFormat, JsonSchema } from './types/output-format';
+export { Schema } from './types/output-format';
+
+// Export file checkpoint types
+export type { FileCheckpoint, CheckpointData } from './tools/file-checkpoint';
+export { FileCheckpointManager, checkpointManager } from './tools/file-checkpoint';
+export { createCheckpointHooks } from './hooks/file-checkpoint-hooks';
 
 export type {
   Tool,

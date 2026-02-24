@@ -6,10 +6,11 @@
 import type { ReActLoop } from '../agent/react-loop';
 import type { SDKMessage } from '../types/messages';
 import type { SessionStorage, SessionData } from './storage';
-import type { SkillCatalogItem } from '../skills/types';
+import type { SkillCatalogItem, SkillRegistry } from '../skills/types';
 import { logger } from '../utils/logger';
 import { generateUUID } from '../utils/uuid';
 import { createSkillRegistry } from '../skills/registry';
+import type { FileCheckpoint, FileCheckpointManager } from '../tools/file-checkpoint';
 
 /** Session states following a state machine pattern */
 export enum SessionState {
@@ -107,7 +108,9 @@ export class Session {
   private storage?: SessionStorage;
   private updatedAt: number;
   private skillCatalog: SkillCatalogItem[];
+  private skillRegistry?: SkillRegistry;
   private skillsLoaded: boolean;
+  private checkpointManager?: FileCheckpointManager;
 
   constructor(loop: ReActLoop, options: SessionOptions, storage?: SessionStorage) {
     this.id = options.id ?? generateUUID();
@@ -123,6 +126,7 @@ export class Session {
     this.isStreaming = false;
     this.storage = storage;
     this.skillCatalog = [];
+    this.skillRegistry = undefined;
     this.skillsLoaded = false;
 
     // Load skills asynchronously
@@ -130,20 +134,52 @@ export class Session {
   }
 
   /**
+   * Initialize the session with an existing skill registry
+   * This is used by the factory to share a pre-loaded registry between Session and ReActLoop
+   * @param registry - Pre-loaded skill registry
+   * @internal
+   */
+  initializeWithSkillRegistry(registry: SkillRegistry): void {
+    this.skillRegistry = registry;
+    this.skillCatalog = registry.getAll();
+    this.skillsLoaded = true;
+    logger.debug('[Session] Initialized with pre-loaded skills:', this.skillCatalog.length);
+  }
+
+  /**
    * Load skills from registry
    * @private
    */
   private async loadSkills(): Promise<void> {
+    // If skills are already loaded (via initializeWithSkillRegistry), skip
+    if (this.skillsLoaded && this.skillRegistry) {
+      return;
+    }
+
     try {
-      const registry = createSkillRegistry();
-      await registry.loadAll();
-      this.skillCatalog = registry.getAll();
+      this.skillRegistry = createSkillRegistry();
+      const loadedSkills = await this.skillRegistry.loadAll();
+      this.skillCatalog = loadedSkills.map(skill => ({
+        name: skill.frontmatter.name,
+        description: skill.frontmatter.description,
+        source: skill.source,
+      }));
       this.skillsLoaded = true;
       logger.debug('[Session] Loaded skills:', this.skillCatalog.length);
     } catch (error) {
       logger.warn('[Session] Failed to load skills:', error);
       this.skillsLoaded = false;
+      this.skillRegistry = undefined;
+      this.skillCatalog = [];
     }
+  }
+
+  /**
+   * Get the skill registry
+   * @returns SkillRegistry instance or undefined if not loaded
+   */
+  getSkillRegistry(): SkillRegistry | undefined {
+    return this.skillRegistry;
   }
 
   /**
@@ -176,15 +212,15 @@ export class Session {
 
     if (this.skillCatalog.length > 0) {
       parts.push('\n\n## Available Skills');
-      parts.push('You can invoke the following skills by typing /skill-name:');
+      parts.push('You can invoke the following skills using the Skill tool:');
       parts.push('');
 
       for (const skill of this.skillCatalog) {
-        parts.push(`- /${skill.name}: ${skill.description}`);
+        parts.push(`- ${skill.name}: ${skill.description}`);
       }
 
       parts.push('');
-      parts.push('To use a skill, start your message with /skill-name followed by any arguments.');
+      parts.push('To use a skill, invoke the Skill tool with the skill name. The skill content will be loaded as a system message and remain active for the session.');
     }
 
     return parts.join('\n');
@@ -275,7 +311,7 @@ export class Session {
       throw new SessionNotIdleError();
     }
 
-    // Create user message and add to history
+    // Create user message
     const userMessage: SDKMessage = {
       type: 'user',
       uuid: generateUUID(),
@@ -325,12 +361,16 @@ export class Session {
       // Pass history messages (excluding the current user message which will be added by runStream)
       const historyMessages = this.messages.slice(0, -1);
       logger.debug('[Session] historyMessages count:', historyMessages.length);
-      logger.debug('[Session] historyMessages:', JSON.stringify(historyMessages, null, 2));
 
       // Run the ReAct loop and yield messages
       for await (const event of this.loop.runStream(userPrompt, historyMessages)) {
         switch (event.type) {
           case 'assistant':
+            this.messages.push(event.message);
+            yield event.message;
+            break;
+
+          case 'skill_system':
             this.messages.push(event.message);
             yield event.message;
             break;
@@ -453,5 +493,59 @@ export class Session {
       preTokens: result.preTokens,
       preservedRounds: result.preservedRounds,
     };
+  }
+
+  /**
+   * Initialize the session with a checkpoint manager
+   * Called by the factory when file checkpointing is enabled
+   * @param manager - FileCheckpointManager instance
+   * @internal
+   */
+  initializeWithCheckpointManager(manager: FileCheckpointManager): void {
+    this.checkpointManager = manager;
+  }
+
+  /**
+   * Rewind files to the state before a specific tool use
+   * Requires file checkpointing to be enabled
+   *
+   * @param toolUseId - Tool use ID to rewind to
+   * @throws {Error} If file checkpointing is not enabled
+   * @throws {SessionClosedError} If session is closed
+   */
+  async rewindFiles(toolUseId: string): Promise<void> {
+    if (this._state === SessionState.CLOSED) {
+      throw new SessionClosedError();
+    }
+
+    if (!this.checkpointManager) {
+      throw new Error('File checkpointing is not enabled for this session. ' +
+        'Enable it by setting enableFileCheckpointing: true when creating the session.');
+    }
+
+    await this.checkpointManager.rewindToCheckpoint(this.id, toolUseId);
+  }
+
+  /**
+   * List all checkpoints for this session
+   * Requires file checkpointing to be enabled
+   *
+   * @returns Array of checkpoints
+   * @throws {Error} If file checkpointing is not enabled
+   */
+  listCheckpoints(): FileCheckpoint[] {
+    if (!this.checkpointManager) {
+      // Return empty array if checkpointing is not enabled
+      return [];
+    }
+
+    return this.checkpointManager.getCheckpoints(this.id);
+  }
+
+  /**
+   * Check if file checkpointing is enabled for this session
+   */
+  isCheckpointingEnabled(): boolean {
+    return this.checkpointManager !== undefined;
   }
 }

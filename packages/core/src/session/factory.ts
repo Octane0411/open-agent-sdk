@@ -12,8 +12,13 @@ import { Session } from './session';
 import { InMemoryStorage, type SessionStorage, type SessionData } from './storage';
 import { logger, type LogLevel } from '../utils/logger';
 import { generateUUID } from '../utils/uuid';
-import type { HooksConfig } from '../hooks/types';
+import { createSkillRegistry } from '../skills/registry';
 import type { PermissionMode, CanUseTool } from '../permissions/types';
+import type { OutputFormat } from '../types/output-format';
+import { checkpointManager } from '../tools/file-checkpoint';
+import { createCheckpointHooks } from '../hooks/file-checkpoint-hooks';
+import { HookManager } from '../hooks/manager';
+import type { HooksConfig, HookCallbackMatcher } from '../hooks/types';
 
 /** Options for creating a new session */
 export interface CreateSessionOptions {
@@ -49,6 +54,10 @@ export interface CreateSessionOptions {
   logLevel?: LogLevel;
   /** Hooks configuration */
   hooks?: HooksConfig;
+  /** Output format for structured responses */
+  outputFormat?: OutputFormat;
+  /** Enable file checkpointing for rollback support */
+  enableFileCheckpointing?: boolean;
 }
 
 /** Options for resuming an existing session */
@@ -156,7 +165,25 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
 
-  // Create ReAct loop
+  // Create skill registry and load skills
+  const skillRegistry = createSkillRegistry();
+  await skillRegistry.loadAll();
+
+  // Set up checkpoint hooks if file checkpointing is enabled
+  let hooks = options.hooks;
+  if (options.enableFileCheckpointing) {
+    const checkpointHooks = createCheckpointHooks(checkpointManager);
+    const existingHooks = options.hooks instanceof HookManager
+      ? options.hooks
+      : options.hooks
+        ? new HookManager(options.hooks)
+        : new HookManager();
+
+    // Merge checkpoint hooks with existing hooks
+    hooks = mergeHooks(existingHooks, checkpointHooks);
+  }
+
+  // Create ReAct loop with skill registry
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: options.maxTurns ?? 10,
     systemPrompt: options.systemPrompt,
@@ -168,7 +195,9 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
     canUseTool: options.canUseTool,
     mcpServers: options.mcpServers,
-    hooks: options.hooks,
+    hooks,
+    skillRegistry,
+    outputFormat: options.outputFormat,
   });
 
   // Create session
@@ -176,6 +205,14 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     model: options.model,
     provider: providerType,
   }, storage);
+
+  // Initialize checkpoint manager if enabled
+  if (options.enableFileCheckpointing) {
+    session.initializeWithCheckpointManager(checkpointManager);
+  }
+
+  // Initialize the session with the pre-loaded skill registry
+  session.initializeWithSkillRegistry(skillRegistry);
 
   // Save initial session data to storage
   const sessionData: SessionData = {
@@ -198,6 +235,8 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
       allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
       mcpServers: options.mcpServers,
       hooks: options.hooks,
+      outputFormat: options.outputFormat,
+      enableFileCheckpointing: options.enableFileCheckpointing,
     },
   };
 
@@ -280,6 +319,10 @@ export async function resumeSession(
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
 
+  // Create skill registry and load skills
+  const skillRegistry = createSkillRegistry();
+  await skillRegistry.loadAll();
+
   // Create ReAct loop with saved options, overridden by new options
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: sessionData.options.maxTurns ?? 10,
@@ -292,10 +335,17 @@ export async function resumeSession(
     canUseTool: options?.canUseTool,
     mcpServers: sessionData.options.mcpServers,
     hooks: options?.hooks,
+    skillRegistry,
+    outputFormat: sessionData.options.outputFormat,
   });
 
   // Restore session from storage
   const session = await Session.loadFromStorage(sessionId, storage, loop);
+
+  // Initialize the session with the skill registry
+  if (session) {
+    session.initializeWithSkillRegistry(skillRegistry);
+  }
 
   if (!session) {
     throw new Error(`Failed to load session with ID "${sessionId}".`);
@@ -378,6 +428,10 @@ export async function forkSession(
   // Create tool registry with default tools
   const toolRegistry = createDefaultRegistry();
 
+  // Create skill registry and load skills
+  const skillRegistry = createSkillRegistry();
+  await skillRegistry.loadAll();
+
   // Create ReAct loop with inherited options, overridden by new options
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: sourceData.options.maxTurns ?? 10,
@@ -390,6 +444,7 @@ export async function forkSession(
     canUseTool: options.canUseTool,
     mcpServers: sourceData.options.mcpServers,
     hooks: options.hooks ?? sourceData.options.hooks,
+    skillRegistry,
   });
 
   // Generate new session ID and fork timestamp
@@ -404,6 +459,9 @@ export async function forkSession(
     parentSessionId: sourceSessionId,
     forkedAt: forkTimestamp,
   }, storage);
+
+  // Initialize the session with the skill registry
+  session.initializeWithSkillRegistry(skillRegistry);
 
   // Copy message history from source session
   (session as unknown as { messages: unknown[] }).messages = [...sourceData.messages];
@@ -432,4 +490,39 @@ export async function forkSession(
   await storage.save(forkedData);
 
   return session;
+}
+
+/**
+ * Merge checkpoint hooks with existing hooks
+ * Preserves all existing hooks and adds checkpoint hooks
+ */
+function mergeHooks(
+  existing: HookManager | HooksConfig,
+  checkpointHooks: ReturnType<typeof createCheckpointHooks>
+): HooksConfig {
+  // Extract existing hooks config
+  const existingConfig: HooksConfig = existing instanceof HookManager
+    ? {} // HookManager doesn't expose its internal config, so we can't merge
+    : existing ?? {};
+
+  // Merge checkpoint hooks with existing hooks
+  const merged: HooksConfig = { ...existingConfig };
+
+  // Add PreToolUse checkpoint hooks
+  if (checkpointHooks.PreToolUse) {
+    merged.PreToolUse = [
+      checkpointHooks.PreToolUse as HookCallbackMatcher,
+      ...(existingConfig.PreToolUse ?? []),
+    ];
+  }
+
+  // Add PostToolUse checkpoint hooks
+  if (checkpointHooks.PostToolUse) {
+    merged.PostToolUse = [
+      checkpointHooks.PostToolUse as HookCallbackMatcher,
+      ...(existingConfig.PostToolUse ?? []),
+    ];
+  }
+
+  return merged;
 }

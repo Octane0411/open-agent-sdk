@@ -6,18 +6,22 @@
 import type { LLMProvider, ChatOptions } from '../providers/base';
 import type { ToolRegistry } from '../tools/registry';
 import type { Tool, ToolContext } from '../types/tools';
+import type { SkillRegistry } from '../skills/types';
+import { preprocessContent } from '../skills/preprocessor';
 import { logger } from '../utils/logger';
 import { generateUUID } from '../utils/uuid';
 import {
   type SDKMessage,
   type SDKAssistantMessage,
   type SDKToolResultMessage,
+  type SDKSkillSystemMessage,
   type ToolCall,
   createUserMessage,
   createSystemMessage,
   createAssistantMessage,
   createToolResultMessage,
   createCompactBoundaryMessage,
+  createSkillSystemMessage,
 } from '../types/messages';
 import { HookManager } from '../hooks/manager';
 import type { HooksConfig } from '../hooks/types';
@@ -33,6 +37,7 @@ import {
   createPreCompactInput,
 } from '../hooks/inputs';
 import type { SyncHookJSONOutput } from '../hooks/types';
+import type { OutputFormat } from '../types/output-format';
 import { PermissionManager } from '../permissions/manager';
 import type { PermissionMode, CanUseTool, PermissionCheckResult } from '../permissions/types';
 
@@ -59,6 +64,10 @@ export interface ReActLoopConfig {
   autoCompactThreshold?: number;
   /** Number of recent conversation rounds to preserve during compaction (default: 2) */
   preserveRecentRounds?: number;
+  /** Skill registry for loading skills */
+  skillRegistry?: SkillRegistry;
+  /** Output format for structured responses */
+  outputFormat?: OutputFormat;
 }
 
 export interface ReActResult {
@@ -71,11 +80,14 @@ export interface ReActResult {
   };
   /** Whether the execution resulted in an error or was aborted */
   isError?: boolean;
+  /** Structured output when outputFormat is configured */
+  structuredOutput?: unknown;
 }
 
 /** Stream event types for ReActLoop.runStream() */
 export type ReActStreamEvent =
   | { type: 'assistant'; message: SDKAssistantMessage }
+  | { type: 'skill_system'; message: SDKSkillSystemMessage }
   | { type: 'tool_result'; message: SDKToolResultMessage }
   | { type: 'usage'; usage: { input_tokens: number; output_tokens: number } }
   | { type: 'done'; result: string };
@@ -284,6 +296,19 @@ export class ReActLoop {
         // Execute tools and add results
         for (const toolCall of assistantToolCalls) {
           const result = await this.executeTool(toolCall, availableTools, toolContext);
+
+          // If this was a Skill tool, insert skill system message before tool result
+          if (result.skillResult) {
+            messages.push(
+              createSkillSystemMessage(
+                result.skillResult.name,
+                result.skillResult.content,
+                this.sessionId,
+                generateUUID()
+              )
+            );
+          }
+
           messages.push(
             createToolResultMessage(
               toolCall.id,
@@ -313,6 +338,7 @@ export class ReActLoop {
             input_tokens: totalInputTokens,
             output_tokens: totalOutputTokens,
           },
+          structuredOutput: (this as unknown as { lastStructuredOutput: unknown }).lastStructuredOutput,
         };
       }
     }
@@ -327,6 +353,7 @@ export class ReActLoop {
         output_tokens: totalOutputTokens,
       },
       isError: true,
+      structuredOutput: (this as unknown as { lastStructuredOutput: unknown }).lastStructuredOutput,
     };
   }
 
@@ -490,6 +517,19 @@ export class ReActLoop {
         // Execute tools and add results
         for (const toolCall of assistantToolCalls) {
           const result = await this.executeTool(toolCall, availableTools, toolContext);
+
+          // If this was a Skill tool, insert skill system message before tool result
+          if (result.skillResult) {
+            const skillSystemMessage = createSkillSystemMessage(
+              result.skillResult.name,
+              result.skillResult.content,
+              this.sessionId,
+              generateUUID()
+            );
+            messages.push(skillSystemMessage);
+            yield { type: 'skill_system', message: skillSystemMessage };
+          }
+
           const toolResultMessage = createToolResultMessage(
             toolCall.id,
             toolCall.function.name,
@@ -763,8 +803,10 @@ Generate a concise but comprehensive summary.`;
     onUsage: (tokens: { input: number; output: number }) => void
   ): Promise<SDKAssistantMessage> {
     // Pass system prompt via ChatOptions, not in messages
+    // Also pass outputSchema if outputFormat is configured
     const chatOptions: ChatOptions = {
       systemInstruction: this.config.systemPrompt,
+      outputSchema: this.config.outputFormat?.schema as Record<string, unknown> | undefined,
     };
     const stream = this.provider.chat(messages, tools, this.config.abortController?.signal, chatOptions);
 
@@ -772,6 +814,7 @@ Generate a concise but comprehensive summary.`;
     const toolCalls: Map<string, ToolCall> = new Map();
     let inputTokens = 0;
     let outputTokens = 0;
+    let structuredOutput: unknown = undefined;
 
     for await (const chunk of stream) {
       switch (chunk.type) {
@@ -799,6 +842,13 @@ Generate a concise but comprehensive summary.`;
           }
           break;
 
+        case 'structured_output':
+          // Capture structured output when outputFormat is configured
+          if (chunk.structured_output !== undefined) {
+            structuredOutput = chunk.structured_output;
+          }
+          break;
+
         case 'usage':
           if (chunk.usage) {
             inputTokens = chunk.usage.input_tokens;
@@ -815,6 +865,11 @@ Generate a concise but comprehensive summary.`;
     }
 
     onUsage({ input: inputTokens, output: outputTokens });
+
+    // Store structured output on the instance for retrieval
+    if (structuredOutput !== undefined) {
+      (this as unknown as { lastStructuredOutput: unknown }).lastStructuredOutput = structuredOutput;
+    }
 
     const contentBlocks: { type: 'text'; text: string }[] = content
       ? [{ type: 'text', text: content }]
@@ -833,7 +888,7 @@ Generate a concise but comprehensive summary.`;
     toolCall: ToolCall,
     availableTools: Tool[],
     context: ToolContext
-  ): Promise<{ content: string; isError: boolean }> {
+  ): Promise<{ content: string; isError: boolean; skillResult?: { name: string; content: string } }> {
     const tool = availableTools.find((t) => t.name === toolCall.function.name);
 
     if (!tool) {
@@ -979,6 +1034,42 @@ Generate a concise but comprehensive summary.`;
 
     try {
       const result = await tool.handler(finalInput, context);
+
+      // Special handling for Skill tool - look up skill and return content for system message
+      if (toolCall.function.name === 'Skill' && this.config.skillRegistry) {
+        const skillInput = finalInput as { name: string };
+        const skill = this.config.skillRegistry.get(skillInput.name);
+
+        if (skill) {
+          // Preprocess skill content (substitute $ARGUMENTS if any)
+          const processedContent = preprocessContent(skill.content, { arguments: '' });
+
+          // Trigger PostToolUse hook
+          const postToolInput = createPostToolUseInput(
+            this.sessionId,
+            cwd,
+            toolCall.function.name,
+            finalInput,
+            result
+          );
+          await this.hookManager.emitForTool('PostToolUse', postToolInput, toolCall.function.name, toolCall.id);
+
+          return {
+            content: JSON.stringify({ loaded: true, skill_name: skill.frontmatter.name }),
+            isError: false,
+            skillResult: {
+              name: skill.frontmatter.name,
+              content: processedContent,
+            },
+          };
+        } else {
+          // Skill not found
+          return {
+            content: JSON.stringify({ loaded: false, skill_name: skillInput.name, error: `Skill "${skillInput.name}" not found` }),
+            isError: true,
+          };
+        }
+      }
 
       // Trigger PostToolUse hook
       const postToolInput = createPostToolUseInput(
