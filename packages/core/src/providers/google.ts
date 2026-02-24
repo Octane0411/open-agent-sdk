@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { streamText, type ModelMessage, jsonSchema } from 'ai';
+import { streamText, generateObject, type ModelMessage, jsonSchema } from 'ai';
 import { LLMProvider, type ProviderConfig, type LLMChunk, type ChatOptions } from './base';
 import type { SDKMessage, AssistantContentBlock } from '../types/messages';
 import type { ToolDefinition } from '../types/tools';
@@ -32,6 +32,12 @@ export class GoogleProvider extends LLMProvider {
     signal?: AbortSignal,
     options?: ChatOptions
   ): AsyncIterable<LLMChunk> {
+    // If outputSchema is provided, use generateObject for structured output
+    if (options?.outputSchema) {
+      yield* this.generateStructuredOutput(messages, options, signal);
+      return;
+    }
+
     try {
       // Convert message format
       const coreMessages = this.convertToCoreMessages(messages);
@@ -108,6 +114,69 @@ export class GoogleProvider extends LLMProvider {
       }
 
       // Handle API errors - yield as error content instead of throwing
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      yield { type: 'error', error: errorMessage };
+      yield { type: 'done' };
+    }
+  }
+
+  /**
+   * Generate structured output using generateObject
+   * This is a non-streaming operation that returns a complete object
+   */
+  private async *generateStructuredOutput(
+    messages: SDKMessage[],
+    options: ChatOptions,
+    signal?: AbortSignal
+  ): AsyncIterable<LLMChunk> {
+    try {
+      // Convert message format
+      const coreMessages = this.convertToCoreMessages(messages);
+
+      // Use Vercel AI SDK's generateObject for structured output
+      const result = await generateObject({
+        model: this.googleAI(this.config.model),
+        schema: jsonSchema(options.outputSchema!),
+        messages: coreMessages,
+        system: options.systemInstruction,
+        maxOutputTokens: this.config.maxTokens,
+        temperature: this.config.temperature,
+        abortSignal: signal,
+      });
+
+      // Yield the structured output object
+      yield {
+        type: 'structured_output',
+        structured_output: result.object,
+      };
+
+      // Also yield as content for backward compatibility
+      yield {
+        type: 'content',
+        delta: JSON.stringify(result.object),
+      };
+
+      // Yield usage stats
+      yield {
+        type: 'usage',
+        usage: {
+          input_tokens: result.usage?.inputTokens ?? 0,
+          output_tokens: result.usage?.outputTokens ?? 0,
+        },
+      };
+
+      yield { type: 'done' };
+    } catch (error) {
+      // Handle AbortError
+      if (
+        error instanceof Error &&
+        (error.name === 'AbortError' || error.message?.toLowerCase().includes('abort'))
+      ) {
+        yield { type: 'error', error: 'Operation aborted' };
+        yield { type: 'done' };
+        return;
+      }
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       yield { type: 'error', error: errorMessage };
       yield { type: 'done' };

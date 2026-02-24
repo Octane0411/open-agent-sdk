@@ -8,7 +8,7 @@ import { ToolDefinition } from '../types/tools';
 /** Chunk from streaming LLM response */
 export interface LLMChunk {
   /** Type of chunk */
-  type: 'content' | 'tool_call' | 'usage' | 'done' | 'error';
+  type: 'content' | 'tool_call' | 'usage' | 'done' | 'error' | 'structured_output';
   /** Content delta (for content type) */
   delta?: string;
   /** Tool call info (for tool_call type) */
@@ -24,6 +24,8 @@ export interface LLMChunk {
   };
   /** Error message (for error type) */
   error?: string;
+  /** Structured output object (for structured_output type) */
+  structured_output?: unknown;
 }
 
 /** Provider configuration */
@@ -44,6 +46,8 @@ export interface ProviderConfig {
 export interface ChatOptions {
   /** System instruction to prepend to the conversation (not part of message history) */
   systemInstruction?: string;
+  /** Output schema for structured output generation */
+  outputSchema?: Record<string, unknown>;
 }
 
 /** Token usage for cost calculation */
