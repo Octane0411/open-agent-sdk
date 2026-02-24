@@ -9,6 +9,7 @@
 import type { SDKMessage } from '../types/messages';
 import type { PermissionMode } from '../permissions/types';
 import type { HooksConfig } from '../hooks/types';
+import type { OutputFormat } from '../types/output-format';
 
 /** Session data structure for storage */
 export interface SessionData {
@@ -64,6 +65,10 @@ export interface SessionOptions {
   mcpServers?: Record<string, unknown>;
   /** Hooks configuration (optional) */
   hooks?: HooksConfig;
+  /** Output format for structured responses (optional) */
+  outputFormat?: OutputFormat;
+  /** Enable file checkpointing for rollback support (optional) */
+  enableFileCheckpointing?: boolean;
 }
 
 /** Storage interface for session persistence */
