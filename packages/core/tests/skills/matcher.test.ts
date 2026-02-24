@@ -65,17 +65,17 @@ describe('exactMatch', () => {
 describe('parseSkillCommand', () => {
   it('should parse /skill-name format', () => {
     const result = parseSkillCommand('/commit');
-    expect(result).toEqual({ name: 'commit', args: [] });
+    expect(result).toEqual({ name: 'commit', args: [], userMessage: '' });
   });
 
   it('should parse with arguments', () => {
     const result = parseSkillCommand('/commit fix: bug fix');
-    expect(result).toEqual({ name: 'commit', args: ['fix:', 'bug', 'fix'] });
+    expect(result).toEqual({ name: 'commit', args: ['fix:', 'bug', 'fix'], userMessage: 'fix: bug fix' });
   });
 
   it('should handle multiple spaces', () => {
     const result = parseSkillCommand('/commit   arg1   arg2');
-    expect(result).toEqual({ name: 'commit', args: ['arg1', 'arg2'] });
+    expect(result).toEqual({ name: 'commit', args: ['arg1', 'arg2'], userMessage: 'arg1   arg2' });
   });
 
   it('should return null for non-skill input', () => {
@@ -90,7 +90,12 @@ describe('parseSkillCommand', () => {
 
   it('should trim leading/trailing whitespace', () => {
     const result = parseSkillCommand('  /commit arg1  ');
-    expect(result).toEqual({ name: 'commit', args: ['arg1'] });
+    expect(result).toEqual({ name: 'commit', args: ['arg1'], userMessage: 'arg1' });
+  });
+
+  it('should preserve original spacing in userMessage', () => {
+    const result = parseSkillCommand('/refactor  some   complex   args');
+    expect(result?.userMessage).toBe('some   complex   args');
   });
 });
 

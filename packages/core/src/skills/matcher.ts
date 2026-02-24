@@ -43,6 +43,7 @@ export function exactMatch(
 export function parseSkillCommand(input: string): {
   name: string;
   args: string[];
+  userMessage: string;
 } | null {
   const trimmed = input.trim();
 
@@ -57,7 +58,14 @@ export function parseSkillCommand(input: string): {
     return null;
   }
 
-  return { name: parts[0], args: parts.slice(1) };
+  // Extract user message (everything after the skill name)
+  // Find where the skill name ends in the original input
+  const skillNameMatch = trimmed.match(/^\/(\S+)/);
+  const userMessage = skillNameMatch
+    ? trimmed.slice(skillNameMatch[0].length).trim()
+    : '';
+
+  return { name: parts[0], args: parts.slice(1), userMessage };
 }
 
 /**

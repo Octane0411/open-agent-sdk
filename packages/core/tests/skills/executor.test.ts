@@ -2,7 +2,6 @@ import { describe, it, expect } from 'bun:test';
 import {
   executeSkill,
   getSkillContent,
-  buildSkillSystemPrompt,
   createSkillPreprocessorContext,
 } from '../../src/skills/executor';
 import type { SkillDefinition } from '../../src/skills/types';
@@ -35,6 +34,7 @@ describe('executeSkill', () => {
     expect(result.skill?.frontmatter.name).toBe('commit');
     expect(result.content).toBe('Please generate a commit message for: fix bug');
     expect(result.args).toEqual(['fix', 'bug']);
+    expect(result.userMessage).toBe('fix bug');
   });
 
   it('should return not executed for non-skill input', () => {
@@ -52,6 +52,13 @@ describe('executeSkill', () => {
     const result = executeSkill('/refactor myFunction', mockSkills);
     expect(result.executed).toBe(true);
     expect(result.content).toBe('Please refactor the following code:\n\nmyFunction');
+    expect(result.userMessage).toBe('myFunction');
+  });
+
+  it('should return userMessage for skill without arguments', () => {
+    const result = executeSkill('/commit', mockSkills);
+    expect(result.executed).toBe(true);
+    expect(result.userMessage).toBe('');
   });
 });
 
@@ -62,6 +69,7 @@ describe('getSkillContent', () => {
     expect(result?.skill.frontmatter.name).toBe('commit');
     expect(result?.content).toContain('commit message');
     expect(result?.args).toEqual(['test']);
+    expect(result?.userMessage).toBe('test');
   });
 
   it('should return null for non-skill input', () => {
@@ -72,24 +80,6 @@ describe('getSkillContent', () => {
   it('should return null for unknown skill', () => {
     const result = getSkillContent('/unknown', mockSkills);
     expect(result).toBeNull();
-  });
-});
-
-describe('buildSkillSystemPrompt', () => {
-  it('should combine base prompt with skill content', () => {
-    const base = 'You are a helpful assistant.';
-    const skill = 'Generate commit messages following conventional commits.';
-    const result = buildSkillSystemPrompt(base, skill);
-    expect(result).toContain('You are a helpful assistant.');
-    expect(result).toContain('Skill Instructions');
-    expect(result).toContain('Generate commit messages');
-  });
-
-  it('should work without base prompt', () => {
-    const skill = 'Refactor code to improve quality.';
-    const result = buildSkillSystemPrompt(undefined, skill);
-    expect(result).toContain('Skill Instructions');
-    expect(result).toContain('Refactor code');
   });
 });
 
