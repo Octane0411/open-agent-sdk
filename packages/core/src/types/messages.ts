@@ -107,15 +107,27 @@ export interface SDKCompactBoundaryMessage extends BaseMessage {
   };
 }
 
+/** Skill system message - indicates a skill has been loaded for this session */
+export interface SDKSkillSystemMessage extends BaseMessage {
+  type: 'system';
+  subtype: 'skill';
+  uuid: UUID;
+  session_id: string;
+  skill_name: string;
+  skill_content: string;
+}
+
 /** Result message - final output of the agent */
 export interface SDKResultMessage extends BaseMessage {
   type: 'result';
-  subtype: 'success' | 'error_max_turns' | 'error_during_execution';
+  subtype: 'success' | 'error_max_turns' | 'error_during_execution' | 'error_max_structured_output_retries';
   duration_ms: number;
   duration_api_ms: number;
   is_error: boolean;
   num_turns: number;
   result: string;
+  /** Structured output when outputFormat is configured */
+  structured_output?: unknown;
   usage: {
     input_tokens: number;
     output_tokens: number;
@@ -129,6 +141,7 @@ export type SDKMessage =
   | SDKToolResultMessage
   | SDKSystemMessage
   | SDKCompactBoundaryMessage
+  | SDKSkillSystemMessage
   | SDKResultMessage;
 
 /** Helper function to create user message */
@@ -265,5 +278,22 @@ export function createCompactBoundaryMessage(
       trigger,
       pre_tokens: preTokens,
     },
+  };
+}
+
+/** Helper function to create skill system message */
+export function createSkillSystemMessage(
+  skillName: string,
+  skillContent: string,
+  sessionId: string,
+  uuid: UUID
+): SDKSkillSystemMessage {
+  return {
+    type: 'system',
+    subtype: 'skill',
+    uuid,
+    session_id: sessionId,
+    skill_name: skillName,
+    skill_content: skillContent,
   };
 }
