@@ -59,6 +59,12 @@ bun run build        # Build
 - **Types**: All public APIs must have complete types
 - **Structure**: `types/` (types), `tools/` (tools), `providers/` (providers), `agent/` (core logic), `session/` (session management), `permissions/` (permission system), `hooks/` (hooks framework)
 
+## Workflow Standards
+
+- **Pull Requests**: Use English for all PR titles and descriptions
+  - PR title format: `<type>(<scope>): <description>` (e.g., `refactor(tests): remove low-value mock tests`)
+  - PR description should include: Summary, Changes, Metrics (if applicable), Verification checklist
+
 ## Testing with LLM API
 
 When running tests that require LLM API access:
