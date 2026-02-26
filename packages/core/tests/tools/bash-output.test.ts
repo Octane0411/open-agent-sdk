@@ -38,7 +38,7 @@ describe('BashOutputTool', () => {
       context
     );
 
-    expect(result.error).toBeDefined();
+    expect(typeof result.error).toBe('string');
     expect(result.error).toContain('No background process');
   });
 

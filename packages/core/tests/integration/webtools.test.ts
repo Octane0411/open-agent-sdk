@@ -28,9 +28,9 @@ describe('WebSearch Real API Integration', () => {
     // Should not have errors
     expect(result.error).toBeUndefined();
 
-    // Should return content
-    expect(result.content).toBeTruthy();
-    expect(result.content.length).toBeGreaterThan(0);
+    // Should return content as string
+    expect(typeof result.content).toBe('string');
+    expect(result.content.length).toBeGreaterThan(50);
 
     // Should contain query
     expect(result.query).toBe('TypeScript programming language');
@@ -58,7 +58,8 @@ describe('WebSearch Real API Integration', () => {
     );
 
     expect(result.error).toBeUndefined();
-    expect(result.content).toBeTruthy();
+    expect(typeof result.content).toBe('string');
+    expect(result.content.length).toBeGreaterThan(0);
 
     console.log('Search with numResults=3:', result.content.substring(0, 200) + '...');
   }, 30000);

@@ -12,7 +12,7 @@ describe('AskUserQuestionTool', () => {
 
   it('should have correct name and description', () => {
     expect(tool.name).toBe('AskUserQuestion');
-    expect(tool.description).toBeTruthy();
+    expect(tool.description).toBe('Ask the user one or more questions to gather information or preferences. Returns the questions and empty answers (answers filled by user interaction).');
   });
 
   it('should have correct parameters schema', () => {

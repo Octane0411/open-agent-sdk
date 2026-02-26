@@ -88,7 +88,8 @@ describe('Bash Tool', () => {
       context
     );
 
-    expect(result.shellId).toBeDefined();
+    expect(typeof result.shellId).toBe('string');
+    expect(result.shellId.length).toBeGreaterThan(0);
     expect(result.output).toContain('background');
   });
 

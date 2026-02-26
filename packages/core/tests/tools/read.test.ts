@@ -93,7 +93,8 @@ describe('Read Tool', () => {
     const tool = new ReadTool();
     const result = await tool.handler({ file_path: filePath }, context);
 
-    expect(result.image).toBeDefined();
+    expect(typeof result.image).toBe('string');
+    expect(result.image.length).toBeGreaterThan(0);
     expect(result.mime_type).toBe('image/png');
     expect(result.content).toBeUndefined();
   });
