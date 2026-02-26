@@ -61,9 +61,44 @@ bun run build        # Build
 
 ## Workflow Standards
 
-- **Pull Requests**: Use English for all PR titles and descriptions
+### Pull Request Guidelines
+
+- **Language**: Use English for all PR titles and descriptions
   - PR title format: `<type>(<scope>): <description>` (e.g., `refactor(tests): remove low-value mock tests`)
   - PR description should include: Summary, Changes, Metrics (if applicable), Verification checklist
+
+### Git Branch Management
+
+**Before creating a PR, always check:**
+
+```bash
+# Check if this branch already has a merged PR
+gh pr view <branch-name> --json state,merged
+
+# Or check all PRs for this branch
+gh pr list --head <branch-name> --state all
+```
+
+**Rules:**
+
+1. **Never push to a branch with a merged PR**
+   - If PR is already merged (`"state": "MERGED"`), create a new branch from `main`
+   - Example: `git checkout -b fix/phase-1.2-e2e-skip-logic`
+
+2. **Workflow for continuing work after PR merge:**
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b <new-branch-name>
+   ```
+
+3. **Keep PRs focused and independent**
+   - Each PR should contain a single logical change
+   - Don't stack unrelated changes on the same branch after merge
+
+4. **Verify branch status before pushing**
+   - Run `git status` to confirm you're on the correct branch
+   - Run `gh pr view` to check if branch already has an open/merged PR
 
 ## Testing with LLM API
 
