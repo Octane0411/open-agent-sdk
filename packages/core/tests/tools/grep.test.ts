@@ -105,7 +105,8 @@ describe('Grep Tool', () => {
       context
     );
 
-    expect(result.error).toBeDefined();
+    expect(typeof result.error).toBe('string');
+    expect(result.error.length).toBeGreaterThan(0);
     expect(result.matches).toBeUndefined();
     expect(result.count).toBeUndefined();
   });
@@ -240,7 +241,8 @@ describe('Grep Tool', () => {
       );
 
       expect(result.error).toBeUndefined();
-      expect(result.fileCounts).toBeDefined();
+      expect(typeof result.fileCounts).toBe('object');
+      expect(result.fileCounts).not.toBeNull();
       expect(result.fileCounts![join(tempDir, 'file1.ts')]).toBe(2);
       expect(result.fileCounts![join(tempDir, 'file2.ts')]).toBe(1);
       expect(result.matches).toBeUndefined();

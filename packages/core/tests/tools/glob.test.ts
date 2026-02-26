@@ -62,7 +62,7 @@ describe('Glob Tool', () => {
     const tool = new GlobTool();
     const result = await tool.handler({ pattern: '[invalid' }, context);
 
-    expect(result.error).toBeDefined();
+    expect(typeof result.error).toBe('string');
     expect(result.files).toBeUndefined();
     expect(result.count).toBeUndefined();
   });

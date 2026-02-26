@@ -45,9 +45,10 @@ describe('Subagent Integration', () => {
 
       const agentDef = mockAgents[taskInput.subagent_type];
 
-      expect(agentDef).toBeDefined();
-      expect(taskInput.description).toBeTruthy();
-      expect(taskInput.prompt).toBeTruthy();
+      expect(agentDef).toEqual(mockAgents['code-reviewer']);
+      expect(taskInput.description).toBe('Review auth module');
+      expect(taskInput.prompt).toBe('Please review the authentication module for security issues...');
+      expect(taskInput.subagent_type).toBe('code-reviewer');
     });
 
     it('应正确传递配置给子Agent', () => {
