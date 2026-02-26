@@ -90,8 +90,10 @@ export class AnthropicProvider extends LLMProvider {
         tool_call: {
           id: toolCall.toolCallId,
           name: toolCall.toolName,
-          // input can be undefined if the tool has no parameters, default to empty object
-          arguments: JSON.stringify(toolCall.input ?? {}),
+          // input may be a pre-serialized string (e.g. from @ai-sdk/anthropic) or an object
+          arguments: typeof toolCall.input === 'string'
+            ? toolCall.input
+            : JSON.stringify(toolCall.input ?? {}),
         },
       };
     }
@@ -187,11 +189,21 @@ export class AnthropicProvider extends LLMProvider {
           case 'user':
             return { role: 'user', content: msg.message.content };
           case 'assistant': {
-            const text = msg.message.content
-              .filter((c: AssistantContentBlock) => c.type === 'text')
-              .map((c: AssistantContentBlock & { type: 'text' }) => c.text)
-              .join('');
-            return { role: 'assistant', content: text };
+            const content: unknown[] = [];
+            for (const block of msg.message.content as AssistantContentBlock[]) {
+              if (block.type === 'text') {
+                content.push({ type: 'text', text: block.text });
+              }
+            }
+            for (const tc of msg.message.tool_calls ?? []) {
+              content.push({
+                type: 'tool-call',
+                toolCallId: tc.id,
+                toolName: tc.function.name,
+                input: JSON.parse(tc.function.arguments || '{}'),
+              });
+            }
+            return { role: 'assistant', content };
           }
           case 'tool_result': {
             // Get tool name from the tool call in the previous assistant message

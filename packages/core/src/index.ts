@@ -208,7 +208,7 @@ export async function prompt(
   // Get API key based on provider
   const apiKey = options.apiKey ??
     (providerType === 'google' ? process.env.GEMINI_API_KEY :
-     providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY);
+     providerType === 'anthropic' ? (process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN) : process.env.OPENAI_API_KEY);
 
   if (!apiKey) {
     const keyName = providerType === 'google' ? 'GEMINI_API_KEY' :
@@ -223,7 +223,7 @@ export async function prompt(
   if (providerType === 'google') {
     provider = new GoogleProvider({ apiKey, model: options.model });
   } else if (providerType === 'anthropic') {
-    provider = new AnthropicProvider({ apiKey, model: options.model });
+    provider = new AnthropicProvider({ apiKey, model: options.model, baseURL: options.baseURL });
   } else {
     provider = new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
   }
@@ -240,6 +240,7 @@ export async function prompt(
     env: options.env,
     abortController: options.abortController,
     permissionMode: options.permissionMode,
+    allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
     mcpServers: options.mcpServers,
     canUseTool: options.canUseTool,
     outputFormat: options.outputFormat,
