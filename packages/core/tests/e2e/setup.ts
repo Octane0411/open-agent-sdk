@@ -24,6 +24,14 @@ export const TEST_CONFIG = {
     model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
     available: !!process.env.GEMINI_API_KEY,
   },
+  // Anthropic settings
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    authToken: process.env.ANTHROPIC_AUTH_TOKEN, // For MiniMax compatible endpoints
+    baseURL: process.env.ANTHROPIC_BASE_URL,
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+    available: !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN),
+  },
   // Test control
   skipExpensive: process.env.E2E_SKIP_EXPENSIVE === 'true',
   timeout: parseInt(process.env.E2E_TIMEOUT || '30000', 10),
@@ -33,7 +41,7 @@ export const TEST_CONFIG = {
  * Check if a provider is available for testing
  * For OpenAI, checks either OPENAI_API_KEY or GEMINI_API_KEY (when using OpenAI-compatible endpoint)
  */
-export function isProviderAvailable(provider: 'openai' | 'google'): boolean {
+export function isProviderAvailable(provider: 'openai' | 'google' | 'anthropic'): boolean {
   if (provider === 'openai') {
     // OpenAI is available if:
     // 1. OPENAI_API_KEY is set, OR
@@ -48,7 +56,7 @@ export function isProviderAvailable(provider: 'openai' | 'google'): boolean {
  * Check if provider is available, return boolean
  * Use at the beginning of test: if (skipIfNoProvider('openai')) return;
  */
-export function skipIfNoProvider(provider: 'openai' | 'google'): boolean {
+export function skipIfNoProvider(provider: 'openai' | 'google' | 'anthropic'): boolean {
   const available = isProviderAvailable(provider);
   if (!available) {
     console.log(`Skipping test: ${provider} API key not available`);
@@ -60,7 +68,7 @@ export function skipIfNoProvider(provider: 'openai' | 'google'): boolean {
  * Get test options for prompt() with specified provider
  */
 export function getPromptOptions(
-  provider: 'openai' | 'google',
+  provider: 'openai' | 'google' | 'anthropic',
   overrides: Partial<PromptOptions> = {}
 ): PromptOptions {
   const config = TEST_CONFIG[provider];
@@ -84,7 +92,7 @@ export function getPromptOptions(
  * Get test options for createSession() with specified provider
  */
 export function getSessionOptions(
-  provider: 'openai' | 'google',
+  provider: 'openai' | 'google' | 'anthropic',
   overrides: Partial<CreateSessionOptions> = {}
 ): CreateSessionOptions {
   const config = TEST_CONFIG[provider];
