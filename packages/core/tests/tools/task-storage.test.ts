@@ -18,8 +18,10 @@ describe('TaskStorage', () => {
       expect(task.subject).toBe('Test task');
       expect(task.description).toBe('Test description');
       expect(task.status).toBe('pending');
-      expect(task.createdAt).toBeDefined();
-      expect(task.updatedAt).toBeDefined();
+      expect(typeof task.createdAt).toBe('number');
+      expect(typeof task.updatedAt).toBe('number');
+      expect(task.createdAt).toBeGreaterThan(0);
+      expect(task.updatedAt).toBeGreaterThan(0);
     });
 
     it('should create a task with all optional fields', () => {
@@ -105,7 +107,7 @@ describe('TaskStorage', () => {
       });
 
       const found = taskStorage.getById(created.id);
-      expect(found).toBeDefined();
+      expect(found).toEqual(created);
       expect(found?.subject).toBe('Test task');
     });
 
