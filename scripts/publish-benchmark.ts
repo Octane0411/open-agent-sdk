@@ -13,7 +13,8 @@
  * 5. 发布 CLI
  *
  * 用法:
- *   bun scripts/publish-benchmark.ts
+ *   bun scripts/publish-benchmark.ts           # 真实发布
+ *   bun scripts/publish-benchmark.ts --dry-run # 测试模式（不真发布）
  */
 
 import { readFileSync, writeFileSync } from 'fs';
@@ -23,6 +24,9 @@ import { execSync } from 'child_process';
 const ROOT_DIR = join(import.meta.dir, '..');
 const CORE_PKG_PATH = join(ROOT_DIR, 'packages/core/package.json');
 const CLI_PKG_PATH = join(ROOT_DIR, 'packages/cli/package.json');
+
+// 检查是否为 dry-run 模式
+const DRY_RUN = process.argv.includes('--dry-run');
 
 // 颜色输出
 const colors = {
@@ -112,6 +116,9 @@ async function waitForNpmPackage(packageName: string, version: string, maxAttemp
 async function main() {
   log('\n╔════════════════════════════════════════════════════════╗', 'bright');
   log('║     Benchmark Publishing Tool - SDK + CLI             ║', 'bright');
+  if (DRY_RUN) {
+    log('║                  🧪 DRY RUN MODE                      ║', 'yellow');
+  }
   log('╚════════════════════════════════════════════════════════╝', 'bright');
 
   // 1. 生成 canary 版本号
@@ -167,20 +174,30 @@ async function main() {
 
   // 6. 发布 SDK
   log('\n📤 Publishing SDK to npm...', 'blue');
-  try {
-    execCommand('cd packages/core && npm publish --access public --tag canary', 'Publishing open-agent-sdk');
-    log(`   ✓ Published open-agent-sdk@${canaryVersion}`, 'green');
-  } catch (error) {
-    log('\n❌ Failed to publish SDK. Check your npm credentials.', 'red');
-    log('   Run: npm login', 'yellow');
-    process.exit(1);
+  if (DRY_RUN) {
+    log('   [DRY RUN] Would run: cd packages/core && npm publish --access public --tag canary', 'yellow');
+    log(`   ✓ [DRY RUN] Would publish open-agent-sdk@${canaryVersion}`, 'green');
+  } else {
+    try {
+      execCommand('cd packages/core && npm publish --access public --tag canary', 'Publishing open-agent-sdk');
+      log(`   ✓ Published open-agent-sdk@${canaryVersion}`, 'green');
+    } catch (error) {
+      log('\n❌ Failed to publish SDK. Check your npm credentials.', 'red');
+      log('   Run: npm login', 'yellow');
+      process.exit(1);
+    }
   }
 
   // 7. 等待 npm 索引
-  const sdkAvailable = await waitForNpmPackage('open-agent-sdk', canaryVersion);
-  if (!sdkAvailable) {
-    log('\n⚠️  SDK package not yet indexed, but continuing...', 'yellow');
-    log('   You may need to wait a bit before installing CLI', 'yellow');
+  if (DRY_RUN) {
+    log('\n⏳ [DRY RUN] Would wait for npm to index the package...', 'yellow');
+    log('   ✓ [DRY RUN] Simulating npm indexing complete', 'green');
+  } else {
+    const sdkAvailable = await waitForNpmPackage('open-agent-sdk', canaryVersion);
+    if (!sdkAvailable) {
+      log('\n⚠️  SDK package not yet indexed, but continuing...', 'yellow');
+      log('   You may need to wait a bit before installing CLI', 'yellow');
+    }
   }
 
   // 8. 更新 CLI 版本和依赖
@@ -191,12 +208,17 @@ async function main() {
 
   // 9. 发布 CLI
   log('\n📤 Publishing CLI to npm...', 'blue');
-  try {
-    execCommand('cd packages/cli && npm publish --access public --tag canary', 'Publishing @open-agent-sdk/cli');
-    log(`   ✓ Published @open-agent-sdk/cli@${canaryVersion}`, 'green');
-  } catch (error) {
-    log('\n❌ Failed to publish CLI', 'red');
-    process.exit(1);
+  if (DRY_RUN) {
+    log('   [DRY RUN] Would run: cd packages/cli && npm publish --access public --tag canary', 'yellow');
+    log(`   ✓ [DRY RUN] Would publish @open-agent-sdk/cli@${canaryVersion}`, 'green');
+  } else {
+    try {
+      execCommand('cd packages/cli && npm publish --access public --tag canary', 'Publishing @open-agent-sdk/cli');
+      log(`   ✓ Published @open-agent-sdk/cli@${canaryVersion}`, 'green');
+    } catch (error) {
+      log('\n❌ Failed to publish CLI', 'red');
+      process.exit(1);
+    }
   }
 
   // 10. 完成
@@ -220,9 +242,14 @@ async function main() {
   log('   3. Run your benchmark tests', 'blue');
 
   // 11. 提示是否还原版本号
-  log('\n⚠️  Note: package.json files have been modified', 'yellow');
-  log('   You may want to revert these changes after publishing:', 'yellow');
-  log('   git checkout packages/*/package.json', 'yellow');
+  if (DRY_RUN) {
+    log('\n💡 Tip: This was a dry run. No changes were published to npm.', 'blue');
+    log('   To publish for real, run without --dry-run flag', 'blue');
+  } else {
+    log('\n⚠️  Note: package.json files have been modified', 'yellow');
+    log('   You may want to revert these changes after publishing:', 'yellow');
+    log('   git checkout packages/*/package.json', 'yellow');
+  }
 }
 
 main().catch(error => {
