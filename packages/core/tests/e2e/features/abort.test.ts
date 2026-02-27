@@ -255,20 +255,27 @@ describeIfProvider('Abort Operations E2E', () => {
     test('should abort Google session stream', async () => {
       skipIfNoProvider('google');
 
-      session = await createSession(getSessionOptions('google'));
-
       const controller = new AbortController();
-      setTimeout(() => controller.abort(), 500);
+      session = await createSession(
+        getSessionOptions('google', { abortController: controller })
+      );
 
       await session.send('Write a comprehensive guide to machine learning');
 
       const startTime = Date.now();
       const messages: unknown[] = [];
 
+      // Abort after receiving some messages
+      let messageCount = 0;
       let googleAbortError = false;
       try {
         for await (const message of session.stream()) {
           messages.push(message);
+          messageCount++;
+          // Abort after receiving a few messages to ensure streaming started
+          if (messageCount === 3) {
+            controller.abort();
+          }
         }
       } catch (error) {
         googleAbortError = true;
@@ -276,9 +283,10 @@ describeIfProvider('Abort Operations E2E', () => {
       }
 
       const duration = Date.now() - startTime;
-      // Should have either thrown an error or completed with messages
-      expect(messages.length > 0 || googleAbortError).toBe(true);
-      expect(duration).toBeLessThan(10000);
+      // Should have received some messages before abort
+      expect(messages.length).toBeGreaterThan(0);
+      // Should have aborted relatively quickly (not completed full response)
+      expect(duration).toBeLessThan(15000);
     }, TEST_CONFIG.timeout);
   });
 

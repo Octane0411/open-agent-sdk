@@ -7,6 +7,7 @@
 
 import { readdir, readFile, stat } from 'fs/promises';
 import { join, extname, basename } from 'path';
+import { homedir } from 'os';
 import type {
   SkillLoaderOptions,
   SkillDefinition,
@@ -19,6 +20,20 @@ import { parseSkillFile } from './parser';
 const DEFAULT_PERSONAL_DIR = '~/.claude/skills';
 const DEFAULT_PROJECT_DIR = './.claude/skills';
 const LEGACY_COMMANDS_DIR = './.claude/commands';
+
+/**
+ * Expand tilde (~) in path to home directory
+ * Uses process.env.HOME if set (for testing), otherwise falls back to os.homedir()
+ * @param filePath - Path that may contain ~
+ * @returns Expanded path
+ */
+function expandTilde(filePath: string): string {
+  if (filePath.startsWith('~/') || filePath === '~') {
+    const home = process.env.HOME || homedir();
+    return join(home, filePath.slice(1));
+  }
+  return filePath;
+}
 
 /**
  * Skill loader class
@@ -148,12 +163,13 @@ export class SkillLoader {
    */
   async scanDirectory(dirPath: string): Promise<string[]> {
     const files: string[] = [];
+    const expandedPath = expandTilde(dirPath);
 
     try {
-      const entries = await readdir(dirPath, { withFileTypes: true });
+      const entries = await readdir(expandedPath, { withFileTypes: true });
 
       for (const entry of entries) {
-        const fullPath = join(dirPath, entry.name);
+        const fullPath = join(expandedPath, entry.name);
 
         // Skip hidden files and directories
         if (entry.name.startsWith('.')) {
