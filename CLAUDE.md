@@ -1,18 +1,16 @@
-# Open Agent SDK - Claude Code Project Context
+# Open Agent SDK - Claude Code Context
 
-## Project Overview
+TypeScript SDK for building AI agents with tool use, ReAct loop, and multi-provider support.
 
-Open Agent SDK is a TypeScript SDK for building AI agents with tool use, ReAct loop, and multi-provider support. Architecture follows **core + extensions** pattern (see [ADR 001](docs/adr/001-monorepo-structure.md)).
-
-## Navigation Hub
+## Navigation
 
 | Document | Purpose |
 |----------|---------|
-| [Requirements](REQUIREMENTS.md) | Feature requirements, version planning |
-| [Gap Analysis](docs/gap-analysis.md) | Comparison with Claude Agent SDK |
-| [Architecture Decisions](docs/adr/) | Technical decision records |
-| [Git Workflow](docs/workflows/git-workflow.md) | Worktrees, branching, PR process |
-| [Testing Guide](docs/workflows/testing-guide.md) | TDD guidelines, environment setup |
+| [Requirements](REQUIREMENTS.md) | Feature requirements |
+| [Gap Analysis](docs/gap-analysis.md) | vs Claude Agent SDK |
+| [ADRs](docs/adr/) | Architecture decisions |
+| [Git Workflow](docs/workflows/git-workflow.md) | Worktree & PR rules |
+| [Testing Guide](docs/workflows/testing-guide.md) | TDD & env setup |
 
 ## Project Structure
 
@@ -38,102 +36,47 @@ open-agent-sdk/
 
 ## Tech Stack
 
-- **Language**: TypeScript 5.x (strict mode)
-- **Runtime**: Bun
-- **Testing**: Bun built-in test framework
-- **Core Dependencies**: `ai` (Vercel AI SDK), `@ai-sdk/google`, `zod`
+- TypeScript 5.x (strict), Bun runtime
+- Testing: Bun test framework
+- Dependencies: `ai` (Vercel AI SDK), `@ai-sdk/google`, `zod`
 
-## Common Commands
+## Decision Rules
 
-```bash
-bun install          # Install dependencies
-bun test             # Run all tests
-bun test --coverage  # Run tests with coverage report
-bun run build        # Build packages
-bun run typecheck    # Type checking without emit
-```
+### TDD
+- **Use TDD for**: Core agent logic, tools, providers, permissions
+- **Tests after OK for**: Utils, docs, config, obvious fixes
 
-## Key Decision Rules
+### Worktrees
+- **Recommended for**: Features, refactoring, experiments
+- **Optional for**: Typo fixes, single-line fixes, hotfixes
+- See [Git Workflow](docs/workflows/git-workflow.md)
 
-### When to Use TDD
+### Commits
+- Format: `type(scope): description` (Conventional Commits)
+- Frequency: After each logical unit
+- Language: English only
+- Incremental: Break features into multiple commits
 
-**Use TDD (tests first) for:**
-- Core agent logic (ReAct loop, tool execution)
-- New tool implementations
-- Provider integrations
-- Permission system changes
+## Standards
 
-**Tests after implementation OK for:**
-- Simple utility functions
-- Documentation updates
-- Configuration changes
-- Bug fixes with obvious solutions
+### Structure
+- Tests: `tests/` (mirrors `src/`), e.g., `src/foo.ts` → `tests/foo.test.ts`
+- Directories: `types/`, `tools/`, `providers/`, `agent/`, `session/`, `permissions/`, `skills/`, `hooks/`
 
-### When to Use Git Worktrees
+### Types
+- Public APIs: Complete type definitions required
+- Strict mode enforced
 
-**Recommended for:**
-- All feature development
-- Refactoring work
-- Experimental changes
-
-**Optional for:**
-- Typo fixes in docs
-- Single-line bug fixes
-- Emergency hotfixes
-
-**See [Git Workflow Guide](docs/workflows/git-workflow.md) for detailed usage.**
-
-### Commit Standards
-
-- **Format**: Conventional Commits (`type(scope): description`)
-- **Frequency**: Commit after each logical unit of work
-- **Language**: English for all commit messages and PR content
-- **Guideline**: Each commit should be self-contained (tests pass)
-
-**See [Git Workflow Guide](docs/workflows/git-workflow.md) for examples and PR guidelines.**
-
-## Coding Standards
-
-### Code Organization
-
-- **Test Location**: `tests/` directory (sibling to `src/`), mirroring source structure
-  - Example: `src/permissions/manager.ts` → `tests/permissions/manager.test.ts`
-- **Directory Structure**: Follow existing patterns in `src/`
-  - `types/` - Type definitions and interfaces
-  - `tools/` - Tool implementations
-  - `providers/` - LLM provider adapters
-  - `agent/` - Core agent logic
-  - `session/` - Session management
-  - `permissions/` - Permission system
-  - `skills/` - Skill loading and execution
-  - `hooks/` - Hooks framework
-
-### Type Safety
-
-- **Public APIs**: Must have complete type definitions
-- **Internal Code**: Leverage TypeScript strict mode
-- **Type Exports**: Export types from `src/types/index.ts`
-
-### Test Coverage
-
-- **Target**: > 80% coverage
-- **Focus**: Core logic, edge cases, error handling
-- **Integration Tests**: Require `.env` file with API keys (see Testing Guide)
+### Coverage
+- Target: >80% overall, >90% core logic
+- Integration tests need `.env` with API keys
 
 ## Testing with LLM APIs
 
-**Environment Setup:**
-Tests that call real LLM APIs require environment variables from `.env` file:
-
+Run tests with `.env` variables:
 ```bash
-# Run tests with environment variables
 env $(cat .env | xargs) bun test
-
-# Run specific test file
-env $(cat .env | xargs) bun test tests/providers/openai.test.ts
 ```
-
-**See [Testing Guide](docs/workflows/testing-guide.md) for mock vs. integration testing guidelines.**
 
 ## Provider Compatibility
 
