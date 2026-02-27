@@ -1,7 +1,5 @@
 # Open Agent SDK - API 参考
 
-[English Version](./api-reference.md)
-
 ---
 
 ## 目录

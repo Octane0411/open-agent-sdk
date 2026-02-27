@@ -115,7 +115,7 @@ session.close();
 
 ## API Reference
 
-See the full [API Reference](./docs/api-reference.md) for detailed documentation on:
+See the full [API Reference](./docs/api-reference.zh.md) for detailed documentation on:
 
 - `prompt()` - Execute single prompts with the agent
 - `createSession()` / `resumeSession()` - Manage persistent conversations
@@ -123,10 +123,10 @@ See the full [API Reference](./docs/api-reference.md) for detailed documentation
 
 ## Documentation
 
-- [Built-in Tools](./docs/api-reference.md#built-in-tools) - File operations, shell execution, code search, web access
-- [Provider Support](./docs/api-reference.md#providers) - OpenAI, Google Gemini, Anthropic
-- [Permissions](./docs/api-reference.md#permissions) - Permission modes and management
-- [Hooks](./docs/api-reference.md#hooks) - Event-driven extensibility
+- [Built-in Tools](./docs/api-reference.zh.md#内置工具) - File operations, shell execution, code search, web access
+- [Provider Support](./docs/api-reference.zh.md#供应商) - OpenAI, Google Gemini, Anthropic
+- [Permissions](./docs/api-reference.zh.md#权限) - Permission modes and management
+- [Hooks](./docs/api-reference.zh.md#钩子) - Event-driven extensibility
 
 ## Architecture
 

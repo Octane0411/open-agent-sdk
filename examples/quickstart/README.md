@@ -79,4 +79,4 @@ bun run test
 ## 📚 More Documentation
 
 - [Open Agent SDK GitHub](https://github.com/Octane0411/open-agent-sdk)
-- [API Reference](../../docs/api-reference.md)
+- [API Reference](../../docs/api-reference.zh.md)

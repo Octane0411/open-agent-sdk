@@ -1,7 +1,5 @@
 # Open Agent SDK - 项目介绍
 
-[English Version](./introduction.md)
-
 ---
 
 ## 概述
