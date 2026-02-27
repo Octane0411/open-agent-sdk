@@ -7,15 +7,9 @@ import { logger, type LogLevel } from './utils/logger';
 import type { PermissionMode, CanUseTool } from './permissions/types';
 import type { McpServersConfig } from './mcp/types';
 import type { OutputFormat } from './types/output-format';
-import { OpenAIProvider } from './providers/openai';
-import { GoogleProvider } from './providers/google';
-import { AnthropicProvider } from './providers/anthropic';
-import { createDefaultRegistry } from './tools/registry';
-import { ReActLoop } from './agent/react-loop';
-import type { SessionStorage } from './session/storage';
+import { InMemoryStorage, type SessionStorage } from './session/storage';
 import { createSession, resumeSession, forkSession } from './session/factory';
 import type { Session } from './session/session';
-// ToolRegistry type used indirectly through createDefaultRegistry
 
 // Export permission system
 export {
@@ -198,94 +192,58 @@ export async function prompt(
     };
   }
 
-  // No resume/fork - use original one-shot behavior
-  // Auto-detect provider from model name if not specified
-  const modelLower = options.model.toLowerCase();
-  const providerType = options.provider ??
-    (modelLower.includes('gemini') ? 'google' :
-     modelLower.includes('claude') ? 'anthropic' : 'openai');
-
-  // Get API key based on provider
-  const apiKey = options.apiKey ??
-    (providerType === 'google' ? process.env.GEMINI_API_KEY :
-     providerType === 'anthropic' ? (process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN) : process.env.OPENAI_API_KEY);
-
-  if (!apiKey) {
-    const keyName = providerType === 'google' ? 'GEMINI_API_KEY' :
-                    providerType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
-    throw new Error(
-      `${providerType} API key is required. Provide it via options.apiKey or ${keyName} environment variable.`
-    );
-  }
-
-  // Create provider
-  let provider;
-  if (providerType === 'google') {
-    provider = new GoogleProvider({ apiKey, model: options.model });
-  } else if (providerType === 'anthropic') {
-    provider = new AnthropicProvider({ apiKey, model: options.model, baseURL: options.baseURL });
-  } else {
-    provider = new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
-  }
-
-  // Create tool registry with default tools
-  const toolRegistry = createDefaultRegistry();
-
-  // Create ReAct loop
-  const loop = new ReActLoop(provider, toolRegistry, {
-    maxTurns: options.maxTurns ?? 10,
-    systemPrompt: options.systemPrompt,
+  // No resume/fork - use session for single LLM execution
+  // Using createSession ensures session storage and LLM call happen in one pass (no double execution)
+  session = await createSession({
+    model: options.model,
+    provider: options.provider,
+    apiKey: options.apiKey,
+    baseURL: options.baseURL,
+    storage: storage ?? new InMemoryStorage(),
+    logLevel,
+    maxTurns: options.maxTurns,
     allowedTools: options.allowedTools,
+    systemPrompt: options.systemPrompt,
     cwd: options.cwd,
     env: options.env,
     abortController: options.abortController,
     permissionMode: options.permissionMode,
     allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
-    mcpServers: options.mcpServers,
     canUseTool: options.canUseTool,
+    mcpServers: options.mcpServers,
     outputFormat: options.outputFormat,
   });
+  sessionId = storage ? session.id : undefined;
 
-  // Run the loop
-  const result = await loop.run(prompt);
+  await session.send(prompt);
 
-  const duration_ms = Date.now() - startTime;
+  let resultText = '';
 
-  // If storage is provided, create and save a session
-  if (storage) {
-    session = await createSession({
-      model: options.model,
-      provider: options.provider,
-      apiKey: options.apiKey,
-      storage,
-      logLevel,
-      maxTurns: options.maxTurns,
-      allowedTools: options.allowedTools,
-      systemPrompt: options.systemPrompt,
-      cwd: options.cwd,
-      env: options.env,
-      permissionMode: options.permissionMode,
-      allowDangerouslySkipPermissions: options.allowDangerouslySkipPermissions,
-      canUseTool: options.canUseTool,
-      mcpServers: options.mcpServers,
-    });
-    sessionId = session.id;
-
-    // Send the prompt and stream to populate the session
-    await session.send(prompt);
-
-    // Collect messages to populate session history
-    for await (const _message of session.stream()) {
-      // Just consume the stream to populate session messages
+  for await (const message of session.stream()) {
+    if (message.type === 'assistant') {
+      const content = message.message.content;
+      if (typeof content === 'string') {
+        resultText = content;
+      } else if (Array.isArray(content)) {
+        const text = content
+          .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+          .map((c) => c.text)
+          .join('');
+        if (text) resultText = text;
+      }
     }
   }
 
+  const inputTokens = estimateTokens(prompt);
+  const outputTokens = estimateTokens(resultText);
+  const duration_ms = Date.now() - startTime;
+
   return {
-    result: result.result,
+    result: resultText,
     duration_ms,
-    usage: result.usage,
+    usage: { input_tokens: inputTokens, output_tokens: outputTokens },
     session_id: sessionId,
-    structured_output: result.structuredOutput,
+    structured_output: undefined,
   };
 }
 

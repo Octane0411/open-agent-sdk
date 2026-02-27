@@ -28,6 +28,8 @@ export interface CreateSessionOptions {
   provider?: 'openai' | 'google' | 'anthropic';
   /** API key (defaults to OPENAI_API_KEY or GEMINI_API_KEY env var based on provider) */
   apiKey?: string;
+  /** Base URL override for API endpoint (used for proxies or compatible APIs like MiniMax) */
+  baseURL?: string;
   /** Maximum conversation turns (default: 10) */
   maxTurns?: number;
   /** Allowed tools whitelist (default: all) */
@@ -157,9 +159,9 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
   if (providerType === 'google') {
     provider = new GoogleProvider({ apiKey, model: options.model });
   } else if (providerType === 'anthropic') {
-    provider = new AnthropicProvider({ apiKey, model: options.model });
+    provider = new AnthropicProvider({ apiKey, model: options.model, baseURL: options.baseURL });
   } else {
-    provider = new OpenAIProvider({ apiKey, model: options.model });
+    provider = new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
   }
 
   // Create tool registry with default tools
@@ -183,6 +185,9 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     hooks = mergeHooks(existingHooks, checkpointHooks);
   }
 
+  // Generate session ID upfront so loop and session share the same ID
+  const sessionId = generateUUID();
+
   // Create ReAct loop with skill registry
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: options.maxTurns ?? 10,
@@ -198,10 +203,11 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     hooks,
     skillRegistry,
     outputFormat: options.outputFormat,
-  });
+  }, sessionId);
 
-  // Create session
+  // Create session with the same ID
   const session = new Session(loop, {
+    id: sessionId,
     model: options.model,
     provider: providerType,
   }, storage);
@@ -324,6 +330,7 @@ export async function resumeSession(
   await skillRegistry.loadAll();
 
   // Create ReAct loop with saved options, overridden by new options
+  // Pass the existing session ID so all messages share the same session_id
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: sessionData.options.maxTurns ?? 10,
     systemPrompt: sessionData.options.systemPrompt,
@@ -337,7 +344,7 @@ export async function resumeSession(
     hooks: options?.hooks,
     skillRegistry,
     outputFormat: sessionData.options.outputFormat,
-  });
+  }, sessionId);
 
   // Restore session from storage
   const session = await Session.loadFromStorage(sessionId, storage, loop);
@@ -432,6 +439,10 @@ export async function forkSession(
   const skillRegistry = createSkillRegistry();
   await skillRegistry.loadAll();
 
+  // Generate new session ID upfront so loop and session share the same ID
+  const newId = generateUUID();
+  const forkTimestamp = Date.now();
+
   // Create ReAct loop with inherited options, overridden by new options
   const loop = new ReActLoop(provider, toolRegistry, {
     maxTurns: sourceData.options.maxTurns ?? 10,
@@ -445,11 +456,7 @@ export async function forkSession(
     mcpServers: sourceData.options.mcpServers,
     hooks: options.hooks ?? sourceData.options.hooks,
     skillRegistry,
-  });
-
-  // Generate new session ID and fork timestamp
-  const newId = generateUUID();
-  const forkTimestamp = Date.now();
+  }, newId);
 
   // Create new Session instance with fork metadata
   const session = new Session(loop, {

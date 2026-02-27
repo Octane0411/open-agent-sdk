@@ -266,6 +266,102 @@ describe('FileStorage', () => {
       await storage.save(sessionData);
     }).toThrow('Invalid session ID format');
   });
+
+  it('should write a .jsonl file (not .json)', async () => {
+    const sessionId = generateUUID();
+    const sessionData: SessionData = {
+      id: sessionId,
+      model: 'gpt-4o',
+      provider: 'openai',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: [],
+      options: { model: 'gpt-4o' },
+    };
+
+    await storage.save(sessionData);
+
+    const jsonlFile = Bun.file(`${testDir}/${sessionId}.jsonl`);
+    const jsonFile = Bun.file(`${testDir}/${sessionId}.json`);
+
+    expect(await jsonlFile.exists()).toBe(true);
+    expect(await jsonFile.exists()).toBe(false);
+  });
+
+  it('should write valid JSONL: first line is session_header, each message on its own line', async () => {
+    const sessionId = generateUUID();
+    const messages = [
+      {
+        type: 'user' as const,
+        uuid: 'uuid-1',
+        session_id: sessionId,
+        message: { role: 'user' as const, content: 'Hello' },
+        parent_tool_use_id: null,
+      },
+      {
+        type: 'assistant' as const,
+        uuid: 'uuid-2',
+        session_id: sessionId,
+        message: { role: 'assistant' as const, content: [{ type: 'text' as const, text: 'Hi there!' }], tool_calls: [] },
+        parent_tool_use_id: null,
+      },
+    ];
+
+    const sessionData: SessionData = {
+      id: sessionId,
+      model: 'gpt-4o',
+      provider: 'openai',
+      createdAt: 1000,
+      updatedAt: 2000,
+      messages,
+      options: { model: 'gpt-4o' },
+    };
+
+    await storage.save(sessionData);
+
+    const content = await Bun.file(`${testDir}/${sessionId}.jsonl`).text();
+    const lines = content.split('\n').filter((l) => l.trim() !== '');
+
+    // Should have 3 lines: 1 header + 2 messages
+    expect(lines).toHaveLength(3);
+
+    // Every line must be valid JSON
+    for (const line of lines) {
+      expect(() => JSON.parse(line)).not.toThrow();
+    }
+
+    // First line must be session_header
+    const header = JSON.parse(lines[0]);
+    expect(header.type).toBe('session_header');
+    expect(header.id).toBe(sessionId);
+    expect(header.model).toBe('gpt-4o');
+    expect(header.createdAt).toBe(1000);
+
+    // Remaining lines are messages
+    expect(JSON.parse(lines[1]).type).toBe('user');
+    expect(JSON.parse(lines[2]).type).toBe('assistant');
+  });
+
+  it('should list sessions by reading .jsonl files', async () => {
+    const id1 = generateUUID();
+    const id2 = generateUUID();
+
+    for (const id of [id1, id2]) {
+      await storage.save({
+        id,
+        model: 'gpt-4o',
+        provider: 'openai',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        messages: [],
+        options: { model: 'gpt-4o' },
+      });
+    }
+
+    const list = await storage.list();
+    expect(list).toContain(id1);
+    expect(list).toContain(id2);
+  });
 });
 
 describe('SessionData interface', () => {
