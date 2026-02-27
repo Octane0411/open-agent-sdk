@@ -1,10 +1,19 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+# Worktree-compatible husky hook
+# Try to source husky.sh from current location first, then from main repo
+if [ -f "$(dirname "$0")/_/husky.sh" ]; then
+  . "$(dirname "$0")/_/husky.sh"
+elif [ -f "$(git rev-parse --show-toplevel)/.husky/_/husky.sh" ]; then
+  . "$(git rev-parse --show-toplevel)/.husky/_/husky.sh"
+fi
 
 echo "🔍 Running TypeScript check..."
 
-# Run TypeScript check
-cd packages/core && npx tsc --noEmit
+# Get the root of the repository (works in worktrees)
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Run TypeScript check from repo root
+cd "$REPO_ROOT/packages/core" && npx tsc --noEmit
 
 if [ $? -ne 0 ]; then
   echo "❌ TypeScript check failed. Please fix errors before committing."

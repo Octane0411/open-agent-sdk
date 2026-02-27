@@ -61,6 +61,41 @@ bun run build        # Build
 
 ## Workflow Standards
 
+### Development Workflow
+
+**CRITICAL: Always use git worktrees for new work**
+
+1. **Start new work in a worktree + new branch**
+   ```bash
+   # Create worktree with new branch
+   git worktree add .worktrees/<feature-name> -b <branch-name>
+   cd .worktrees/<feature-name>
+
+   # Or use EnterWorktree tool in Claude Code
+   ```
+
+2. **Never work directly on main branch**
+   - Always create a feature branch for any changes
+   - Main branch should only be updated via PR merges
+
+3. **Make incremental commits**
+   - ❌ **Bad**: Complete entire feature → single commit
+   - ✅ **Good**: Break work into logical steps with meaningful commits
+
+   **Example of good commit sequence:**
+   ```bash
+   git commit -m "feat(core): add basic provider interface"
+   git commit -m "feat(core): implement OpenAI provider"
+   git commit -m "test(core): add provider integration tests"
+   git commit -m "docs(core): document provider usage"
+   ```
+
+4. **Commit guidelines**
+   - Commit after completing each logical unit of work
+   - Each commit should be self-contained and working (tests pass)
+   - Write clear commit messages following conventional commits format
+   - Commit frequently to preserve work and enable easy rollback
+
 ### Pull Request Guidelines
 
 - **Language**: Use English for all PR titles and descriptions
@@ -73,7 +108,7 @@ bun run build        # Build
 
 ```bash
 # Check if this branch already has a merged PR
-gh pr view <branch-name> --json state,merged
+gh pr view <branch-name> --json state,mergedAt,number,title
 
 # Or check all PRs for this branch
 gh pr list --head <branch-name> --state all
@@ -82,14 +117,15 @@ gh pr list --head <branch-name> --state all
 **Rules:**
 
 1. **Never push to a branch with a merged PR**
-   - If PR is already merged (`"state": "MERGED"`), create a new branch from `main`
+   - If PR is already merged (`"mergedAt": "..."`), create a new branch from `main`
    - Example: `git checkout -b fix/phase-1.2-e2e-skip-logic`
 
 2. **Workflow for continuing work after PR merge:**
    ```bash
    git checkout main
    git pull origin main
-   git checkout -b <new-branch-name>
+   git worktree add .worktrees/<new-feature> -b <new-branch-name>
+   cd .worktrees/<new-feature>
    ```
 
 3. **Keep PRs focused and independent**
@@ -99,6 +135,13 @@ gh pr list --head <branch-name> --state all
 4. **Verify branch status before pushing**
    - Run `git status` to confirm you're on the correct branch
    - Run `gh pr view` to check if branch already has an open/merged PR
+
+5. **Clean up after PR merge**
+   ```bash
+   # After PR is merged, remove worktree
+   git worktree remove .worktrees/<feature-name>
+   git branch -d <branch-name>
+   ```
 
 ## Testing with LLM API
 
