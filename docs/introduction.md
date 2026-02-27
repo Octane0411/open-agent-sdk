@@ -1,7 +1,5 @@
 # Open Agent SDK - Introduction
 
-[中文版本](./introduction.zh.md)
-
 ---
 
 ## Overview

@@ -2,8 +2,6 @@
 
 Thanks for your interest in Open Agent SDK! This document will help you understand how to contribute to the project.
 
-[中文版本](./CONTRIBUTING.zh.md)
-
 ## Development Environment
 
 - **Runtime**: Bun >= 1.0.0

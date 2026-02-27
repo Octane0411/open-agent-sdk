@@ -6,8 +6,6 @@
 
 An open-source alternative to Claude Agent SDK — lightweight, customizable, and provider-agnostic.
 
-[中文文档](./README.zh.md)
-
 ---
 
 ## What is this?

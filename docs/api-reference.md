@@ -1,7 +1,5 @@
 # Open Agent SDK - API Reference
 
-[中文版本](./api-reference.zh.md)
-
 ---
 
 ## Table of Contents
