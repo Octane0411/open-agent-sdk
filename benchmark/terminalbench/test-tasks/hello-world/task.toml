@@ -1,0 +1,8 @@
+[metadata]
+name = "hello-world"
+description = "Simple test task to verify Harbor + open-agent-sdk integration"
+version = "1.0.0"
+
+[timeouts]
+agent = 180  # Allow time for LLM API call
+verifier = 180
