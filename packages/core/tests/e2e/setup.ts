@@ -3,11 +3,69 @@
  * Shared configuration and helper functions for real API integration tests
  */
 
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import type { PromptOptions } from '../../src/index';
 import type { CreateSessionOptions } from '../../src/session/factory';
+
+/**
+ * Smart .env file loader for worktree compatibility
+ * Searches for .env in current directory and parent directories
+ * Explicitly overrides process.env to ensure .env takes precedence over shell environment
+ *
+ * This is critical for worktree scenarios where:
+ * 1. Git worktree doesn't copy .env (it's in .gitignore)
+ * 2. Tests might inherit shell environment variables (e.g., Claude Code's ANTHROPIC_BASE_URL)
+ * 3. We need .env values to take precedence over shell values
+ */
+function loadEnvFile(): string {
+  // Possible .env locations (in priority order)
+  const possiblePaths = [
+    join(process.cwd(), '.env'),                    // Current directory (main repo or symlink)
+    resolve(process.cwd(), '../../.env'),           // Parent directory (standard worktree)
+    resolve(process.cwd(), '../../../.env'),        // Grandparent (Claude Code worktree)
+  ];
+
+  let foundPath: string | null = null;
+
+  for (const envPath of possiblePaths) {
+    if (existsSync(envPath)) {
+      foundPath = envPath;
+      const content = readFileSync(envPath, 'utf-8');
+
+      // Parse and override process.env
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        // Skip empty lines and comments
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        // Match KEY=VALUE pattern
+        const match = trimmed.match(/^([^=#]+)=(.*)$/);
+        if (match) {
+          const [, key, value] = match;
+          // Remove surrounding quotes
+          const cleanValue = value.trim().replace(/^["']|["']$/g, '');
+          // Explicitly override process.env
+          process.env[key] = cleanValue;
+        }
+      }
+
+      console.log(`[Test Setup] Loaded .env from: ${foundPath}`);
+      return foundPath;
+    }
+  }
+
+  // If no .env found, throw clear error
+  throw new Error(
+    'Cannot find .env file. Searched in:\n' +
+    possiblePaths.map(p => `  - ${p}`).join('\n') +
+    '\n\nFor worktree: create symlink with: ln -s ../../.env .env'
+  );
+}
+
+// Load .env before any test configuration
+loadEnvFile();
 
 // Test configuration from environment
 export const TEST_CONFIG = {
@@ -21,7 +79,7 @@ export const TEST_CONFIG = {
   // Google settings
   google: {
     apiKey: process.env.GEMINI_API_KEY,
-    model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
     available: !!process.env.GEMINI_API_KEY,
   },
   // Anthropic settings
