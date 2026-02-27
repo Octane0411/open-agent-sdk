@@ -115,18 +115,18 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         # Daytona uses shlex.quote on env values which breaks shell variable assignment
         env_exports = " && ".join([f'export {k}="{v}"' for k, v in env_vars.items()])
 
-        # Build base command
+        # Build base command (always use /workspace as cwd for Harbor compatibility)
         cmd_parts = [
             'export PATH="$HOME/.bun/bin:$PATH"',
             env_exports,
-            f'{CLI_COMMAND} -p "{escaped}" --model {model} --output-format json'
+            f'{CLI_COMMAND} -p "{escaped}" --model {model} --cwd /workspace --output-format json'
         ]
 
-        # For MiniMax, add --base-url flag
+        # For MiniMax, add --provider and --base-url flags
         if is_minimax_model(model) and "ANTHROPIC_BASE_URL" in env_vars:
             base_url = env_vars["ANTHROPIC_BASE_URL"]
-            # Insert --base-url before the -p flag
-            cmd_parts[2] = f'{CLI_COMMAND} --base-url {base_url} -p "{escaped}" --model {model} --output-format json'
+            # Use anthropic provider with custom base URL
+            cmd_parts[2] = f'{CLI_COMMAND} --provider anthropic --base-url {base_url} -p "{escaped}" --model {model} --cwd /workspace --output-format json'
 
         return [
             ExecInput(

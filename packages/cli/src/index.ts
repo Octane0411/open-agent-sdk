@@ -27,13 +27,16 @@ if (!model) {
   process.exit(1);
 }
 
-const SYSTEM_PROMPT = `You are a terminal agent. Complete the given task using the available tools.
+const getSystemPrompt = (cwd: string) => `You are a terminal agent. Complete the given task using the available tools.
+
+Current working directory: ${cwd}
 
 Guidelines:
 - Complete the task fully before stopping
 - After making changes, verify the result (e.g., read the file back, run a check command)
 - If a command fails, diagnose why and try an alternative approach
 - Be efficient: don't repeat commands that already succeeded
+- When using file paths, use relative paths from the current working directory (${cwd})
 - When the task is complete, provide a brief summary of what was accomplished`;
 
 async function main() {
@@ -42,7 +45,7 @@ async function main() {
       model: model!,
       provider,
       maxTurns,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: getSystemPrompt(cwd),
       allowedTools: ['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'BashOutput', 'KillBash'],
       permissionMode: 'bypassPermissions',
       allowDangerouslySkipPermissions: true,
