@@ -170,23 +170,40 @@ export class OpenAIProvider extends LLMProvider {
           case 'user':
             return { role: 'user', content: msg.message.content };
           case 'assistant': {
+            const toolCalls = msg.message.tool_calls ?? [];
             const text = msg.message.content
               .filter((c: AssistantContentBlock) => c.type === 'text')
               .map((c: AssistantContentBlock & { type: 'text' }) => c.text)
               .join('');
+
+            if (toolCalls.length > 0) {
+              // Build content array with text + tool-call blocks
+              const content: Array<Record<string, unknown>> = [];
+              if (text) {
+                content.push({ type: 'text', text });
+              }
+              for (const tc of toolCalls) {
+                content.push({
+                  type: 'tool-call',
+                  toolCallId: tc.id,
+                  toolName: tc.function.name,
+                  input: JSON.parse(tc.function.arguments || '{}'),
+                });
+              }
+              return { role: 'assistant', content } as unknown as ModelMessage;
+            }
+
+            // Text-only assistant message (no tool calls)
             return { role: 'assistant', content: text };
           }
           case 'tool_result': {
-            // Get tool name from the tool call in the previous assistant message
-            const toolName = msg.tool_use_id ? 'Tool' : 'unknown';
-            // Output must be wrapped in {type, value} format per Vercel AI SDK schema
             const outputValue = typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
             return {
               role: 'tool',
               content: [{
                 type: 'tool-result',
                 toolCallId: msg.tool_use_id,
-                toolName,
+                toolName: msg.tool_name,
                 output: {
                   type: 'text',
                   value: outputValue,

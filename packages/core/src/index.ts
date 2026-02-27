@@ -468,6 +468,19 @@ export {
 // Re-export logger
 export { logger, type LogLevel } from './utils/logger';
 
+// Re-export trajectory utilities
+export {
+  convertToATIF,
+  type ATIFTrajectory,
+  type ATIFStep,
+  type ATIFToolCall,
+  type ATIFObservation,
+  type ATIFMetrics,
+  type ATIFAgent,
+  type ATIFFinalMetrics,
+  type ConvertToATIFOptions,
+} from './utils/trajectory';
+
 // Re-export hooks
 export {
   HookManager,

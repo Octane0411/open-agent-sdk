@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { prompt } from 'open-agent-sdk';
+import { prompt, FileStorage, convertToATIF } from 'open-agent-sdk';
 
 const args = process.argv.slice(2);
 
@@ -16,9 +16,11 @@ const outputFormat = getFlag('--output-format') ?? 'text';
 const maxTurns = parseInt(getFlag('--max-turns') ?? '50', 10);
 const cwd = getFlag('--cwd') ?? process.cwd();
 const baseURL = getFlag('--base-url') ?? process.env.ANTHROPIC_BASE_URL ?? process.env.OPENAI_BASE_URL;
+const saveTrajectory = getFlag('--save-trajectory');
+const noPersist = args.includes('--no-persist');
 
 if (!instruction) {
-  console.error('Usage: oas -p <instruction> [--model <model>] [--provider openai|google|anthropic] [--output-format text|json] [--max-turns <n>] [--cwd <path>]');
+  console.error('Usage: oas -p <instruction> [--model <model>] [--provider openai|google|anthropic] [--output-format text|json] [--max-turns <n>] [--cwd <path>] [--save-trajectory <path>] [--no-persist]');
   process.exit(1);
 }
 
@@ -40,6 +42,9 @@ Guidelines:
 - When the task is complete, provide a brief summary of what was accomplished`;
 
 async function main() {
+  // Default to FileStorage for session persistence; --no-persist disables it
+  const storage = noPersist ? undefined : new FileStorage();
+
   try {
     const result = await prompt(instruction!, {
       model: model!,
@@ -52,13 +57,24 @@ async function main() {
       cwd,
       baseURL,
       logLevel: 'error',
+      storage,
     });
+
+    // Export trajectory if requested
+    if (saveTrajectory && result.session_id && storage) {
+      const sessionData = await storage.load(result.session_id);
+      if (sessionData) {
+        const atif = convertToATIF(sessionData, { model: model! });
+        await Bun.write(saveTrajectory, JSON.stringify(atif, null, 2));
+      }
+    }
 
     if (outputFormat === 'json') {
       console.log(JSON.stringify({
         result: result.result,
         duration_ms: result.duration_ms,
         usage: result.usage,
+        session_id: result.session_id,
       }));
     } else {
       console.log(result.result);
