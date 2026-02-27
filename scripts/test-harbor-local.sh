@@ -85,10 +85,14 @@ echo "Registering local development agent..."
 HARBOR_AGENTS_DIR=$(python -c "import harbor; print(harbor.__path__[0])")/agents/installed
 AGENT_SOURCE="$REPO_ROOT/benchmark/terminalbench/harbor/agent_local.py"
 AGENT_TARGET="$HARBOR_AGENTS_DIR/open_agent_sdk_local.py"
+TEMPLATE_SOURCE="$REPO_ROOT/benchmark/terminalbench/harbor/install-open-agent-sdk-local.sh.j2"
+TEMPLATE_TARGET="$HARBOR_AGENTS_DIR/install-open-agent-sdk-local.sh.j2"
 
-# Create symlink
+# Create symlinks for both agent and template
 ln -sf "$AGENT_SOURCE" "$AGENT_TARGET"
+ln -sf "$TEMPLATE_SOURCE" "$TEMPLATE_TARGET"
 print_status "Agent registered at $AGENT_TARGET"
+print_status "Template registered at $TEMPLATE_TARGET"
 
 # Run test task
 echo ""
