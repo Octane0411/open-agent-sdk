@@ -58,11 +58,9 @@ export class OpenAIProvider extends LLMProvider {
       : undefined;
 
     // Use Vercel AI SDK's streamText
-    // When using a custom baseURL (e.g., Gemini's OpenAI-compatible endpoint),
-    // use openai.chat() to explicitly use Chat Completions API instead of Responses API
-    const model = this.config.baseURL
-      ? this.openAI.chat(this.config.model)
-      : this.openAI(this.config.model);
+    // Always use .chat() to explicitly use Chat Completions API (/v1/chat/completions)
+    // instead of Responses API (/v1/responses)
+    const model = this.openAI.chat(this.config.model);
     const result = streamText({
       model,
       messages: coreMessages,
@@ -119,9 +117,8 @@ export class OpenAIProvider extends LLMProvider {
       const coreMessages = this.convertToCoreMessages(messages);
 
       // Use Vercel AI SDK's generateObject for structured output
-      const model = this.config.baseURL
-        ? this.openAI.chat(this.config.model)
-        : this.openAI(this.config.model);
+      // Always use .chat() to explicitly use Chat Completions API
+      const model = this.openAI.chat(this.config.model);
 
       const result = await generateObject({
         model,
