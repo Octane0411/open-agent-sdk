@@ -210,6 +210,7 @@ describe('InMemoryStorage', () => {
 });
 
 import { generateUUID } from '../../src/utils/uuid';
+import { createUserMessage, createAssistantMessage } from '../../src/types/messages';
 
 describe('FileStorage', () => {
   let storage: FileStorage;
@@ -455,6 +456,41 @@ describe('FileStorage', () => {
     await expect(storage.append(fakeId, msg)).resolves.toBeUndefined();
     expect(await storage.exists(fakeId)).toBe(false);
   });
+
+  it('should persist and reload P1 metadata fields (timestamp, model, usage, stop_reason)', async () => {
+    const sessionId = generateUUID();
+    const now = new Date().toISOString();
+
+    const assistantMsg: SDKMessage = {
+      type: 'assistant',
+      uuid: 'uuid-p1',
+      session_id: sessionId,
+      message: { role: 'assistant', content: [{ type: 'text', text: 'hello' }] },
+      parent_tool_use_id: null,
+      timestamp: now,
+      model: 'gpt-4o-mini',
+      usage: { input_tokens: 100, output_tokens: 50 },
+      stop_reason: 'end_turn',
+    };
+
+    await storage.save({
+      id: sessionId,
+      model: 'gpt-4o-mini',
+      provider: 'openai',
+      createdAt: 1000,
+      updatedAt: 1000,
+      messages: [assistantMsg],
+      options: { model: 'gpt-4o-mini' },
+    });
+
+    const loaded = await storage.load(sessionId);
+    expect(loaded?.messages).toHaveLength(1);
+    const msg = loaded?.messages[0] as (typeof assistantMsg);
+    expect(msg.timestamp).toBe(now);
+    expect(msg.model).toBe('gpt-4o-mini');
+    expect(msg.usage).toEqual({ input_tokens: 100, output_tokens: 50 });
+    expect(msg.stop_reason).toBe('end_turn');
+  });
 });
 
 describe('SessionData interface', () => {
@@ -486,5 +522,52 @@ describe('SessionData interface', () => {
     expect(sessionData.messages).toEqual([]);
     expect(sessionData.options.model).toBe('gpt-4o');
     expect(sessionData.options.maxTurns).toBe(10);
+  });
+});
+
+describe('P1 message metadata', () => {
+  it('createUserMessage() sets timestamp as ISO 8601', () => {
+    const before = Date.now();
+    const msg = createUserMessage('hi', 'session-1', 'uuid-1');
+    const after = Date.now();
+
+    expect(msg.timestamp).toBeDefined();
+    const ts = new Date(msg.timestamp!).getTime();
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(after);
+  });
+
+  it('createAssistantMessage() sets timestamp, model, usage, stop_reason', () => {
+    const before = Date.now();
+    const msg = createAssistantMessage(
+      [{ type: 'text', text: 'hello' }],
+      'session-1',
+      'uuid-2',
+      null,
+      undefined,
+      { model: 'gpt-4o', usage: { input_tokens: 10, output_tokens: 5 }, stop_reason: 'end_turn' }
+    );
+    const after = Date.now();
+
+    expect(msg.timestamp).toBeDefined();
+    const ts = new Date(msg.timestamp!).getTime();
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(after);
+    expect(msg.model).toBe('gpt-4o');
+    expect(msg.usage).toEqual({ input_tokens: 10, output_tokens: 5 });
+    expect(msg.stop_reason).toBe('end_turn');
+  });
+
+  it('createAssistantMessage() without options has undefined metadata fields', () => {
+    const msg = createAssistantMessage(
+      [{ type: 'text', text: 'hello' }],
+      'session-1',
+      'uuid-3'
+    );
+    expect(msg.model).toBeUndefined();
+    expect(msg.usage).toBeUndefined();
+    expect(msg.stop_reason).toBeUndefined();
+    // timestamp still set
+    expect(msg.timestamp).toBeDefined();
   });
 });

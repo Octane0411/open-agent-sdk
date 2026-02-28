@@ -39,6 +39,8 @@ export interface SDKUserMessage extends BaseMessage {
   type: 'user';
   message: UserMessageContent;
   parent_tool_use_id: string | null;
+  /** ISO 8601 timestamp when this message was created */
+  timestamp?: string;
 }
 
 /** Tool call from assistant */
@@ -56,6 +58,14 @@ export interface SDKAssistantMessage extends BaseMessage {
   type: 'assistant';
   message: AssistantMessageContent;
   parent_tool_use_id: string | null;
+  /** ISO 8601 timestamp when this message was created */
+  timestamp?: string;
+  /** Model identifier used to generate this response */
+  model?: string;
+  /** Token usage for this response */
+  usage?: { input_tokens: number; output_tokens: number };
+  /** Why the model stopped generating: 'end_turn' | 'tool_use' | 'max_tokens' */
+  stop_reason?: string;
 }
 
 /** Tool result message - output from tool execution */
@@ -155,6 +165,7 @@ export function createUserMessage(
     type: 'user',
     uuid,
     session_id: sessionId,
+    timestamp: new Date().toISOString(),
     message: { role: 'user', content },
     parent_tool_use_id: parentToolUseId,
   };
@@ -196,24 +207,36 @@ export function createSystemMessage(
   };
 }
 
+/** Options for creating assistant message with observability metadata */
+export interface CreateAssistantMessageOptions {
+  model?: string;
+  usage?: { input_tokens: number; output_tokens: number };
+  stop_reason?: string;
+}
+
 /** Helper function to create assistant message */
 export function createAssistantMessage(
   contentBlocks: AssistantContentBlock[],
   sessionId: string,
   uuid: UUID,
   parentToolUseId: string | null = null,
-  toolCalls?: ToolCall[]
+  toolCalls?: ToolCall[],
+  options?: CreateAssistantMessageOptions
 ): SDKAssistantMessage {
   return {
     type: 'assistant',
     uuid,
     session_id: sessionId,
+    timestamp: new Date().toISOString(),
     message: {
       role: 'assistant',
       content: contentBlocks,
       tool_calls: toolCalls,
     },
     parent_tool_use_id: parentToolUseId,
+    model: options?.model,
+    usage: options?.usage,
+    stop_reason: options?.stop_reason,
   };
 }
 

@@ -16,6 +16,7 @@ import {
   type SDKToolResultMessage,
   type SDKSkillSystemMessage,
   type ToolCall,
+  type CreateAssistantMessageOptions,
   createUserMessage,
   createSystemMessage,
   createAssistantMessage,
@@ -875,12 +876,20 @@ Generate a concise but comprehensive summary.`;
       ? [{ type: 'text', text: content }]
       : [];
 
+    const hasToolCalls = toolCalls.size > 0;
+    const messageOptions: CreateAssistantMessageOptions = {
+      model: this.provider.getModel(),
+      usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+      stop_reason: hasToolCalls ? 'tool_use' : 'end_turn',
+    };
+
     return createAssistantMessage(
       contentBlocks,
       this.sessionId,
       generateUUID(),
       null,
-      toolCalls.size > 0 ? Array.from(toolCalls.values()) : undefined
+      hasToolCalls ? Array.from(toolCalls.values()) : undefined,
+      messageOptions
     );
   }
 
