@@ -54,6 +54,7 @@ def get_required_env_vars(model_name: str) -> dict[str, str]:
                 "Example: https://api.minimaxi.com/anthropic/v1"
             )
 
+        # Pass authToken for Bearer authentication (MiniMax compatibility)
         env_vars["ANTHROPIC_AUTH_TOKEN"] = auth_token
         env_vars["ANTHROPIC_BASE_URL"] = base_url
         return env_vars

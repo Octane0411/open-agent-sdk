@@ -30,8 +30,8 @@ export interface LLMChunk {
 
 /** Provider configuration */
 export interface ProviderConfig {
-  /** API key for the provider */
-  apiKey: string;
+  /** API key for the provider (optional for providers that support authToken) */
+  apiKey?: string;
   /** Base URL for API (for custom endpoints like Gemini) */
   baseURL?: string;
   /** Model identifier */

@@ -35,6 +35,8 @@ export interface PromptOptions {
   provider?: 'openai' | 'google' | 'anthropic';
   /** Base URL for API (OpenAI only) */
   baseURL?: string;
+  /** Auth token for Bearer authentication (used by Anthropic-compatible endpoints like MiniMax) */
+  authToken?: string;
   /** Maximum conversation turns (default: 10) */
   maxTurns?: number;
   /** Allowed tools whitelist (default: all) */
@@ -199,6 +201,7 @@ export async function prompt(
     provider: options.provider,
     apiKey: options.apiKey,
     baseURL: options.baseURL,
+    authToken: options.authToken,
     storage: storage ?? new InMemoryStorage(),
     logLevel,
     maxTurns: options.maxTurns,

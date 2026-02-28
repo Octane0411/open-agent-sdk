@@ -3,10 +3,10 @@ set -euo pipefail
 
 # Install dependencies if not available
 if command -v apk &> /dev/null; then
-    apk add --no-cache curl bash
+    apk add --no-cache curl bash unzip
 elif command -v apt-get &> /dev/null; then
     apt-get update
-    apt-get install -y curl
+    apt-get install -y curl unzip
 fi
 
 # Install Bun if not present
@@ -15,8 +15,9 @@ if ! command -v bun &> /dev/null; then
 fi
 export PATH="$HOME/.bun/bin:$PATH"
 
-# Install CLI from npm globally
-bun add -g @open-agent-sdk/cli
+# Install CLI from npm globally (force latest canary)
+bun add -g @open-agent-sdk/cli@canary
 
 echo "Bun ready: $(bun --version)"
 echo "CLI ready: $(which oas)"
+echo "CLI version: $(oas --version 2>&1 || echo 'version check failed')"

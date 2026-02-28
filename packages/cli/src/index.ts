@@ -16,6 +16,7 @@ const outputFormat = getFlag('--output-format') ?? 'text';
 const maxTurns = parseInt(getFlag('--max-turns') ?? '50', 10);
 const cwd = getFlag('--cwd') ?? process.cwd();
 const baseURL = getFlag('--base-url') ?? process.env.ANTHROPIC_BASE_URL ?? process.env.OPENAI_BASE_URL;
+const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
 const saveTrajectory = getFlag('--save-trajectory');
 const noPersist = args.includes('--no-persist');
 
@@ -56,6 +57,7 @@ async function main() {
       allowDangerouslySkipPermissions: true,
       cwd,
       baseURL,
+      authToken,
       logLevel: 'error',
       storage,
     });

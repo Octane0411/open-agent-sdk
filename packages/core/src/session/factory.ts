@@ -30,6 +30,8 @@ export interface CreateSessionOptions {
   apiKey?: string;
   /** Base URL override for API endpoint (used for proxies or compatible APIs like MiniMax) */
   baseURL?: string;
+  /** Auth token for Bearer authentication (used by Anthropic-compatible endpoints like MiniMax) */
+  authToken?: string;
   /** Maximum conversation turns (default: 10) */
   maxTurns?: number;
   /** Allowed tools whitelist (default: all) */
@@ -143,7 +145,8 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
     (providerType === 'google' ? process.env.GEMINI_API_KEY :
      providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY);
 
-  if (!apiKey) {
+  // For Anthropic provider, allow authToken as alternative to apiKey
+  if (!apiKey && !(providerType === 'anthropic' && options.authToken)) {
     const keyName = providerType === 'google' ? 'GEMINI_API_KEY' :
                     providerType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
     throw new Error(
@@ -159,7 +162,7 @@ export async function createSession(options: CreateSessionOptions): Promise<Sess
   if (providerType === 'google') {
     provider = new GoogleProvider({ apiKey, model: options.model });
   } else if (providerType === 'anthropic') {
-    provider = new AnthropicProvider({ apiKey, model: options.model, baseURL: options.baseURL });
+    provider = new AnthropicProvider({ apiKey, model: options.model, baseURL: options.baseURL, authToken: options.authToken });
   } else {
     provider = new OpenAIProvider({ apiKey, model: options.model, baseURL: options.baseURL });
   }
