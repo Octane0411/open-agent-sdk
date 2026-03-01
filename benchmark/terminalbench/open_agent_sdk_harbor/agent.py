@@ -38,15 +38,15 @@ def get_required_env_vars(model_name: str) -> dict[str, str]:
     env_vars = {}
     model_lower = model_name.lower()
 
-    # MiniMax uses Anthropic compatible endpoint with custom auth
+    # MiniMax uses Anthropic compatible endpoint
+    # SDK auto-detects Bearer auth based on baseURL
     if is_minimax_model(model_name):
-        auth_token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
         base_url = os.environ.get("ANTHROPIC_BASE_URL")
 
-        if not auth_token:
+        if not api_key:
             raise ValueError(
-                "MiniMax model requires ANTHROPIC_AUTH_TOKEN environment variable. "
-                "This is used for Bearer token authentication."
+                "MiniMax model requires ANTHROPIC_API_KEY environment variable."
             )
         if not base_url:
             raise ValueError(
@@ -54,8 +54,8 @@ def get_required_env_vars(model_name: str) -> dict[str, str]:
                 "Example: https://api.minimaxi.com/anthropic/v1"
             )
 
-        # Pass authToken for Bearer authentication (MiniMax compatibility)
-        env_vars["ANTHROPIC_AUTH_TOKEN"] = auth_token
+        # SDK will auto-detect Bearer auth based on baseURL
+        env_vars["ANTHROPIC_API_KEY"] = api_key
         env_vars["ANTHROPIC_BASE_URL"] = base_url
         return env_vars
 

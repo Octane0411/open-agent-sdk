@@ -29,14 +29,12 @@ export {
 export interface PromptOptions {
   /** Model identifier (e.g., 'gpt-4', 'gpt-4o', 'gemini-2.0-flash') */
   model: string;
-  /** API key (defaults to OPENAI_API_KEY or GEMINI_API_KEY env var based on provider) */
+  /** API key (defaults to OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY env var based on provider) */
   apiKey?: string;
   /** Provider to use: 'openai', 'google', or 'anthropic' (auto-detected from model name if not specified) */
   provider?: 'openai' | 'google' | 'anthropic';
-  /** Base URL for API (OpenAI only) */
+  /** Base URL for API (supports custom endpoints like MiniMax). Authentication method is auto-detected based on the endpoint. */
   baseURL?: string;
-  /** Auth token for Bearer authentication (used by Anthropic-compatible endpoints like MiniMax) */
-  authToken?: string;
   /** Maximum conversation turns (default: 10) */
   maxTurns?: number;
   /** Allowed tools whitelist (default: all) */
@@ -201,7 +199,6 @@ export async function prompt(
     provider: options.provider,
     apiKey: options.apiKey,
     baseURL: options.baseURL,
-    authToken: options.authToken,
     storage: storage ?? new InMemoryStorage(),
     logLevel,
     maxTurns: options.maxTurns,
