@@ -34,6 +34,12 @@ coverage/
 *.temp
 .cache/
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
 # Husky (managed by package manager)
 .husky/_/
 
@@ -41,6 +47,7 @@ coverage/
 docs/adr/
 docs/dev/
 docs/release/
+docs/research/
 
 # Legacy files
 claude-agent-sdk-ts*
@@ -55,3 +62,4 @@ RELEASE_NOTES.md
 
 # Harbor benchmark results
 jobs/
+run-bench-test.sh
