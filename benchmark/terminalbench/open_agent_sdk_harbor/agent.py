@@ -5,13 +5,26 @@ Implements Harbor's BaseInstalledAgent interface to run open-agent-sdk
 on terminal-bench and other Harbor benchmarks.
 
 Usage:
-    # Standard providers
-    harbor run -d terminal-bench@2.0 --agent-import-path "harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent" --model gemini-2.0-flash
+    # Standard providers (Gemini)
+    harbor run -d terminal-bench@2.0 \
+      --agent-import-path "harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent" \
+      --model gemini-2.0-flash \
+      --ae GEMINI_API_KEY=$GEMINI_API_KEY
 
     # MiniMax (Anthropic compatible endpoint)
-    export ANTHROPIC_AUTH_TOKEN=your_token
-    export ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic/v1
-    harbor run -d terminal-bench@2.0 --agent-import-path "harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent" --model MiniMax-M2.5
+    harbor run -d terminal-bench@2.0 \
+      --agent-import-path "harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent" \
+      --model MiniMax-M2.5 \
+      --ae ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+      --ae ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL
+
+    # Claude
+    harbor run -d terminal-bench@2.0 \
+      --agent-import-path "harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent" \
+      --model claude-sonnet-4 \
+      --ae ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+
+Note: Environment variables MUST be passed via --ae flag for Docker container access.
 """
 
 import os
@@ -30,59 +43,30 @@ def is_minimax_model(model_name: str) -> bool:
     return model_name.lower().startswith("minimax")
 
 
-def get_required_env_vars(model_name: str) -> dict[str, str]:
+def get_required_env_var_names(model_name: str) -> list[str]:
     """
-    Determine required environment variables based on model name.
-    Returns a dict of {env_var_name: env_var_value}.
+    Determine required environment variable names based on model name.
+    Returns a list of environment variable names that should be passed to the container.
+
+    Note: This function does NOT check if the variables exist in the host environment.
+    Harbor will pass them via --ae flag, and they will be available in the container.
     """
-    env_vars = {}
     model_lower = model_name.lower()
 
     # MiniMax uses Anthropic compatible endpoint
-    # SDK auto-detects Bearer auth based on baseURL
     if is_minimax_model(model_name):
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        base_url = os.environ.get("ANTHROPIC_BASE_URL")
-
-        if not api_key:
-            raise ValueError(
-                "MiniMax model requires ANTHROPIC_API_KEY environment variable."
-            )
-        if not base_url:
-            raise ValueError(
-                "MiniMax model requires ANTHROPIC_BASE_URL environment variable. "
-                "Example: https://api.minimaxi.com/anthropic/v1"
-            )
-
-        # SDK will auto-detect Bearer auth based on baseURL
-        env_vars["ANTHROPIC_API_KEY"] = api_key
-        env_vars["ANTHROPIC_BASE_URL"] = base_url
-        return env_vars
+        return ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"]
 
     # Standard providers
     if model_lower.startswith("gemini") or model_lower.startswith("google"):
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("Gemini model requires GEMINI_API_KEY environment variable.")
-        env_vars["GEMINI_API_KEY"] = api_key
+        return ["GEMINI_API_KEY"]
     elif model_lower.startswith("claude"):
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError("Claude model requires ANTHROPIC_API_KEY environment variable.")
-        env_vars["ANTHROPIC_API_KEY"] = api_key
+        return ["ANTHROPIC_API_KEY"]
     elif model_lower.startswith("gpt") or model_lower.startswith("openai"):
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OpenAI model requires OPENAI_API_KEY environment variable.")
-        env_vars["OPENAI_API_KEY"] = api_key
+        return ["OPENAI_API_KEY"]
     else:
         # Default to Gemini for unknown models
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError(f"Unknown model '{model_name}'. Please set GEMINI_API_KEY for default Gemini provider.")
-        env_vars["GEMINI_API_KEY"] = api_key
-
-    return env_vars
+        return ["GEMINI_API_KEY"]
 
 
 class OpenAgentSDKAgent(BaseInstalledAgent):
@@ -106,32 +90,21 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
     def create_run_agent_commands(self, instruction: str) -> list[ExecInput]:
         model = self.model_name or "gemini-2.0-flash"
 
-        # Get required environment variables
-        env_vars = get_required_env_vars(model)
+        # Build CLI command with provider-specific flags
+        cli_flags = f"--model {model} --cwd /workspace --output-format json"
+        if is_minimax_model(model):
+            cli_flags = f'--provider anthropic --base-url "$ANTHROPIC_BASE_URL" {cli_flags}'
 
-        # Escape instruction for shell
-        escaped = instruction.replace('"', '\\"').replace('$', '\\$')
-
-        # Build CLI command with env vars inline (for Daytona compatibility)
-        # Daytona uses shlex.quote on env values which breaks shell variable assignment
-        env_exports = " && ".join([f'export {k}="{v}"' for k, v in env_vars.items()])
-
-        # Build base command (always use /workspace as cwd for Harbor compatibility)
-        cmd_parts = [
-            'export PATH="$HOME/.bun/bin:$PATH"',
-            env_exports,
-            f'{CLI_COMMAND} -p "{escaped}" --model {model} --cwd /workspace --output-format json'
-        ]
-
-        # For MiniMax, add --provider and --base-url flags
-        if is_minimax_model(model) and "ANTHROPIC_BASE_URL" in env_vars:
-            base_url = env_vars["ANTHROPIC_BASE_URL"]
-            # Use anthropic provider with custom base URL
-            cmd_parts[2] = f'{CLI_COMMAND} --provider anthropic --base-url {base_url} -p "{escaped}" --model {model} --cwd /workspace --output-format json'
+        # Use heredoc to safely pass instruction without escaping
+        # This handles multi-line text and special characters correctly
+        command = f"""export PATH="$HOME/.bun/bin:$PATH" && {CLI_COMMAND} -p "$(cat <<'INSTRUCTION_EOF'
+{instruction}
+INSTRUCTION_EOF
+)" {cli_flags}"""
 
         return [
             ExecInput(
-                command=" && ".join(cmd_parts),
+                command=command,
                 timeout_sec=600,
             )
         ]
