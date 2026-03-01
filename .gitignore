@@ -51,6 +51,7 @@ RELEASE_NOTES.md
 
 # Worktrees
 .worktrees/
+.claude/worktrees/
 
 # Harbor benchmark results
 jobs/
