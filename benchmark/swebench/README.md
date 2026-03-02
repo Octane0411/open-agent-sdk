@@ -33,6 +33,32 @@ Optional timeout override:
 SWEBENCH_TIMEOUT=300 ./scripts/run_smoke_one.sh
 ```
 
+## Run One-Instance OAS Smoke Test
+
+This path calls Open Agent SDK CLI to generate `model_patch` from the SWE-bench task, then runs harness.
+
+Required env:
+
+```bash
+export OAS_MODEL="<your-model>"
+# Optional:
+# export OAS_PROVIDER="openai|anthropic|google"
+# export OAS_BASE_URL="https://..."
+```
+
+Run:
+
+```bash
+cd benchmark/swebench
+./scripts/run_oas_smoke_one.sh
+```
+
+Optional overrides:
+
+```bash
+SWEBENCH_INSTANCE_ID="astropy__astropy-12907" OAS_MAX_TURNS=40 SWEBENCH_TIMEOUT=600 ./scripts/run_oas_smoke_one.sh
+```
+
 Artifacts are written to:
 
 - `benchmark/swebench/outputs/predictions/`
