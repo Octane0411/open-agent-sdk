@@ -10,6 +10,9 @@ dist/
 .env
 .env.local
 .env.*.local
+.env.base
+.env.profiles/*.env
+!.env.profiles/*.env.example
 
 # IDE
 .vscode/
