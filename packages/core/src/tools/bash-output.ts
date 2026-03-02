@@ -5,6 +5,8 @@
 import type { Tool, ToolContext, JSONSchema } from '../types/tools';
 import { backgroundProcesses } from './bash';
 
+const TRUNCATED_NOTICE = '\n[Output truncated to avoid excessive memory usage]';
+
 export interface BashOutputInput {
   shellId: string;
 }
@@ -56,8 +58,8 @@ export class BashOutputTool implements Tool<BashOutputInput, BashOutputOutput> {
     const running = process.exitCode === null;
 
     return {
-      stdout: process.stdout,
-      stderr: process.stderr,
+      stdout: process.stdout + (process.stdoutTruncated ? TRUNCATED_NOTICE : ''),
+      stderr: process.stderr + (process.stderrTruncated ? TRUNCATED_NOTICE : ''),
       exitCode: process.exitCode,
       running,
     };
