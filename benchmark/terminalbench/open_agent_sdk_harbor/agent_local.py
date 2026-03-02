@@ -119,24 +119,39 @@ class OpenAgentSDKAgentLocal(BaseInstalledAgent):
         # Daytona uses shlex.quote on env values which breaks shell variable assignment
         env_exports = " && ".join([f'export {k}="{v}"' for k, v in env_vars.items()])
 
-        # Build base command (always use /workspace as cwd for Harbor compatibility)
+        # Build base command (auto-detect real workdir inside container).
         # Default to --no-persist to reduce memory/I/O usage in benchmark containers.
-        # Trajectory export is opt-in via OAS_HARBOR_SAVE_TRAJECTORY=1.
-        cli_flags = f'--model {model} --cwd /workspace --output-format json --no-persist'
-        if os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1":
-            cli_flags += " --save-trajectory /workspace/trajectory.json"
+        # When trajectory export is enabled, persistence must remain enabled
+        # so storage data can be loaded for export.
+        cli_flags = f'--model {model} --output-format json'
+        save_trajectory = os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1"
+        if save_trajectory:
+            cli_flags += " --save-trajectory /logs/agent/open-agent-transcript/trajectory.json"
+        else:
+            cli_flags += " --no-persist"
 
         cmd_parts = [
             'export PATH="$HOME/.bun/bin:$PATH"',
             env_exports,
-            f'{CLI_COMMAND} -p "{escaped}" {cli_flags}'
+            'WORKDIR="/workspace"',
+            'if [ ! -d "$WORKDIR" ]; then if [ -d /app/personal-site ]; then WORKDIR="/app/personal-site"; elif [ -d /app ]; then WORKDIR="/app"; else WORKDIR="$(pwd)"; fi; fi',
+            'mkdir -p /logs/agent/open-agent-transcript',
+            f'{CLI_COMMAND} -p "{escaped}" --cwd "$WORKDIR" {cli_flags}'
         ]
 
         # For MiniMax, add --provider and --base-url flags
         if is_minimax_model(model) and "ANTHROPIC_BASE_URL" in env_vars:
             base_url = env_vars["ANTHROPIC_BASE_URL"]
             # Use anthropic provider with custom base URL
-            cmd_parts[2] = f'{CLI_COMMAND} --provider anthropic --base-url {base_url} -p "{escaped}" {cli_flags}'
+            cmd_parts[5] = f'{CLI_COMMAND} --provider anthropic --base-url {base_url} -p "{escaped}" --cwd "$WORKDIR" {cli_flags}'
+
+        # Best-effort transcript/session extraction for Harbor jobs artifacts.
+        cmd_parts.extend([
+            'RC=$?',
+            'cp -f /root/.open-agent/sessions/sessions-index.json /logs/agent/open-agent-transcript/ 2>/dev/null || true',
+            'cp -f /root/.open-agent/sessions/*.jsonl /logs/agent/open-agent-transcript/ 2>/dev/null || true',
+            'exit $RC',
+        ])
 
         return [
             ExecInput(

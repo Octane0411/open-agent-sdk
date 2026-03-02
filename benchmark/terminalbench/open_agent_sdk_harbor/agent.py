@@ -93,11 +93,16 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         # Build CLI command with provider-specific flags.
         # IMPORTANT:
         # - Default to --no-persist to reduce container I/O and memory usage.
-        # - Trajectory export is opt-in via OAS_HARBOR_SAVE_TRAJECTORY=1 because
-        #   loading + ATIF conversion can be heavy for real terminal-bench tasks.
-        cli_flags = f"--model {model} --cwd /workspace --output-format json --no-persist"
-        if os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1":
-            cli_flags += " --save-trajectory /workspace/trajectory.json"
+        # - When trajectory export is enabled, persistence must remain enabled,
+        #   otherwise storage is disabled and trajectory export is skipped.
+        # - Transcript/session artifacts are copied to /logs/agent so Harbor can
+        #   pull them back into jobs/* for debugging.
+        cli_flags = f"--model {model} --output-format json"
+        save_trajectory = os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1"
+        if save_trajectory:
+            cli_flags += " --save-trajectory /logs/agent/open-agent-transcript/trajectory.json"
+        else:
+            cli_flags += " --no-persist"
         if is_minimax_model(model):
             cli_flags = f'--provider anthropic --base-url "$ANTHROPIC_BASE_URL" {cli_flags}'
 
@@ -107,10 +112,20 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         # (containers can't access host's 127.0.0.1 proxy)
         command = f"""export PATH="$HOME/.bun/bin:$PATH" && \\
 unset https_proxy http_proxy all_proxy HTTPS_PROXY HTTP_PROXY ALL_PROXY && \\
+WORKDIR="/workspace" && \\
+if [ ! -d "$WORKDIR" ]; then \\
+  if [ -d /app/personal-site ]; then WORKDIR="/app/personal-site"; \\
+  elif [ -d /app ]; then WORKDIR="/app"; \\
+  else WORKDIR="$(pwd)"; fi; \\
+fi && \\
+mkdir -p /logs/agent/open-agent-transcript && \\
 {CLI_COMMAND} -p "$(cat <<'INSTRUCTION_EOF'
 {instruction}
 INSTRUCTION_EOF
-)" {cli_flags}"""
+)" --cwd "$WORKDIR" {cli_flags}; RC=$?; \\
+cp -f /root/.open-agent/sessions/sessions-index.json /logs/agent/open-agent-transcript/ 2>/dev/null || true; \\
+cp -f /root/.open-agent/sessions/*.jsonl /logs/agent/open-agent-transcript/ 2>/dev/null || true; \\
+exit $RC"""
 
         return [
             ExecInput(
