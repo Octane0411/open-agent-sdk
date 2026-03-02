@@ -248,6 +248,9 @@ pip install harbor
 ```bash
 export OAS_HARBOR_SAVE_TRAJECTORY=1
 ```
+- Debug artifacts are exported into job outputs, not repository root:
+  - `jobs/<run>/<trial>/agent/open-agent-transcript/trajectory.json`
+  - `jobs/<run>/<trial>/agent/open-agent-transcript/*.jsonl`
 
 **Issue: "ANTHROPIC_AUTH_TOKEN is not set"**
 ```bash
