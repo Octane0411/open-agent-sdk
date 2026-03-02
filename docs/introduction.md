@@ -235,7 +235,7 @@ Extend agent behavior with event hooks:
 ### 1. Code Assistant
 ```typescript
 const result = await prompt("Analyze this codebase and suggest improvements", {
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   allowedTools: ['Read', 'Glob', 'Grep'],
   cwd: './src',
@@ -245,7 +245,7 @@ const result = await prompt("Analyze this codebase and suggest improvements", {
 ### 2. DevOps Automation
 ```typescript
 const result = await prompt("Check server health and restart if needed", {
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   allowedTools: ['Bash', 'Read'],
   permissionMode: 'default', // Requires approval for dangerous operations
@@ -255,7 +255,7 @@ const result = await prompt("Check server health and restart if needed", {
 ### 3. Research Assistant
 ```typescript
 const session = createSession({
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   allowedTools: ['WebSearch', 'WebFetch', 'Write'],
 });
@@ -269,7 +269,7 @@ for await (const msg of session.stream()) {
 ### 4. Interactive Development
 ```typescript
 const session = createSession({
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   hooks: {
     onPermissionRequest: async (request) => {
@@ -309,7 +309,7 @@ const session = createSession({
    import { prompt } from 'open-agent-sdk';
    
    const result = await prompt("What files are in the current directory?", {
-     model: 'your-model',
+     model: 'gpt-5.3-codex',
      apiKey: process.env.OPENAI_API_KEY,
    });
    

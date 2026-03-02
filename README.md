@@ -1,40 +1,26 @@
 # Open Agent SDK
 
-[![Build in Public](https://img.shields.io/badge/Build%20in%20Public-blue)](https://twitter.com/octane0411)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/branding/open-agent-sdk-banner-dark.svg">
+  <img src="./docs/branding/open-agent-sdk-banner.svg" alt="Open Agent SDK" width="100%">
+</picture>
 
-An open-source alternative to Claude Agent SDK — lightweight, customizable, and provider-agnostic.
+TypeScript SDK for building production-grade AI agents with tool use and multi-provider support.
 
----
+- Compatible developer experience with Claude Agent SDK concepts
+- Open and extensible architecture for custom tools, providers, and hooks
+- Strong operational controls with sessions, permissions, and MCP integration
 
-## What is this?
+## Highlights
 
-Open Agent SDK is a TypeScript framework for building AI agents. It provides a developer experience similar to Claude Agent SDK but with full transparency and no vendor lock-in.
-
-## Why Choose This?
-
-### 🎯 API Compatible with Claude Agent SDK
-Drop-in replacement with feature parity — same Agent loop, tools, sessions, permissions, and hooks. Minimal learning curve for existing Claude Agent SDK users.
-
-### 🔓 Open Source & Extensible
-Full MIT-licensed source code. Easily customize and extend with custom tools, providers, and hooks.
-
-### 🚀 No Claude Code Dependency
-Pure TypeScript implementation that runs independently. No need to install or run Claude Code — works with any LLM provider directly.
-
-**Key features:**
-- **Agent Loop** — Observation-thought-action cycle for autonomous agents
-- **Built-in Tools** — File operations (read/write/edit), shell execution, code search (glob/grep), web search
-- **Streaming Support** — Real-time response streaming with token usage tracking
-- **Multi-Provider** — Works with OpenAI, Google Gemini, and Anthropic
-- **Provider Extensibility** — Add custom providers with a simple interface
-- **Session Management** — Persistent conversations with InMemory and File storage
-- **Permission System** — 4 permission modes (default/acceptEdits/bypassPermissions/plan)
-- **Hooks Framework** — Event-driven extensibility (10 hook events)
-- **Subagent System** — Delegate tasks to specialized agents
-- **Type Safety** — Full TypeScript support with strict type constraints
-- **Cancellation** — AbortController support for interrupting long-running operations
+- ReAct-style agent loop with multi-turn execution
+- Built-in toolset for files, shell, search, web, and task orchestration
+- Session persistence with resume and fork support
+- Permission system (`default`, `acceptEdits`, `bypassPermissions`, `plan`)
+- Hook system for lifecycle and tool events
+- Multi-provider support (OpenAI, Google Gemini, Anthropic)
+- MCP integration support
+- Strict TypeScript typing across public APIs
 
 ## Installation
 
@@ -42,189 +28,109 @@ Pure TypeScript implementation that runs independently. No need to install or ru
 npm install open-agent-sdk@alpha
 ```
 
-Or with specific package manager:
+Alternative package managers:
 
 ```bash
-# npm
-npm install open-agent-sdk@alpha
-
-# yarn
 yarn add open-agent-sdk@alpha
-
-# pnpm
 pnpm add open-agent-sdk@alpha
-
-# bun
 bun add open-agent-sdk@alpha
 ```
 
-> **Note**: Currently in alpha. Use `@alpha` tag to install the latest alpha version.
+## Requirements
 
-**Requirements:**
-- Bun >= 1.0.0 (primary runtime)
-- Node.js >= 20 (with peer dependencies)
-- TypeScript >= 5.0
+- Bun `>= 1.0.0`
+- Node.js `>= 18`
+- TypeScript `>= 5.0`
 
 ## Quick Start
 
-### Basic Usage
+### One-shot prompt
 
 ```typescript
-import { prompt } from 'open-agent-sdk';
+import { prompt } from "open-agent-sdk";
 
-const result = await prompt("What files are in the current directory?", {
-  model: 'your-model',
+const result = await prompt("Summarize the repository structure.", {
+  model: "gpt-5.3-codex",
+  provider: "openai",
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 console.log(result.result);
-console.log(`Duration: ${result.duration_ms}ms`);
-console.log(`Tokens: ${result.usage.input_tokens} in / ${result.usage.output_tokens} out`);
+console.log(result.usage);
 ```
 
-### Session-Based Conversations
+### Session workflow
 
 ```typescript
-import { createSession } from 'open-agent-sdk';
+import { createSession } from "open-agent-sdk";
 
-const session = createSession({
-  model: 'your-model',
+const session = await createSession({
+  model: "gpt-5.3-codex",
+  provider: "openai",
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Send message
-await session.send("What is 5 + 3?");
+await session.send("Read the current directory and list key files.");
 
-// Stream the response
 for await (const message of session.stream()) {
-  if (message.type === 'assistant') {
-    console.log(message.content);
+  if (message.type === "assistant") {
+    console.log(message.message.content);
   }
-}
-
-// Continue conversation (context preserved)
-await session.send("Multiply that by 2");
-for await (const message of session.stream()) {
-  console.log(message.content);
 }
 
 session.close();
 ```
 
-## API Reference
-
-See the full [API Reference](./docs/api-reference.md) for detailed documentation on:
-
-- `prompt()` - Execute single prompts with the agent
-- `createSession()` / `resumeSession()` - Manage persistent conversations
-- All configuration options and types
-
 ## Documentation
 
-- [Built-in Tools](./docs/api-reference.md#built-in-tools) - File operations, shell execution, code search, web access
-- [Provider Support](./docs/api-reference.md#providers) - OpenAI, Google Gemini, Anthropic
-- [Permissions](./docs/api-reference.md#permissions) - Permission modes and management
-- [Hooks](./docs/api-reference.md#hooks) - Event-driven extensibility
+- [API Reference](./docs/api-reference.md)
+- [Introduction](./docs/introduction.md)
+- [Comparison with Claude Agent SDK](./docs/claude-agent-sdk-comparison.md)
 
-## Architecture
+## Monorepo Structure
 
+```text
+packages/
+  core/        # SDK implementation
+examples/      # usage examples
+docs/          # technical docs, workflows, ADRs
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Open Agent SDK                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   User Code              Core SDK                      External              │
-│  ┌─────────┐           ┌─────────┐                   ┌─────────┐            │
-│  │ prompt()│──────────►│ Agent   │──────────────────►│ OpenAI  │            │
-│  └─────────┘           │  Loop   │                   │ Google  │            │
-│  ┌─────────┐           │         │                   │Anthropic│            │
-│  │ Session │──────────►│ ┌─────┐ │                   └─────────┘            │
-│  └─────────┘           │ │Tools│ │                                          │
-│                        │ │(14) │ │                   ┌─────────┐            │
-│                        │ └─────┘ │──────────────────►│  File   │            │
-│                        │ ┌─────┐ │                   │  Edit   │            │
-│                        │ │Hooks│ │                   │ Search  │            │
-│                        │ │(10) │ │                   │  Web    │            │
-│                        │ └─────┘ │                   │ Tasks   │            │
-│                        └────┬────┘                   └─────────┘            │
-│                             │                                               │
-│                        ┌────┴────┐         ┌─────────┐                      │
-│                        │ Session │◄───────►│Storage  │                      │
-│                        │ Manager │         │Memory/  │                      │
-│                        └─────────┘         │File     │                      │
-│                                            └─────────┘                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Project Status
-
-**Current Version:** v0.1.0-alpha.0
-
-This project is being developed in public. Follow our progress:
-
-- Twitter: [@octane0411](https://twitter.com/octane0411)
-- Discussions: [GitHub Discussions](../../discussions)
-
-### Roadmap
-
-| Version | Features | Status |
-|---------|----------|--------|
-| v0.1.0-alpha | Core Agent loop, 14 tools, 3 providers, Session, Hooks, Permissions | ✅ Released |
-| v0.1.0-beta | Structured outputs, File checkpointing, Session forking enhancements | 🚧 In Progress |
-| v0.1.0 | Stable release | 📋 Planned |
-| v0.2.0 | Browser automation, Skill system, Query class | 📋 Planned |
-| v1.0.0 | Full Claude Agent SDK compatibility, Python SDK | 📋 Planned |
-
-### Benchmarks
-
-We're preparing comprehensive benchmarks comparing Open Agent SDK with Claude Agent SDK across various real-world scenarios:
-
-- **Code Understanding** - Analyze and explain complex codebases
-- **File Operations** - Read, write, and edit files efficiently
-- **Task Completion** - Multi-step task execution and reasoning
-- **Tool Usage** - Effectiveness in using built-in tools
-- **Performance** - Response time, token usage, and accuracy
-
-**Status**: 📋 Coming Soon
-
-Results will be published in the [`docs/benchmarks/`](./docs/benchmarks/) directory with full methodology and reproducible test cases.
 
 ## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/Octane0411/open-agent-sdk.git
-cd open-agent-sdk
-
-# Install dependencies
+# install dependencies
 bun install
 
-# Run tests
+# build core package
+bun run build
+
+# run tests
 bun test
 
-# Run with coverage
+# run coverage
 bun test --coverage
 
-# Type checking
-cd packages/core && npx tsc --noEmit
-
-# Run quickstart example
-bun examples/quickstart/test-basic.ts
+# type check
+bun run typecheck
 ```
 
-## Why build this?
+Integration tests with real LLM APIs:
 
-Claude Agent SDK is excellent but closed-source. We wanted:
+```bash
+env $(cat .env | xargs) bun test
+```
 
-1. **Full transparency** — Open code, free to customize
-2. **Provider independence** — No lock-in to a single vendor
-3. **Lightweight core** — Focused, understandable architecture
-4. **No Claude Code dependency** — Pure TypeScript, runs independently
+## Project Status
+
+Current release line: `0.1.0-alpha.x`.
+
+This repository is under active development. APIs may evolve before the stable `1.0.0` release.
 
 ## Contributing
 
-Contributions welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md).
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening PRs.
 
 ## License
 
-[MIT](./LICENSE) © 2026 Octane0411
+[MIT](./LICENSE)

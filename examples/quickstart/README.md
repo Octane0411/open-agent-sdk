@@ -67,12 +67,10 @@ bun run test
 
 ## ⚠️ Notes
 
-1. **Model**: This example uses the `gemini-3-pro-preview` model. Make sure your API Key has access to this model.
+1. **Model**: This example uses the `gpt-5.3-codex` model. Make sure your API Key has access to this model.
 
-2. **Alternative Models**: If `gemini-3-pro-preview` is not available, try:
-   - `gemini-2.0-flash`
-   - `gemini-2.0-flash-lite`
-   - `gemini-1.5-pro`
+2. **Alternative Models**: If `gpt-5.3-codex` is not available, try:
+   - `claude-opus-4.6`
 
 3. **Runtime**: This example uses **Bun** to run TypeScript files directly.
 
