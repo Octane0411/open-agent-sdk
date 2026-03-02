@@ -6,7 +6,6 @@
   <p><strong>TypeScript SDK for building production-grade AI agents with tool use and multi-provider support.</strong></p>
 
   <p>
-    <a href="https://twitter.com/octane0411"><img src="https://img.shields.io/badge/Build%20in%20Public-000000?style=for-the-badge&logo=x&logoColor=white" alt="Build in Public"></a>
     <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License: MIT"></a>
     <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-000000?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
     <a href="https://bun.sh/"><img src="https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white" alt="Bun"></a>
