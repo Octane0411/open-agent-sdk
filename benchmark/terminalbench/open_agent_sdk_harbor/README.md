@@ -241,6 +241,14 @@ colima start
 pip install harbor
 ```
 
+**Issue: CLI exits with code 137 on real tasks**
+- `137` usually means `SIGKILL` (most commonly container OOM).
+- Keep trajectory export disabled in benchmark runs.
+- Only enable trajectory export for debugging:
+```bash
+export OAS_HARBOR_SAVE_TRAJECTORY=1
+```
+
 **Issue: "ANTHROPIC_AUTH_TOKEN is not set"**
 ```bash
 export ANTHROPIC_AUTH_TOKEN="sk-api-..."

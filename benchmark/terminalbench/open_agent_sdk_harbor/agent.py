@@ -90,8 +90,14 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
     def create_run_agent_commands(self, instruction: str) -> list[ExecInput]:
         model = self.model_name or "gemini-2.0-flash"
 
-        # Build CLI command with provider-specific flags
-        cli_flags = f"--model {model} --cwd /workspace --output-format json"
+        # Build CLI command with provider-specific flags.
+        # IMPORTANT:
+        # - Default to --no-persist to reduce container I/O and memory usage.
+        # - Trajectory export is opt-in via OAS_HARBOR_SAVE_TRAJECTORY=1 because
+        #   loading + ATIF conversion can be heavy for real terminal-bench tasks.
+        cli_flags = f"--model {model} --cwd /workspace --output-format json --no-persist"
+        if os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1":
+            cli_flags += " --save-trajectory /workspace/trajectory.json"
         if is_minimax_model(model):
             cli_flags = f'--provider anthropic --base-url "$ANTHROPIC_BASE_URL" {cli_flags}'
 

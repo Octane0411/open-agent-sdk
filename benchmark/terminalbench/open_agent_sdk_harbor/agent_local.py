@@ -120,17 +120,23 @@ class OpenAgentSDKAgentLocal(BaseInstalledAgent):
         env_exports = " && ".join([f'export {k}="{v}"' for k, v in env_vars.items()])
 
         # Build base command (always use /workspace as cwd for Harbor compatibility)
+        # Default to --no-persist to reduce memory/I/O usage in benchmark containers.
+        # Trajectory export is opt-in via OAS_HARBOR_SAVE_TRAJECTORY=1.
+        cli_flags = f'--model {model} --cwd /workspace --output-format json --no-persist'
+        if os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1":
+            cli_flags += " --save-trajectory /workspace/trajectory.json"
+
         cmd_parts = [
             'export PATH="$HOME/.bun/bin:$PATH"',
             env_exports,
-            f'{CLI_COMMAND} -p "{escaped}" --model {model} --cwd /workspace --output-format json'
+            f'{CLI_COMMAND} -p "{escaped}" {cli_flags}'
         ]
 
         # For MiniMax, add --provider and --base-url flags
         if is_minimax_model(model) and "ANTHROPIC_BASE_URL" in env_vars:
             base_url = env_vars["ANTHROPIC_BASE_URL"]
             # Use anthropic provider with custom base URL
-            cmd_parts[2] = f'{CLI_COMMAND} --provider anthropic --base-url {base_url} -p "{escaped}" --model {model} --cwd /workspace --output-format json'
+            cmd_parts[2] = f'{CLI_COMMAND} --provider anthropic --base-url {base_url} -p "{escaped}" {cli_flags}'
 
         return [
             ExecInput(
