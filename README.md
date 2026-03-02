@@ -1,9 +1,8 @@
 # Open Agent SDK
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/branding/open-agent-sdk-banner-dark.svg">
-  <img src="./docs/branding/open-agent-sdk-banner.svg" alt="Open Agent SDK" width="100%">
-</picture>
+<div align="center">
+  <img src="./docs/branding/pixel-banner.svg" alt="Open Agent SDK Banner" width="100%">
+</div>
 
 TypeScript SDK for building production-grade AI agents with tool use and multi-provider support.
 
@@ -13,6 +12,9 @@ TypeScript SDK for building production-grade AI agents with tool use and multi-p
 
 ## Highlights
 
+<div align="center">
+  <img src="./docs/branding/pixel-demo.svg" alt="Open Agent SDK Demo" width="100%">
+</div>
 - ReAct-style agent loop with multi-turn execution
 - Built-in toolset for files, shell, search, web, and task orchestration
 - Session persistence with resume and fork support

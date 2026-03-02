@@ -1,0 +1,43 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: #0d1117; }
+    .dot-r { fill: #ff5f56; }
+    .dot-y { fill: #ffbd2e; }
+    .dot-g { fill: #27c93f; }
+    .font { font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 14px; }
+    .user { fill: #a5d6ff; font-weight: bold; }
+    .agent { fill: #7ee787; font-weight: bold; }
+    .system { fill: #8b949e; }
+    .action { fill: #d2a8ff; }
+    .text { fill: #e6edf3; }
+  </style>
+  <rect width="100%" height="100%" class="bg" rx="8"/>
+  <circle cx="24" cy="24" r="6" class="dot-r"/>
+  <circle cx="44" cy="24" r="6" class="dot-y"/>
+  <circle cx="64" cy="24" r="6" class="dot-g"/>
+  
+  <g class="font" transform="translate(40, 70)">
+    <text y="0" class="user">[USER]</text>
+    <text x="80" y="0" class="text">"Analyze the codebase and write a summary"</text>
+    
+    <text y="40" class="agent">[AGENT]</text>
+    <text x="80" y="40" class="system">► Observation: Need to understand the directory structure</text>
+    <text x="80" y="65" class="system">► Thought:     I should use the Glob tool to find files</text>
+    <text x="80" y="90" class="action">► Action:      [Tool: Glob] pattern="**/*.ts"</text>
+    
+    <text y="130" class="system">[SYSTEM]</text>
+    <text x="80" y="130" class="text">✓ Found 12 TypeScript files</text>
+    
+    <text y="170" class="agent">[AGENT]</text>
+    <text x="80" y="170" class="system">► Observation: Found core source files</text>
+    <text x="80" y="195" class="system">► Thought:     I need to read the core file contents</text>
+    <text x="80" y="220" class="action">► Action:      [Tool: Read] path="src/index.ts"</text>
+    
+    <text y="260" class="system">[SYSTEM]</text>
+    <text x="80" y="260" class="text">✓ Read 150 lines</text>
+    
+    <text y="300" class="agent">[AGENT]</text>
+    <text x="80" y="300" class="system">► Final Answer:</text>
+    <text x="80" y="325" class="text">This is a TypeScript-based AI Agent SDK...</text>
+  </g>
+</svg>
