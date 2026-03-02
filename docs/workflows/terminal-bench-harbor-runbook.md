@@ -80,7 +80,7 @@ After each run, inspect:
 
 ```bash
 latest="$(ls -1dt jobs/* | head -n 1)"
-find "$latest" -maxdepth 3 -type f | rg 'result.json|return-code.txt|stdout.txt|trial.log'
+find "$latest" -maxdepth 5 -type f | grep -E 'result.json|return-code.txt|stdout.txt|trial.log|open-agent-transcript'
 ```
 
 Key files:
@@ -89,6 +89,9 @@ Key files:
 - `jobs/<run>/<trial>/agent/command-0/return-code.txt`
 - `jobs/<run>/<trial>/agent/command-0/stdout.txt`
 - `jobs/<run>/<trial>/verifier/test-stdout.txt`
+- `jobs/<run>/<trial>/agent/open-agent-transcript/trajectory.json` (when `OAS_HARBOR_SAVE_TRAJECTORY=1`)
+- `jobs/<run>/<trial>/agent/open-agent-transcript/*.jsonl` (Open Agent session transcript)
+- `jobs/<run>/<trial>/agent/open-agent-transcript/sessions-index.json`
 
 ## 7. OOM Confirmation Checklist (When 137 Happens)
 
