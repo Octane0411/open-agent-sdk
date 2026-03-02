@@ -19,6 +19,12 @@ def parse_args() -> argparse.Namespace:
         default=10,
         help="Show latest N reports",
     )
+    parser.add_argument(
+        "--format",
+        choices=["table", "markdown", "csv"],
+        default="table",
+        help="Output format",
+    )
     return parser.parse_args()
 
 
@@ -42,6 +48,7 @@ def load_report(path: Path) -> dict | None:
         "total": total,
         "resolved": resolved,
         "unresolved": data.get("unresolved_instances", 0) or 0,
+        "empty_patch": data.get("empty_patch_instances", 0) or 0,
         "error": data.get("error_instances", 0) or 0,
         "resolve_rate": rate,
     }
@@ -66,12 +73,46 @@ def main() -> None:
         print("No valid report json files found.")
         return
 
+    headers = ["file", "total", "resolved", "unresolved", "empty_patch", "error", "resolve_rate"]
+    values = [
+        [
+            r["file"],
+            str(r["total"]),
+            str(r["resolved"]),
+            str(r["unresolved"]),
+            str(r["empty_patch"]),
+            str(r["error"]),
+            f"{r['resolve_rate']:.1f}%",
+        ]
+        for r in rows
+    ]
+
     print("Recent SWE-bench runs:")
-    print("file,total,resolved,unresolved,error,resolve_rate")
-    for r in rows:
-        print(
-            f"{r['file']},{r['total']},{r['resolved']},{r['unresolved']},{r['error']},{r['resolve_rate']:.1f}%"
-        )
+    if args.format == "csv":
+        print(",".join(headers))
+        for row in values:
+            print(",".join(row))
+        return
+
+    if args.format == "markdown":
+        print("| " + " | ".join(headers) + " |")
+        print("| " + " | ".join(["---"] * len(headers)) + " |")
+        for row in values:
+            print("| " + " | ".join(row) + " |")
+        return
+
+    widths = [len(h) for h in headers]
+    for row in values:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+
+    def fmt_row(row: list[str]) -> str:
+        return " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
+
+    print(fmt_row(headers))
+    print("-+-".join("-" * w for w in widths))
+    for row in values:
+        print(fmt_row(row))
 
 
 if __name__ == "__main__":
