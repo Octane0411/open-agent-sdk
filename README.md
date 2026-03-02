@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./docs/branding/pixel-banner.svg" alt="Open Agent SDK Banner" width="100%">
+  <img src="./docs/branding/pixel-banner.svg?v=option23" alt="Open Agent SDK Banner" width="100%">
 
   <h1>Open Agent SDK</h1>
 
