@@ -17,10 +17,11 @@ const maxTurns = parseInt(getFlag('--max-turns') ?? '50', 10);
 const cwd = getFlag('--cwd') ?? process.cwd();
 const baseURL = getFlag('--base-url') ?? process.env.ANTHROPIC_BASE_URL ?? process.env.OPENAI_BASE_URL;
 const saveTrajectory = getFlag('--save-trajectory');
+const sessionDir = getFlag('--session-dir');
 const noPersist = args.includes('--no-persist');
 
 if (!instruction) {
-  console.error('Usage: oas -p <instruction> [--model <model>] [--provider openai|google|anthropic] [--output-format text|json] [--max-turns <n>] [--cwd <path>] [--save-trajectory <path>] [--no-persist]');
+  console.error('Usage: oas -p <instruction> [--model <model>] [--provider openai|google|anthropic] [--output-format text|json] [--max-turns <n>] [--cwd <path>] [--save-trajectory <path>] [--session-dir <path>] [--no-persist]');
   process.exit(1);
 }
 
@@ -43,7 +44,9 @@ Guidelines:
 
 async function main() {
   // Default to FileStorage for session persistence; --no-persist disables it
-  const storage = noPersist ? undefined : new FileStorage();
+  const storage = noPersist
+    ? undefined
+    : new FileStorage(sessionDir ? { directory: sessionDir } : {});
 
   try {
     const result = await prompt(instruction!, {
