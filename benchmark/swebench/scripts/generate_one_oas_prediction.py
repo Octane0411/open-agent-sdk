@@ -107,9 +107,11 @@ def main() -> None:
         "- When complete, summarize what changed.\n"
     )
 
+    cli_cwd = repo_root / "packages" / "cli"
     cmd = [
         "bun",
-        str(repo_root / "packages/cli/src/index.ts"),
+        "run",
+        "src/index.ts",
         "-p",
         prompt,
         "--model",
@@ -129,7 +131,7 @@ def main() -> None:
         cmd.extend(["--base-url", args.base_url])
 
     run_env = os.environ.copy()
-    cli_stdout = run(cmd, cwd=repo_root, env=run_env)
+    cli_stdout = run(cmd, cwd=cli_cwd, env=run_env)
     cli_payload = json.loads(cli_stdout)
     if "error" in cli_payload:
         raise RuntimeError(f"OAS CLI returned error: {cli_payload['error']}")
