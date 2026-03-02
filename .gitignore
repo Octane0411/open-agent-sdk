@@ -48,6 +48,7 @@ docs/adr/
 docs/dev/
 docs/release/
 docs/research/
+docs/testing/
 
 # Legacy files
 claude-agent-sdk-ts*
