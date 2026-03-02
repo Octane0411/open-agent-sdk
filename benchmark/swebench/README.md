@@ -63,6 +63,8 @@ Artifacts are written to:
 
 - `benchmark/swebench/outputs/predictions/`
 - `benchmark/swebench/outputs/reports/`
+- `benchmark/swebench/outputs/trajectories/`
+- `benchmark/swebench/outputs/logs/<instance_id>/open-agent-transcript/`
 
 ## Notes
 

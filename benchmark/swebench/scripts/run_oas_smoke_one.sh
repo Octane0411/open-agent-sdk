@@ -49,8 +49,9 @@ fi
 PRED_DIR="${SWEBENCH_DIR}/outputs/predictions"
 REPORT_DIR="${SWEBENCH_DIR}/outputs/reports"
 TRAJ_DIR="${SWEBENCH_DIR}/outputs/trajectories"
+LOG_DIR="${SWEBENCH_DIR}/outputs/logs"
 WORKSPACE_DIR="${SWEBENCH_DIR}/workspace"
-mkdir -p "${PRED_DIR}" "${REPORT_DIR}" "${TRAJ_DIR}" "${WORKSPACE_DIR}"
+mkdir -p "${PRED_DIR}" "${REPORT_DIR}" "${TRAJ_DIR}" "${LOG_DIR}" "${WORKSPACE_DIR}"
 
 PRED_FILE="${PRED_DIR}/one_lite_oas.jsonl"
 RUN_ID="smoke-lite-oas-one-$(date +%Y%m%d-%H%M%S)"
@@ -66,6 +67,7 @@ GEN_CMD=(
   --repo-root "${REPO_ROOT}"
   --model "${OAS_MODEL}"
   --trajectory-dir "${TRAJ_DIR}"
+  --logs-dir "${LOG_DIR}"
   --max-turns "${MAX_TURNS}"
 )
 if [[ -n "${OAS_PROVIDER:-}" ]]; then
@@ -112,3 +114,4 @@ echo "run_id=${RUN_ID}"
 echo "predictions=${PRED_FILE}"
 echo "reports=${REPORT_DIR}"
 echo "trajectories=${TRAJ_DIR}"
+echo "logs=${LOG_DIR}"

@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import subprocess
+import shutil
 from pathlib import Path
 
 from datasets import load_dataset
@@ -61,7 +62,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default=None)
     parser.add_argument("--max-turns", type=int, default=30)
     parser.add_argument("--trajectory-dir", required=True)
+    parser.add_argument("--logs-dir", required=True)
     return parser.parse_args()
+
+def find_session_jsonl(session_id: str) -> tuple[Path | None, Path | None]:
+    home = Path.home()
+    direct = home / ".open-agent" / "sessions" / f"{session_id}.jsonl"
+    if direct.exists():
+        return direct, direct.parent
+
+    projects_root = home / ".open-agent" / "projects"
+    if projects_root.exists():
+        matches = list(projects_root.glob(f"*/{session_id}.jsonl"))
+        if matches:
+            return matches[0], matches[0].parent
+
+    return None, None
 
 
 def main() -> None:
@@ -90,6 +106,8 @@ def main() -> None:
     trajectory_dir = Path(args.trajectory_dir)
     trajectory_dir.mkdir(parents=True, exist_ok=True)
     trajectory_file = trajectory_dir / f"{instance_id}.trajectory.json"
+    logs_dir = Path(args.logs_dir) / instance_id / "open-agent-transcript"
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
     ensure_repo_at_commit(repo_full_name, base_commit, repo_dir)
 
@@ -135,6 +153,7 @@ def main() -> None:
     cli_payload = json.loads(cli_stdout)
     if "error" in cli_payload:
         raise RuntimeError(f"OAS CLI returned error: {cli_payload['error']}")
+    session_id = cli_payload.get("session_id")
 
     patch = run(["git", "diff", "--binary"], cwd=repo_dir)
     prediction = {
@@ -147,12 +166,29 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(prediction, ensure_ascii=True) + "\n", encoding="utf-8")
 
+    transcript_file = None
+    sessions_index_file = None
+    if session_id:
+        session_jsonl, session_parent = find_session_jsonl(session_id)
+        if session_jsonl and session_jsonl.exists():
+            transcript_file = logs_dir / f"{session_id}.jsonl"
+            shutil.copy2(session_jsonl, transcript_file)
+        if session_parent:
+            maybe_index = session_parent / "sessions-index.json"
+            if maybe_index.exists():
+                sessions_index_file = logs_dir / "sessions-index.json"
+                shutil.copy2(maybe_index, sessions_index_file)
+
     metadata = {
         "instance_id": instance_id,
         "repo": repo_full_name,
         "base_commit": base_commit,
+        "session_id": session_id,
         "prediction_file": str(output_path),
         "trajectory_file": str(trajectory_file),
+        "transcript_file": str(transcript_file) if transcript_file else None,
+        "sessions_index_file": str(sessions_index_file) if sessions_index_file else None,
+        "transcript_dir": str(logs_dir),
         "patch_bytes": len(patch.encode("utf-8")),
     }
     (trajectory_dir / f"{instance_id}.metadata.json").write_text(
