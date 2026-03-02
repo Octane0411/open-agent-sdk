@@ -59,6 +59,29 @@ Optional overrides:
 SWEBENCH_INSTANCE_ID="astropy__astropy-12907" OAS_MAX_TURNS=40 SWEBENCH_TIMEOUT=600 ./scripts/run_oas_smoke_one.sh
 ```
 
+## Run Batch Smoke (Multiple Tasks)
+
+```bash
+cd benchmark/swebench
+SWEBENCH_SMOKE_COUNT=5 OAS_MAX_TURNS=12 ./scripts/run_oas_smoke_batch.sh
+```
+
+Optional:
+
+```bash
+# Run specific ids
+SWEBENCH_INSTANCE_IDS="astropy__astropy-12907,django__django-13925" ./scripts/run_oas_smoke_batch.sh
+
+# Shift starting index in split
+SWEBENCH_START_INDEX=10 SWEBENCH_SMOKE_COUNT=5 ./scripts/run_oas_smoke_batch.sh
+```
+
+## Summarize Recent Runs
+
+```bash
+python ./scripts/summarize_reports.py --reports-dir ./outputs/reports --limit 20
+```
+
 Artifacts are written to:
 
 - `benchmark/swebench/outputs/predictions/`
