@@ -126,4 +126,22 @@ describe('BashOutputTool', () => {
     expect(result.running).toBe(false);
   });
 
+  test('should indicate truncated output for large background stdout', async () => {
+    const bashResult = await bashTool.handler(
+      {
+        command: "head -c 300000 /dev/zero | tr '\\0' 'b'",
+        run_in_background: true,
+      },
+      context
+    );
+
+    const shellId = bashResult.shellId!;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const result = await tool.handler({ shellId }, context);
+    expect(result.running).toBe(false);
+    expect(result.stdout).toContain('[Output truncated to avoid excessive memory usage]');
+    expect(result.stdout.length).toBeLessThan(210000);
+  });
+
 });
