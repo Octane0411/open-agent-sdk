@@ -39,6 +39,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.venv*/
 
 # Husky (managed by package manager)
 .husky/_/
