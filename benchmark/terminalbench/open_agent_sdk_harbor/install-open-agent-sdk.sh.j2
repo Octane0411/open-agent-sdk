@@ -1,6 +1,46 @@
 #!/bin/bash
 set -euo pipefail
 
+retry() {
+    local attempts="$1"
+    local sleep_sec="$2"
+    shift 2
+    local i=1
+    while true; do
+        if "$@"; then
+            return 0
+        fi
+        if [ "$i" -ge "$attempts" ]; then
+            return 1
+        fi
+        i=$((i + 1))
+        sleep "$sleep_sec"
+    done
+}
+
+install_cli_with_registry_fallback() {
+    # Comma-separated registries, can be overridden by environment.
+    # Example:
+    #   OAS_NPM_REGISTRIES="https://registry.npmjs.org,https://registry.npmmirror.com"
+    local registries="${OAS_NPM_REGISTRIES:-https://registry.npmjs.org,https://registry.npmmirror.com}"
+    local pkg="@open-agent-sdk/cli@canary"
+
+    IFS=',' read -r -a registry_list <<< "$registries"
+    for registry in "${registry_list[@]}"; do
+        registry="$(echo "$registry" | xargs)"
+        [ -z "$registry" ] && continue
+        echo "Installing ${pkg} via registry: ${registry}"
+        if retry 3 3 bun add -g "$pkg" --registry "$registry"; then
+            echo "Installed ${pkg} from ${registry}"
+            return 0
+        fi
+        echo "Install failed on ${registry}, trying next registry..."
+    done
+
+    echo "ERROR: failed to install ${pkg} from all registries: ${registries}" >&2
+    return 1
+}
+
 # Install dependencies if not available
 if command -v apk &> /dev/null; then
     apk add --no-cache curl bash unzip
@@ -11,12 +51,22 @@ fi
 
 # Install Bun if not present
 if ! command -v bun &> /dev/null; then
-    curl -fsSL https://bun.sh/install | bash
+    retry 5 3 bash -c "curl -fsSL --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors https://bun.sh/install | bash"
 fi
 export PATH="$HOME/.bun/bin:$PATH"
 
 # Install CLI from npm globally (force latest canary)
-bun add -g @open-agent-sdk/cli@canary
+install_cli_with_registry_fallback
+
+# Daytona may execute agent commands as non-root user.
+# Keep using bun global install under /root, but make it traversable/readable.
+if [ -d "/root/.bun" ]; then
+    chmod o+rx /root /root/.bun /root/.bun/bin || true
+    chmod -R o+rX /root/.bun || true
+fi
+if [ -x "$HOME/.bun/bin/bun" ]; then
+    install -m 0755 "$HOME/.bun/bin/bun" /usr/local/bin/bun
+fi
 
 echo "Bun ready: $(bun --version)"
 echo "CLI ready: $(which oas)"
