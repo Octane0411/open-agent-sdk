@@ -62,4 +62,5 @@ RELEASE_NOTES.md
 
 # Harbor benchmark results
 jobs/
+trajectories/
 run-bench-test.sh

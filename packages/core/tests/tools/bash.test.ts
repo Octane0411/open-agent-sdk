@@ -112,4 +112,19 @@ describe('Bash Tool', () => {
 
     expect(result.output.trim()).toBe('test_value');
   });
+
+  it('should truncate very large output to avoid excessive memory usage', async () => {
+    const tool = new BashTool();
+    const result = await tool.handler(
+      {
+        command: "head -c 300000 /dev/zero | tr '\\0' 'a'",
+        description: 'Generate large output',
+      },
+      context
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('[Output truncated to avoid excessive memory usage]');
+    expect(result.output.length).toBeLessThan(210000);
+  });
 });

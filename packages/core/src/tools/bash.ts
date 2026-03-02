@@ -10,6 +10,8 @@ export interface BackgroundProcess {
   startTime: number;
   stdout: string;
   stderr: string;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
   exitCode: number | null;
   process: ChildProcess;
 }
@@ -55,6 +57,27 @@ const parameters: JSONSchema = {
 // Track background processes
 let backgroundProcessId = 0;
 export const backgroundProcesses = new Map<string, BackgroundProcess>();
+
+// Cap captured output to avoid OOM when commands print large streams.
+const MAX_CAPTURE_CHARS = 200_000;
+const TRUNCATED_NOTICE = '\n[Output truncated to avoid excessive memory usage]';
+
+function appendCapped(
+  current: string,
+  chunk: string,
+  maxChars: number
+): { value: string; truncated: boolean } {
+  if (current.length >= maxChars) {
+    return { value: current, truncated: true };
+  }
+
+  const remaining = maxChars - current.length;
+  if (chunk.length <= remaining) {
+    return { value: current + chunk, truncated: false };
+  }
+
+  return { value: current + chunk.slice(0, remaining), truncated: true };
+}
 
 export class BashTool implements Tool<BashInput, BashOutput> {
   name = 'Bash';
@@ -111,6 +134,8 @@ export class BashTool implements Tool<BashInput, BashOutput> {
           startTime: Date.now(),
           stdout: '',
           stderr: '',
+          stdoutTruncated: false,
+          stderrTruncated: false,
           exitCode: null,
           process: child,
         };
@@ -118,11 +143,15 @@ export class BashTool implements Tool<BashInput, BashOutput> {
 
         // Capture stdout/stderr
         child.stdout?.on('data', (data) => {
-          bgProcess.stdout += data.toString();
+          const next = appendCapped(bgProcess.stdout, data.toString(), MAX_CAPTURE_CHARS);
+          bgProcess.stdout = next.value;
+          if (next.truncated) bgProcess.stdoutTruncated = true;
         });
 
         child.stderr?.on('data', (data) => {
-          bgProcess.stderr += data.toString();
+          const next = appendCapped(bgProcess.stderr, data.toString(), MAX_CAPTURE_CHARS);
+          bgProcess.stderr = next.value;
+          if (next.truncated) bgProcess.stderrTruncated = true;
         });
 
         // Set exit code when process exits (don't delete from map)
@@ -143,13 +172,19 @@ export class BashTool implements Tool<BashInput, BashOutput> {
       let stdout = '';
       let stderr = '';
       let killed = false;
+      let stdoutTruncated = false;
+      let stderrTruncated = false;
 
       child.stdout?.on('data', (data) => {
-        stdout += data.toString();
+        const next = appendCapped(stdout, data.toString(), MAX_CAPTURE_CHARS);
+        stdout = next.value;
+        if (next.truncated) stdoutTruncated = true;
       });
 
       child.stderr?.on('data', (data) => {
-        stderr += data.toString();
+        const next = appendCapped(stderr, data.toString(), MAX_CAPTURE_CHARS);
+        stderr = next.value;
+        if (next.truncated) stderrTruncated = true;
       });
 
       // Set up timeout
@@ -187,8 +222,12 @@ export class BashTool implements Tool<BashInput, BashOutput> {
             ? output + '\n[Command timed out]'
             : output;
 
+        const finalOutput = stdoutTruncated || stderrTruncated
+          ? outputMessage + TRUNCATED_NOTICE
+          : outputMessage;
+
         resolve({
-          output: outputMessage,
+          output: finalOutput,
           exitCode: code ?? (killed ? -1 : 0),
           killed,
         });
