@@ -35,7 +35,7 @@ from harbor.models.agent.context import AgentContext
 
 
 # CLI command (installed globally by install script)
-CLI_COMMAND = "oas"
+CLI_COMMAND = "/usr/local/bin/bun /root/.bun/bin/oas"
 
 
 def is_minimax_model(model_name: str) -> bool:
@@ -92,16 +92,18 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
 
         # Build CLI command with provider-specific flags.
         # IMPORTANT:
-        # - Default to --no-persist to reduce container I/O and memory usage.
-        # - When trajectory export is enabled, persistence must remain enabled,
-        #   otherwise storage is disabled and trajectory export is skipped.
-        # - Transcript/session artifacts are copied to /logs/agent so Harbor can
-        #   pull them back into jobs/* for debugging.
+        # - Persist sessions by default for postmortem debugging in Harbor jobs.
+        # - Keep --no-persist only when both transcript and trajectory export are off.
+        # - While the CLI canary may lag behind local code, keep best-effort sync
+        #   from /root/.open-agent/sessions to /logs/agent/open-agent-transcript.
         cli_flags = f"--model {model} --output-format json"
         save_trajectory = os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1"
+        save_transcript = os.environ.get("OAS_HARBOR_SAVE_TRANSCRIPT", "1") == "1"
         if save_trajectory:
             cli_flags += " --save-trajectory /logs/agent/open-agent-transcript/trajectory.json"
-        else:
+        if save_transcript:
+            cli_flags += " --session-dir /logs/agent/open-agent-transcript"
+        elif not save_trajectory:
             cli_flags += " --no-persist"
         if is_minimax_model(model):
             cli_flags = f'--provider anthropic --base-url "$ANTHROPIC_BASE_URL" {cli_flags}'
@@ -110,7 +112,7 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         # This handles multi-line text and special characters correctly
         # Unset proxy variables to avoid connection issues in Docker containers
         # (containers can't access host's 127.0.0.1 proxy)
-        command = f"""export PATH="$HOME/.bun/bin:$PATH" && \\
+        command = f"""export PATH="/root/.bun/bin:$HOME/.bun/bin:$PATH" && \\
 unset https_proxy http_proxy all_proxy HTTPS_PROXY HTTP_PROXY ALL_PROXY && \\
 WORKDIR="/workspace" && \\
 if [ ! -d "$WORKDIR" ]; then \\
@@ -119,10 +121,12 @@ if [ ! -d "$WORKDIR" ]; then \\
   else WORKDIR="$(pwd)"; fi; \\
 fi && \\
 mkdir -p /logs/agent/open-agent-transcript && \\
+(while true; do cp -f /root/.open-agent/sessions/sessions-index.json /logs/agent/open-agent-transcript/ 2>/dev/null || true; cp -f /root/.open-agent/sessions/*.jsonl /logs/agent/open-agent-transcript/ 2>/dev/null || true; sleep 2; done) & SYNC_PID=$! && \\
 {CLI_COMMAND} -p "$(cat <<'INSTRUCTION_EOF'
 {instruction}
 INSTRUCTION_EOF
 )" --cwd "$WORKDIR" {cli_flags}; RC=$?; \\
+kill "$SYNC_PID" 2>/dev/null || true; \\
 cp -f /root/.open-agent/sessions/sessions-index.json /logs/agent/open-agent-transcript/ 2>/dev/null || true; \\
 cp -f /root/.open-agent/sessions/*.jsonl /logs/agent/open-agent-transcript/ 2>/dev/null || true; \\
 exit $RC"""
