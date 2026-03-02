@@ -67,7 +67,7 @@ function prompt(
 import { prompt } from 'open-agent-sdk';
 
 const result = await prompt("What files are in the current directory?", {
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
 });
 
@@ -86,7 +86,7 @@ Configuration options for `prompt()` function.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `model` | `string` | ✅ | Model identifier (e.g., 'gpt-4', 'gemini-2.0-flash', 'claude-3-5-sonnet') |
+| `model` | `string` | ✅ | Model identifier (e.g., 'gpt-5.3-codex', 'claude-opus-4.6') |
 | `apiKey` | `string` | | API key. Defaults to env var based on provider |
 | `provider` | `'openai' \| 'google' \| 'anthropic'` | | Provider to use. Auto-detected from model name if not specified |
 | `baseURL` | `string` | | Base URL for API (OpenAI only) |
@@ -109,7 +109,7 @@ Configuration options for `prompt()` function.
 
 ```typescript
 const result = await prompt("Analyze the codebase", {
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   systemPrompt: "You are a code review assistant.",
   maxTurns: 15,
@@ -166,7 +166,7 @@ import { createSession, FileStorage } from 'open-agent-sdk';
 
 const storage = new FileStorage({ directory: './.sessions' });
 const session = await createSession({
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   storage,
 });
@@ -254,7 +254,7 @@ import { forkSession, FileStorage } from 'open-agent-sdk';
 const storage = new FileStorage();
 const forkedSession = await forkSession('session-123', {
   storage,
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
 });
 
@@ -335,7 +335,7 @@ import { createSession, InMemoryStorage } from 'open-agent-sdk';
 
 const storage = new InMemoryStorage();
 const session = await createSession({
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   storage,
 });
@@ -366,7 +366,7 @@ import { createSession, FileStorage } from 'open-agent-sdk';
 
 const storage = new FileStorage({ directory: './my-sessions' });
 const session = await createSession({
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   storage,
 });
@@ -429,7 +429,7 @@ import { OpenAIProvider } from 'open-agent-sdk';
 
 const provider = new OpenAIProvider({
   apiKey: process.env.OPENAI_API_KEY,
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
 });
 ```
 
@@ -459,7 +459,7 @@ import { GoogleProvider } from 'open-agent-sdk';
 
 const provider = new GoogleProvider({
   apiKey: process.env.GEMINI_API_KEY,
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
 });
 ```
 
@@ -489,7 +489,7 @@ import { AnthropicProvider } from 'open-agent-sdk';
 
 const provider = new AnthropicProvider({
   apiKey: process.env.ANTHROPIC_API_KEY,
-  model: 'your-model',
+  model: 'claude-opus-4.6',
 });
 ```
 
@@ -665,7 +665,7 @@ if (result.allowed) {
 
 ```typescript
 const result = await prompt("Edit config file", {
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   permissionMode: 'acceptEdits', // Auto-approve edits
 });
@@ -695,7 +695,7 @@ The SDK provides 9 hook events for extending agent behavior:
 
 ```typescript
 const session = await createSession({
-  model: 'your-model',
+  model: 'gpt-5.3-codex',
   apiKey: process.env.OPENAI_API_KEY,
   hooks: {
     onTurnStart: async ({ turnNumber }) => {

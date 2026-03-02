@@ -1,0 +1,33 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Open Agent SDK banner logo dark</title>
+  <desc id="desc">Horizontal logo with abstract agent mark and Open Agent SDK wordmark for dark backgrounds.</desc>
+
+  <defs>
+    <linearGradient id="markBgDark" x1="40" y1="40" x2="280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="signalDark" x1="72" y1="72" x2="248" y2="248" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#67E8F9"/>
+      <stop offset="1" stop-color="#6EE7B7"/>
+    </linearGradient>
+    <linearGradient id="sparkDark" x1="68" y1="252" x2="108" y2="292" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#FB923C"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="40" y="40" width="240" height="240" rx="58" fill="url(#markBgDark)"/>
+
+  <path d="M100 160C100 126.863 126.863 100 160 100H214" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M220 100L238 100" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M214 100C180.863 100 154 126.863 154 160V220" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M154 220L154 238" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
+
+  <rect x="112" y="112" width="96" height="96" rx="28" stroke="#CBD5E1" stroke-opacity="0.4" stroke-width="2"/>
+  <circle cx="248" cy="88" r="12" fill="#67E8F9"/>
+  <circle cx="94" cy="244" r="11" fill="url(#sparkDark)"/>
+
+  <text x="330" y="146" font-size="72" font-family="'Sora', 'Avenir Next', 'Segoe UI', sans-serif" font-weight="700" fill="#F8FAFC" letter-spacing="-1.2">Open Agent SDK</text>
+  <text x="334" y="198" font-size="28" font-family="'Sora', 'Avenir Next', 'Segoe UI', sans-serif" font-weight="500" fill="#CBD5E1" letter-spacing="0.4">Open, extensible SDK for AI agents</text>
+</svg>
