@@ -6,11 +6,17 @@ SWEBENCH_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SWEBENCH_DIR}/../.." && pwd)"
 REPORT_DIR="${SWEBENCH_DIR}/outputs/reports"
 mkdir -p "${REPORT_DIR}"
+# shellcheck disable=SC1090
+. "${SCRIPT_DIR}/load_oas_env.sh"
+bootstrap_oas_env "${REPO_ROOT}"
 
 if [[ -z "${OAS_MODEL:-}" ]]; then
   echo "Missing required env: OAS_MODEL"
   echo "Example:"
   echo "  export OAS_MODEL='MiniMax-M2.5'"
+  if [[ -n "${SWEBENCH_ENV_FILE:-}" ]]; then
+    echo "Loaded env file: ${SWEBENCH_ENV_FILE}"
+  fi
   exit 1
 fi
 
