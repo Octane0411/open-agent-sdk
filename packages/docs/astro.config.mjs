@@ -13,10 +13,11 @@ export default defineConfig({
         replacesTitle: true
       },
       customCss: [
-        '/src/styles/custom.css',
-        '@fontsource-variable/manrope',
-        '@fontsource/jetbrains-mono'
+        '/src/styles/custom.css'
       ],
+      components: {
+        ThemeSelect: './src/components/ThemeToggle.astro'
+      },
       social: [
         {
           icon: 'github',

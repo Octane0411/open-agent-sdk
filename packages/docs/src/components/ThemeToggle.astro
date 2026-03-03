@@ -1,0 +1,64 @@
+<starlight-theme-select>
+  <button type="button" class="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+    <img class="label-icon" src="/icons/theme-toggle-light.svg" alt="" />
+  </button>
+</starlight-theme-select>
+
+<script>
+  type Theme = 'auto' | 'dark' | 'light';
+
+  const storageKey = 'starlight-theme';
+
+  const parseTheme = (theme: unknown): Theme =>
+    theme === 'auto' || theme === 'dark' || theme === 'light' ? theme : 'auto';
+
+  const loadTheme = (): Theme =>
+    parseTheme(typeof localStorage !== 'undefined' && localStorage.getItem(storageKey));
+
+  function storeTheme(theme: Theme): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(storageKey, theme === 'light' || theme === 'dark' ? theme : '');
+    }
+  }
+
+  const getPreferredColorScheme = (): Exclude<Theme, 'auto'> =>
+    matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+
+  function updateIcon(resolvedTheme: Exclude<Theme, 'auto'>): void {
+    const icon = document.querySelector<HTMLImageElement>('starlight-theme-select .label-icon');
+    if (!icon) return;
+    icon.src =
+      resolvedTheme === 'dark' ? '/icons/theme-toggle-dark.svg' : '/icons/theme-toggle-light.svg';
+  }
+
+  function applyTheme(theme: Theme): void {
+    const resolved = theme === 'auto' ? getPreferredColorScheme() : theme;
+    document.documentElement.dataset.theme = resolved;
+    updateIcon(resolved);
+    storeTheme(theme);
+  }
+
+  function getNextTheme(current: Theme): Exclude<Theme, 'auto'> {
+    if (current === 'auto') {
+      return getPreferredColorScheme() === 'light' ? 'dark' : 'light';
+    }
+    return current === 'light' ? 'dark' : 'light';
+  }
+
+  const media = matchMedia('(prefers-color-scheme: light)');
+  media.addEventListener('change', () => {
+    if (loadTheme() === 'auto') applyTheme('auto');
+  });
+
+  class StarlightThemeSelect extends HTMLElement {
+    constructor() {
+      super();
+      applyTheme(loadTheme());
+      this.querySelector('button.theme-toggle')?.addEventListener('click', () => {
+        applyTheme(getNextTheme(loadTheme()));
+      });
+    }
+  }
+
+  customElements.define('starlight-theme-select', StarlightThemeSelect);
+</script>

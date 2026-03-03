@@ -1,7 +1,7 @@
 :root {
-  --sl-font: 'Manrope Variable', 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --sl-font: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
   --sl-font-system: var(--sl-font);
-  --sl-font-system-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+  --sl-font-system-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
   --sl-line-height: 1.6;
 
   --sl-color-accent-low: hsl(220 42% 93%);
@@ -127,6 +127,37 @@ main .sl-markdown-content :is(pre, .expressive-code) {
 .right-sidebar a[aria-current='true'] {
   color: var(--sl-color-accent-high);
   font-weight: 600;
+}
+
+starlight-theme-select .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--sl-color-bg-nav) 88%, var(--sl-color-bg) 12%);
+  color: var(--sl-color-gray-2);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+starlight-theme-select .theme-toggle .label-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  opacity: 0.95;
+}
+
+starlight-theme-select .theme-toggle:hover,
+starlight-theme-select .theme-toggle:focus-visible {
+  border-color: color-mix(in oklab, var(--sl-color-accent) 44%, var(--sl-color-hairline) 56%);
+  background: color-mix(in oklab, var(--sl-color-accent-low) 24%, var(--sl-color-bg-nav) 76%);
+  color: var(--sl-color-accent-high);
+}
+
+:root[data-theme='dark'] starlight-theme-select .theme-toggle {
+  background: color-mix(in oklab, var(--sl-color-bg-nav) 84%, black 16%);
 }
 
 a:focus-visible,

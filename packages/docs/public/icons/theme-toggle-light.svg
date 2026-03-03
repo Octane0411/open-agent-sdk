@@ -1,0 +1,13 @@
+<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Switch to dark mode">
+  <circle cx="10" cy="10" r="4" fill="#F59E0B"/>
+  <g stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round">
+    <path d="M10 1.75V4"/>
+    <path d="M10 16V18.25"/>
+    <path d="M1.75 10H4"/>
+    <path d="M16 10H18.25"/>
+    <path d="M3.7 3.7L5.3 5.3"/>
+    <path d="M14.7 14.7L16.3 16.3"/>
+    <path d="M14.7 5.3L16.3 3.7"/>
+    <path d="M3.7 16.3L5.3 14.7"/>
+  </g>
+</svg>
