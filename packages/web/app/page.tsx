@@ -1,11 +1,13 @@
 import Link from 'next/link';
 
 const docsUrl = process.env.NEXT_PUBLIC_DOCS_URL ?? '/docs';
+const githubUrl = 'https://github.com/OasAIStudio/open-agent-sdk';
 
 const navItems = [
   { href: docsUrl, label: 'Docs' },
   { href: '/blog', label: 'Blog' },
-  { href: '/playground', label: 'Playground' }
+  { href: '/playground', label: 'Playground' },
+  { href: githubUrl, label: 'GitHub', external: true }
 ];
 
 export default function HomePage() {
@@ -16,9 +18,15 @@ export default function HomePage() {
         <div className="brand">Open Agent SDK</div>
         <nav className="nav">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              {item.label}
-            </Link>
+            item.external ? (
+              <a key={item.href} href={item.href} target="_blank" rel="noreferrer">
+                {item.label}
+              </a>
+            ) : (
+              <Link key={item.href} href={item.href}>
+                {item.label}
+              </Link>
+            )
           ))}
         </nav>
       </header>

@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
+  site: 'https://docs.openagentsdk.dev',
   integrations: [
     starlight({
       title: 'Open Agent SDK Docs',
@@ -16,7 +17,8 @@ export default defineConfig({
         '/src/styles/custom.css'
       ],
       components: {
-        ThemeSelect: './src/components/ThemeToggle.astro'
+        ThemeSelect: './src/components/ThemeToggle.astro',
+        SiteTitle: './src/components/SiteTitle.astro'
       },
       social: [
         {

@@ -92,10 +92,14 @@ session.close();
 
 ## Documentation
 
+- Homepage: https://openagentsdk.dev
+- Docs: https://docs.openagentsdk.dev
+- GitHub: https://github.com/OasAIStudio/open-agent-sdk
 - [API Reference](./docs/api-reference.md)
 - [Introduction](./docs/introduction.md)
 - [Comparison with Claude Agent SDK](./docs/claude-agent-sdk-comparison.md)
 - Docs site (Astro + Starlight): `packages/docs` (`bun run docs:dev`)
+- Product web (Next.js): `packages/web` (`bun run web:dev`)
 
 ## Monorepo Structure
 
