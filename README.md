@@ -102,6 +102,7 @@ session.close();
 ```text
 packages/
   core/        # SDK implementation
+  web/         # product homepage (Next.js)
   docs/        # documentation site (Astro + Starlight)
 examples/      # usage examples
 docs/          # engineering docs, workflows, ADRs
