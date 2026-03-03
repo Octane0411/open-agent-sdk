@@ -2,11 +2,26 @@
 import { prompt, FileStorage, convertToATIF, cleanupBackgroundProcesses } from 'open-agent-sdk';
 
 const args = process.argv.slice(2);
+type CleanupBackgroundMode = 'never' | 'on-error' | 'always';
 
 function getFlag(name: string): string | undefined {
   const idx = args.indexOf(name);
   if (idx !== -1 && idx + 1 < args.length) return args[idx + 1];
   return undefined;
+}
+
+function resolveCleanupBackgroundMode(): CleanupBackgroundMode {
+  const mode = (getFlag('--cleanup-background') ?? process.env.OAS_CLEANUP_BACKGROUND ?? 'on-error')
+    .toLowerCase();
+
+  if (mode === 'never' || mode === 'on-error' || mode === 'always') {
+    return mode;
+  }
+
+  console.error(
+    `Invalid cleanup mode "${mode}". Expected one of: never, on-error, always. Falling back to on-error.`
+  );
+  return 'on-error';
 }
 
 const instruction = getFlag('-p');
@@ -19,9 +34,10 @@ const baseURL = getFlag('--base-url') ?? process.env.ANTHROPIC_BASE_URL ?? proce
 const saveTrajectory = getFlag('--save-trajectory');
 const sessionDir = getFlag('--session-dir');
 const noPersist = args.includes('--no-persist');
+const cleanupBackgroundMode = resolveCleanupBackgroundMode();
 
 if (!instruction) {
-  console.error('Usage: oas -p <instruction> [--model <model>] [--provider openai|google|anthropic] [--output-format text|json] [--max-turns <n>] [--cwd <path>] [--save-trajectory <path>] [--session-dir <path>] [--no-persist]');
+  console.error('Usage: oas -p <instruction> [--model <model>] [--provider openai|google|anthropic] [--output-format text|json] [--max-turns <n>] [--cwd <path>] [--save-trajectory <path>] [--session-dir <path>] [--cleanup-background never|on-error|always] [--no-persist]');
   process.exit(1);
 }
 
@@ -91,8 +107,15 @@ async function main() {
     }
     exitCode = 1;
   } finally {
-    // Best-effort cleanup to avoid background command handles blocking process exit.
-    await cleanupBackgroundProcesses();
+    const shouldCleanupBackground =
+      cleanupBackgroundMode === 'always' ||
+      (cleanupBackgroundMode === 'on-error' && exitCode !== 0);
+
+    if (shouldCleanupBackground) {
+      // Best-effort cleanup during error paths or when explicitly requested.
+      await cleanupBackgroundProcesses();
+    }
+
     if (exitCode !== 0) process.exit(exitCode);
   }
 }
