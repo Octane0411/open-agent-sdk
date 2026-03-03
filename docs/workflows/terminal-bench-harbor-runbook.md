@@ -18,7 +18,7 @@ ln -sf "$(pwd)/benchmark/terminalbench/open_agent_sdk_harbor/agent.py" \
 
 ## 2. Load Environment Variables
 
-Use the repository `.env` as the source of truth:
+Use the repository `.env` as the single source of truth:
 
 ```bash
 set -a
@@ -32,6 +32,13 @@ Required for MiniMax Anthropic-compatible endpoint:
 - `ANTHROPIC_BASE_URL` (for example `https://api.minimaxi.com/anthropic/v1`)
 
 If these are empty, `command-0` fails quickly with invalid URL/provider errors.
+
+Quick sanity check:
+
+```bash
+echo "ANTHROPIC_API_KEY length=${#ANTHROPIC_API_KEY}"
+echo "ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL"
+```
 
 ## 3. Proxy Handling (Important)
 

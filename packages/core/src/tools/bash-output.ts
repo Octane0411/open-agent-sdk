@@ -3,9 +3,16 @@
  */
 
 import type { Tool, ToolContext, JSONSchema } from '../types/tools';
+import { readFileSync } from 'fs';
 import { backgroundProcesses } from './bash';
 
+const MAX_CAPTURE_CHARS = 200_000;
 const TRUNCATED_NOTICE = '\n[Output truncated to avoid excessive memory usage]';
+
+function truncateOutput(value: string): { value: string; truncated: boolean } {
+  if (value.length <= MAX_CAPTURE_CHARS) return { value, truncated: false };
+  return { value: value.slice(0, MAX_CAPTURE_CHARS), truncated: true };
+}
 
 export interface BashOutputInput {
   shellId: string;
@@ -56,6 +63,28 @@ export class BashOutputTool implements Tool<BashOutputInput, BashOutputOutput> {
 
     // Check if process is still running
     const running = process.exitCode === null;
+
+    // For detached background processes, refresh output from redirected log files.
+    if (process.stdoutPath) {
+      try {
+        const content = readFileSync(process.stdoutPath, 'utf8');
+        const next = truncateOutput(content);
+        process.stdout = next.value;
+        process.stdoutTruncated = next.truncated;
+      } catch {
+        // Ignore missing/temporary read failures.
+      }
+    }
+    if (process.stderrPath) {
+      try {
+        const content = readFileSync(process.stderrPath, 'utf8');
+        const next = truncateOutput(content);
+        process.stderr = next.value;
+        process.stderrTruncated = next.truncated;
+      } catch {
+        // Ignore missing/temporary read failures.
+      }
+    }
 
     return {
       stdout: process.stdout + (process.stdoutTruncated ? TRUNCATED_NOTICE : ''),

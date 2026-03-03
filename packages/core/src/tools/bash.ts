@@ -3,6 +3,9 @@
  */
 
 import { spawn, ChildProcess } from 'child_process';
+import { mkdirSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import type { Tool, ToolContext, JSONSchema } from '../types/tools';
 
 export interface BackgroundProcess {
@@ -10,10 +13,13 @@ export interface BackgroundProcess {
   startTime: number;
   stdout: string;
   stderr: string;
+  stdoutPath?: string;
+  stderrPath?: string;
   stdoutTruncated: boolean;
   stderrTruncated: boolean;
   exitCode: number | null;
   process: ChildProcess;
+  detached: boolean;
 }
 
 export interface BashInput {
@@ -61,6 +67,7 @@ export const backgroundProcesses = new Map<string, BackgroundProcess>();
 // Cap captured output to avoid OOM when commands print large streams.
 const MAX_CAPTURE_CHARS = 200_000;
 const TRUNCATED_NOTICE = '\n[Output truncated to avoid excessive memory usage]';
+const BG_LOG_DIR = join(tmpdir(), 'open-agent-sdk-bg');
 
 function appendCapped(
   current: string,
@@ -107,11 +114,33 @@ export class BashTool implements Tool<BashInput, BashOutput> {
     return new Promise((resolve) => {
       const shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
       const shellFlag = process.platform === 'win32' ? '/c' : '-c';
+      let shellId: string | undefined;
+      let stdoutPath: string | undefined;
+      let stderrPath: string | undefined;
+      let detachedBackground = false;
 
-      const child = spawn(shell, [shellFlag, command], {
+      if (run_in_background) {
+        shellId = `shell_${++backgroundProcessId}`;
+        if (process.platform !== 'win32') {
+          detachedBackground = true;
+          mkdirSync(BG_LOG_DIR, { recursive: true });
+          stdoutPath = join(BG_LOG_DIR, `${shellId}.stdout.log`);
+          stderrPath = join(BG_LOG_DIR, `${shellId}.stderr.log`);
+        }
+      }
+
+      const normalizedCommand = run_in_background
+        ? command.replace(/\s*&\s*$/, '').trim()
+        : command;
+      const commandToRun = run_in_background && stdoutPath && stderrPath
+        ? `( ${normalizedCommand} ) >>"${stdoutPath}" 2>>"${stderrPath}"`
+        : normalizedCommand;
+
+      const child = spawn(shell, [shellFlag, commandToRun], {
         cwd: context.cwd,
         env: { ...process.env, ...context.env },
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: run_in_background && detachedBackground ? ['ignore', 'ignore', 'ignore'] : ['ignore', 'pipe', 'pipe'],
+        detached: run_in_background ? detachedBackground : false,
       });
 
       // Set up abort handler
@@ -128,35 +157,59 @@ export class BashTool implements Tool<BashInput, BashOutput> {
 
       // Handle background execution
       if (run_in_background) {
-        const shellId = `shell_${++backgroundProcessId}`;
         const bgProcess: BackgroundProcess = {
           pid: child.pid!,
           startTime: Date.now(),
           stdout: '',
           stderr: '',
+          stdoutPath,
+          stderrPath,
           stdoutTruncated: false,
           stderrTruncated: false,
           exitCode: null,
           process: child,
+          detached: detachedBackground,
         };
-        backgroundProcesses.set(shellId, bgProcess);
+        backgroundProcesses.set(shellId!, bgProcess);
 
-        // Capture stdout/stderr
-        child.stdout?.on('data', (data) => {
-          const next = appendCapped(bgProcess.stdout, data.toString(), MAX_CAPTURE_CHARS);
-          bgProcess.stdout = next.value;
-          if (next.truncated) bgProcess.stdoutTruncated = true;
-        });
+        if (!detachedBackground) {
+          // Capture stdout/stderr in-process when not detached.
+          child.stdout?.on('data', (data) => {
+            const next = appendCapped(bgProcess.stdout, data.toString(), MAX_CAPTURE_CHARS);
+            bgProcess.stdout = next.value;
+            if (next.truncated) bgProcess.stdoutTruncated = true;
+          });
 
-        child.stderr?.on('data', (data) => {
-          const next = appendCapped(bgProcess.stderr, data.toString(), MAX_CAPTURE_CHARS);
-          bgProcess.stderr = next.value;
-          if (next.truncated) bgProcess.stderrTruncated = true;
-        });
+          child.stderr?.on('data', (data) => {
+            const next = appendCapped(bgProcess.stderr, data.toString(), MAX_CAPTURE_CHARS);
+            bgProcess.stderr = next.value;
+            if (next.truncated) bgProcess.stderrTruncated = true;
+          });
+        }
 
         // Set exit code when process exits (don't delete from map)
         child.on('exit', (code) => {
           bgProcess.exitCode = code ?? -1;
+          if (bgProcess.stdoutPath) {
+            try {
+              const content = readFileSync(bgProcess.stdoutPath, 'utf8');
+              const next = appendCapped('', content, MAX_CAPTURE_CHARS);
+              bgProcess.stdout = next.value;
+              bgProcess.stdoutTruncated = next.truncated;
+            } catch {
+              // Ignore read errors for best-effort output capture.
+            }
+          }
+          if (bgProcess.stderrPath) {
+            try {
+              const content = readFileSync(bgProcess.stderrPath, 'utf8');
+              const next = appendCapped('', content, MAX_CAPTURE_CHARS);
+              bgProcess.stderr = next.value;
+              bgProcess.stderrTruncated = next.truncated;
+            } catch {
+              // Ignore read errors for best-effort output capture.
+            }
+          }
         });
 
         // Prevent background child handles from keeping the process alive.
@@ -166,9 +219,9 @@ export class BashTool implements Tool<BashInput, BashOutput> {
 
         // Don't wait for completion
         resolve({
-          output: `Command running in background with ID: ${shellId}`,
+          output: `Command running in background with ID: ${shellId!}`,
           exitCode: 0,
-          shellId,
+          shellId: shellId!,
         });
 
         return;
@@ -295,11 +348,27 @@ export async function cleanupBackgroundProcesses(
             done();
           });
 
-          bgProcess.process.kill('SIGTERM');
+          try {
+            if (bgProcess.detached && process.platform !== 'win32') {
+              process.kill(-bgProcess.pid, 'SIGTERM');
+            } else {
+              bgProcess.process.kill('SIGTERM');
+            }
+          } catch {
+            // Ignore errors if process already exited.
+          }
 
           const forceKillTimer = setTimeout(() => {
             if (bgProcess.exitCode === null) {
-              bgProcess.process.kill('SIGKILL');
+              try {
+                if (bgProcess.detached && process.platform !== 'win32') {
+                  process.kill(-bgProcess.pid, 'SIGKILL');
+                } else {
+                  bgProcess.process.kill('SIGKILL');
+                }
+              } catch {
+                // Ignore errors if process already exited.
+              }
             }
             done();
           }, Math.max(1, forceKillAfterMs));

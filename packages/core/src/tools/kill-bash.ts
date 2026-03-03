@@ -55,8 +55,16 @@ export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
       };
     }
 
-    // Send SIGTERM
-    bgProcess.process.kill('SIGTERM');
+    // Send SIGTERM (target process group for detached background jobs)
+    try {
+      if (bgProcess.detached && process.platform !== 'win32') {
+        process.kill(-bgProcess.pid, 'SIGTERM');
+      } else {
+        bgProcess.process.kill('SIGTERM');
+      }
+    } catch {
+      // Ignore if already exited between checks.
+    }
 
     // Wait up to 5 seconds for graceful exit, then SIGKILL
     return new Promise((resolve) => {
@@ -74,7 +82,15 @@ export class KillBashTool implements Tool<KillBashInput, KillBashOutput> {
       const forceKillTimeout = setTimeout(() => {
         clearInterval(checkInterval);
         if (bgProcess.exitCode === null) {
-          bgProcess.process.kill('SIGKILL');
+          try {
+            if (bgProcess.detached && process.platform !== 'win32') {
+              process.kill(-bgProcess.pid, 'SIGKILL');
+            } else {
+              bgProcess.process.kill('SIGKILL');
+            }
+          } catch {
+            // Ignore if already exited.
+          }
           resolve({
             success: true,
             message: `Process ${shellId} force-killed with SIGKILL`,

@@ -96,7 +96,7 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         # - Keep --no-persist only when both transcript and trajectory export are off.
         # - While the CLI canary may lag behind local code, keep best-effort sync
         #   from /root/.open-agent/sessions to /logs/agent/open-agent-transcript.
-        cli_flags = f"--model {model} --output-format json"
+        cli_flags = f"--model {model} --output-format json --cleanup-background never"
         save_trajectory = os.environ.get("OAS_HARBOR_SAVE_TRAJECTORY") == "1"
         save_transcript = os.environ.get("OAS_HARBOR_SAVE_TRANSCRIPT", "1") == "1"
         if save_trajectory:

@@ -167,4 +167,19 @@ describe('BashTool - Enhanced Background Process Tracking', () => {
     const processAfterCleanup = getBackgroundProcess(shellId);
     expect(processAfterCleanup?.exitCode).not.toBeNull();
   });
+
+  test('should handle commands that already include trailing & in background mode', async () => {
+    const result = await tool.handler(
+      {
+        command: 'sleep 1 &',
+        run_in_background: true,
+      },
+      context
+    );
+
+    const shellId = result.shellId!;
+    const process = getBackgroundProcess(shellId);
+    expect(process).toBeDefined();
+    expect(process?.exitCode).toBeNull();
+  });
 });
