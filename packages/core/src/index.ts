@@ -336,6 +336,7 @@ export {
   editTool,
   BashTool,
   bashTool,
+  cleanupBackgroundProcesses,
   GlobTool,
   globTool,
   GrepTool,

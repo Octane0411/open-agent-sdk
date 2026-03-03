@@ -91,7 +91,7 @@ export const defaultToolRegistry = createDefaultRegistry();
 export { readTool, ReadTool } from './read';
 export { writeTool, WriteTool } from './write';
 export { editTool, EditTool } from './edit';
-export { bashTool, BashTool } from './bash';
+export { bashTool, BashTool, cleanupBackgroundProcesses } from './bash';
 export { globTool, GlobTool } from './glob';
 export { grepTool, GrepTool } from './grep';
 export { taskListTool, TaskListTool } from './task-list';

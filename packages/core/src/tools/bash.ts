@@ -159,6 +159,11 @@ export class BashTool implements Tool<BashInput, BashOutput> {
           bgProcess.exitCode = code ?? -1;
         });
 
+        // Prevent background child handles from keeping the process alive.
+        child.unref();
+        (child.stdout as unknown as { unref?: () => void } | null)?.unref?.();
+        (child.stderr as unknown as { unref?: () => void } | null)?.unref?.();
+
         // Don't wait for completion
         resolve({
           output: `Command running in background with ID: ${shellId}`,
@@ -257,4 +262,48 @@ export const bashTool = new BashTool();
 // Export function to get background process info (for future BashOutput tool)
 export function getBackgroundProcess(shellId: string) {
   return backgroundProcesses.get(shellId);
+}
+
+/**
+ * Best-effort cleanup for any running background bash processes.
+ * Intended for process shutdown paths (e.g. CLI exit) to avoid hangs.
+ */
+export async function cleanupBackgroundProcesses(
+  forceKillAfterMs = 1000
+): Promise<void> {
+  const entries = Array.from(backgroundProcesses.values()).filter((p) => p.exitCode === null);
+
+  await Promise.all(
+    entries.map(
+      (bgProcess) =>
+        new Promise<void>((resolve) => {
+          if (bgProcess.exitCode !== null) {
+            resolve();
+            return;
+          }
+
+          let settled = false;
+          const done = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(forceKillTimer);
+            resolve();
+          };
+
+          bgProcess.process.once('exit', (code) => {
+            bgProcess.exitCode = code ?? -1;
+            done();
+          });
+
+          bgProcess.process.kill('SIGTERM');
+
+          const forceKillTimer = setTimeout(() => {
+            if (bgProcess.exitCode === null) {
+              bgProcess.process.kill('SIGKILL');
+            }
+            done();
+          }, Math.max(1, forceKillAfterMs));
+        })
+    )
+  );
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { prompt, FileStorage, convertToATIF } from 'open-agent-sdk';
+import { prompt, FileStorage, convertToATIF, cleanupBackgroundProcesses } from 'open-agent-sdk';
 
 const args = process.argv.slice(2);
 
@@ -48,6 +48,7 @@ async function main() {
     ? undefined
     : new FileStorage(sessionDir ? { directory: sessionDir } : {});
 
+  let exitCode = 0;
   try {
     const result = await prompt(instruction!, {
       model: model!,
@@ -88,7 +89,11 @@ async function main() {
     } else {
       console.error(String(err));
     }
-    process.exit(1);
+    exitCode = 1;
+  } finally {
+    // Best-effort cleanup to avoid background command handles blocking process exit.
+    await cleanupBackgroundProcesses();
+    if (exitCode !== 0) process.exit(exitCode);
   }
 }
 

@@ -3,7 +3,12 @@
  */
 
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { BashTool, getBackgroundProcess } from '../../src/tools/bash';
+import {
+  BashTool,
+  getBackgroundProcess,
+  backgroundProcesses,
+  cleanupBackgroundProcesses,
+} from '../../src/tools/bash';
 import type { ToolContext } from '../../src/types/tools';
 
 describe('BashTool - Enhanced Background Process Tracking', () => {
@@ -11,6 +16,7 @@ describe('BashTool - Enhanced Background Process Tracking', () => {
   let context: ToolContext;
 
   beforeEach(() => {
+    backgroundProcesses.clear();
     tool = new BashTool();
     context = {
       cwd: process.cwd(),
@@ -141,5 +147,24 @@ describe('BashTool - Enhanced Background Process Tracking', () => {
 
     expect(process?.process).toBeDefined();
     expect(process?.process.pid).toBe(process?.pid);
+  });
+
+  test('should cleanup running background processes', async () => {
+    const result = await tool.handler(
+      {
+        command: 'sleep 10',
+        run_in_background: true,
+      },
+      context
+    );
+
+    const shellId = result.shellId!;
+    const processBeforeCleanup = getBackgroundProcess(shellId);
+    expect(processBeforeCleanup?.exitCode).toBeNull();
+
+    await cleanupBackgroundProcesses(200);
+
+    const processAfterCleanup = getBackgroundProcess(shellId);
+    expect(processAfterCleanup?.exitCode).not.toBeNull();
   });
 });
