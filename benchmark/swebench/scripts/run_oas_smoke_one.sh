@@ -4,6 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SWEBENCH_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SWEBENCH_DIR}/../.." && pwd)"
+# shellcheck disable=SC1090
+. "${SCRIPT_DIR}/load_oas_env.sh"
+bootstrap_oas_env "${REPO_ROOT}"
 
 if [[ -d "${REPO_ROOT}/.venv-swebench311" ]]; then
   VENV_PATH="${REPO_ROOT}/.venv-swebench311"
@@ -25,6 +28,9 @@ if [[ -z "${OAS_MODEL:-}" ]]; then
   echo "Missing required env: OAS_MODEL"
   echo "Example:"
   echo "  export OAS_MODEL='gpt-4.1'"
+  if [[ -n "${SWEBENCH_ENV_FILE:-}" ]]; then
+    echo "Loaded env file: ${SWEBENCH_ENV_FILE}"
+  fi
   exit 1
 fi
 
@@ -55,7 +61,6 @@ mkdir -p "${PRED_DIR}" "${REPORT_DIR}" "${TRAJ_DIR}" "${LOG_DIR}" "${WORKSPACE_D
 
 PRED_FILE="${PRED_DIR}/one_lite_oas.jsonl"
 RUN_ID="smoke-lite-oas-one-$(date +%Y%m%d-%H%M%S)"
-TIMEOUT_SECONDS="${SWEBENCH_TIMEOUT:-300}"
 MAX_TURNS="${OAS_MAX_TURNS:-30}"
 INSTANCE_ID="${SWEBENCH_INSTANCE_ID:-}"
 
@@ -92,17 +97,24 @@ PY
 
 echo "[2/3] Running harness for instance: ${INSTANCE_ID_FROM_PRED}"
 echo "Using DOCKER_HOST=${DOCKER_HOST:-<unset>}"
-echo "Using timeout=${TIMEOUT_SECONDS}s"
-python -m swebench.harness.run_evaluation \
-  --dataset_name princeton-nlp/SWE-bench_Lite \
-  --split test \
-  --instance_ids "${INSTANCE_ID_FROM_PRED}" \
-  --predictions_path "${PRED_FILE}" \
-  --max_workers 1 \
-  --timeout "${TIMEOUT_SECONDS}" \
-  --cache_level env \
-  --run_id "${RUN_ID}" \
+RUN_EVAL_CMD=(
+  python -m swebench.harness.run_evaluation
+  --dataset_name princeton-nlp/SWE-bench_Lite
+  --split test
+  --instance_ids "${INSTANCE_ID_FROM_PRED}"
+  --predictions_path "${PRED_FILE}"
+  --max_workers 1
+  --cache_level env
+  --run_id "${RUN_ID}"
   --report_dir "${REPORT_DIR}"
+)
+if [[ -n "${SWEBENCH_TIMEOUT:-}" ]]; then
+  echo "Using timeout=${SWEBENCH_TIMEOUT}s"
+  RUN_EVAL_CMD+=(--timeout "${SWEBENCH_TIMEOUT}")
+else
+  echo "Using harness default timeout (SWEBENCH_TIMEOUT is unset)"
+fi
+"${RUN_EVAL_CMD[@]}"
 
 REPORT_BASENAME="${OAS_MODEL}.${RUN_ID}.json"
 if [[ -f "${SWEBENCH_DIR}/${REPORT_BASENAME}" ]]; then
