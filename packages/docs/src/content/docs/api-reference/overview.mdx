@@ -1,12 +1,200 @@
 ---
 title: API Reference
-description: API documentation status and entry points.
+description: Complete reference for APIs, providers, permissions, and TypeScript types.
 ---
 
-This docs site currently provides API reference entry points.
+## Primary entry points
 
-For detailed API material during this migration phase, use:
+Open Agent SDK exposes two primary usage styles:
 
-- Repository docs: `docs/api-reference.md`
+1. `prompt()` for one-shot requests
+2. `createSession()` / `resumeSession()` / `forkSession()` for stateful workflows
 
-A fully integrated API reference section will be added in a follow-up iteration.
+```ts
+import { prompt, createSession, resumeSession, forkSession } from 'open-agent-sdk';
+```
+
+## Prompt API
+
+```ts
+import { prompt } from 'open-agent-sdk';
+
+const out = await prompt('Summarize this repository.', {
+  model: 'gpt-5.3-codex',
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY,
+  maxTurns: 8,
+  permissionMode: 'default'
+});
+```
+
+`prompt()` returns:
+
+- `result: string`
+- `duration_ms: number`
+- `usage: { input_tokens; output_tokens }`
+- `session_id?: string`
+- `structured_output?: unknown`
+
+Common `PromptOptions` fields:
+
+- `model: string` (required)
+- `provider?: 'openai' | 'google' | 'anthropic'`
+- `apiKey?: string`
+- `baseURL?: string`
+- `maxTurns?: number`
+- `allowedTools?: string[]`
+- `permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan'`
+- `storage?: SessionStorage`
+- `resume?: string`
+- `forkSession?: boolean`
+- `outputFormat?: OutputFormat`
+
+## Session API
+
+```ts
+import { createSession } from 'open-agent-sdk';
+
+const session = await createSession({
+  model: 'gpt-5.3-codex',
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY,
+  systemPrompt: 'You are a repository assistant.',
+  maxTurns: 12,
+});
+
+await session.send('List important modules.');
+for await (const event of session.stream()) {
+  // handle assistant/tool/system events
+}
+await session.close();
+```
+
+Lifecycle methods:
+
+- `await session.send(message)`
+- `for await (const event of session.stream()) { ... }`
+- `session.getMessages()`
+- `await session.close()`
+
+Resume and fork:
+
+```ts
+import { resumeSession, forkSession, FileStorage } from 'open-agent-sdk';
+
+const storage = new FileStorage({ cwd: process.cwd() });
+const resumed = await resumeSession('session-id', { storage });
+const forked = await forkSession('session-id', { storage, model: 'gpt-5.3-codex' });
+```
+
+## Providers and authentication
+
+Supported providers:
+
+- OpenAI
+- Google Gemini
+- Anthropic
+
+Provider can be explicit (`provider`) or auto-detected from model naming conventions.
+
+### Base URL behavior
+
+- Default auth uses provider-specific API keys
+- You can set `baseURL` for proxies or compatible endpoints
+- Anthropic-compatible endpoints may use different auth strategies automatically
+
+## Permissions
+
+Permission modes:
+
+- `default`
+- `acceptEdits`
+- `bypassPermissions`
+- `plan`
+
+`bypassPermissions` requires `allowDangerouslySkipPermissions: true`.
+
+Custom permission callback:
+
+```ts
+import type { CanUseTool } from 'open-agent-sdk';
+
+const canUseTool: CanUseTool = async (toolName, input) => {
+  if (toolName === 'Bash') {
+    return {
+      behavior: 'deny',
+      message: 'Bash is disabled in this runtime.',
+      interrupt: false,
+    };
+  }
+
+  return {
+    behavior: 'allow',
+    updatedInput: input,
+  };
+};
+```
+
+Attach with `prompt({ canUseTool })` or `createSession({ canUseTool })`.
+
+## Type reference
+
+Frequently used exported types:
+
+```ts
+import type {
+  PromptOptions,
+  PromptResult,
+  Session,
+  CreateSessionOptions,
+  ResumeSessionOptions,
+  ForkSessionOptions,
+  PermissionMode,
+  CanUseTool,
+  OutputFormat,
+  Tool,
+  ToolDefinition,
+  SDKMessage,
+} from 'open-agent-sdk';
+```
+
+Built-in tool IO types include:
+
+- `ReadInput`, `ReadOutput`
+- `WriteInput`, `WriteOutput`
+- `EditInput`, `EditOutput`
+- `BashInput`, `BashOutput`
+- `WebSearchInput`, `WebSearchOutput`
+- `WebFetchInput`, `WebFetchOutput`
+
+Session and storage types include:
+
+- `SessionStorage`
+- `SessionData`
+- `FileStorageOptions`
+- `InMemoryStorage`
+- `FileStorage`
+
+Hook-related types include:
+
+- `HookEvent`
+- `HookInput`
+- `HookCallback`
+- `SessionStartHookInput`
+- `PostToolUseHookInput`
+- `PermissionRequestHookInput`
+
+Structured output:
+
+```ts
+import { Schema, type OutputFormat } from 'open-agent-sdk';
+
+const outputFormat: OutputFormat = {
+  name: 'summary',
+  description: 'Structured summary',
+  schema: Schema.object({
+    title: Schema.string(),
+    bullets: Schema.array(Schema.string()),
+  }),
+};
+```

@@ -1,0 +1,64 @@
+---
+title: Quick Migration Guide
+description: Step-by-step migration from Claude Agent SDK style workflows.
+---
+
+## 1. Install and baseline
+
+```bash
+npm install open-agent-sdk@alpha
+```
+
+Create a minimal parity test that runs your most common task end-to-end.
+
+## 2. Map session workflow
+
+- Replace your current session creation with `createSession()`
+- Replace resume/fork semantics with `resumeSession()` / `forkSession()`
+- Keep message streaming behavior under integration tests
+
+## 3. Map permission behavior
+
+- Start with `permissionMode: 'default'`
+- Port custom allow/deny rules into `canUseTool`
+- Only use `bypassPermissions` where you can guarantee runtime safety
+
+## 4. Map providers
+
+- OpenAI: set `provider: 'openai'` and `OPENAI_API_KEY`
+- Google: set `provider: 'google'` and `GEMINI_API_KEY`
+- Anthropic: set `provider: 'anthropic'` and `ANTHROPIC_API_KEY`
+
+If you used custom compatible endpoints, set `baseURL` explicitly.
+
+## 5. Strongly type integration boundaries
+
+Use exported types for options/results/tool IO instead of local ad-hoc interfaces.
+
+## 6. Validate with targeted checks
+
+Recommended smoke checks before full rollout:
+
+- one prompt path
+- one session resume path
+- one fork path
+- one sensitive tool permission denial path
+- one structured output path
+
+## Minimal migration example
+
+```ts
+import { createSession } from 'open-agent-sdk';
+
+const session = await createSession({
+  model: 'gpt-5.3-codex',
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY,
+  permissionMode: 'default',
+});
+
+await session.send('Inspect repository and propose next steps.');
+for await (const event of session.stream()) {
+  // consume output
+}
+```

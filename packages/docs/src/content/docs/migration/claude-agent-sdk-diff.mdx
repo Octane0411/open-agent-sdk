@@ -1,0 +1,32 @@
+---
+title: Diff vs Claude Agent SDK
+description: Practical capability and API differences for migration planning.
+---
+
+## High-level positioning
+
+- Open Agent SDK: open source, multi-provider, Bun/Node-first runtime
+- Claude Agent SDK: Anthropic ecosystem defaults and vendor-first experience
+
+## Capability-level diff
+
+| Area | Open Agent SDK | Claude Agent SDK |
+| --- | --- | --- |
+| Source model | MIT open source | Closed source |
+| Model providers | OpenAI / Google / Anthropic | Primarily Anthropic ecosystem |
+| Session model | create/resume/fork | session-based workflows |
+| Permission model | `default` / `acceptEdits` / `bypassPermissions` / `plan` | permission-gated model |
+| MCP | Supported | Supported |
+| Hooks | Typed lifecycle/tool hooks | Hook-like extensibility |
+
+## API-shape differences to watch
+
+- Option names are similar conceptually but not guaranteed identical.
+- Provider config is explicit and multi-vendor in Open Agent SDK.
+- Permission callbacks use typed `PermissionResult` unions.
+- Tool and message types are exported for stricter app-level typing.
+
+## Recommendation
+
+Treat migration as concept-compatible, not drop-in binary-compatible.
+Validate each integration surface (provider, permissions, hooks, tools) with focused tests.
