@@ -5,6 +5,9 @@
   "description": "Open source agent SDK compatible with Claude Agent SDK (monorepo root)",
   "scripts": {
     "build": "cd packages/core && bun run build",
+    "docs:dev": "cd packages/docs && bun run dev",
+    "docs:build": "cd packages/docs && bun run build",
+    "docs:preview": "cd packages/docs && bun run preview",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "typecheck": "cd packages/core && npx tsc --noEmit",

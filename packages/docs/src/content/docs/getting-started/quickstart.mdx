@@ -1,0 +1,41 @@
+---
+title: Quickstart
+description: Run your first prompt and session with Open Agent SDK.
+---
+
+## One-shot prompt
+
+```ts
+import { prompt } from 'open-agent-sdk';
+
+const result = await prompt('Summarize the repository structure.', {
+  model: 'gpt-5.3-codex',
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+console.log(result.result);
+console.log(result.usage);
+```
+
+## Session workflow
+
+```ts
+import { createSession } from 'open-agent-sdk';
+
+const session = await createSession({
+  model: 'gpt-5.3-codex',
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+await session.send('Read the current directory and list key files.');
+
+for await (const message of session.stream()) {
+  if (message.type === 'assistant') {
+    console.log(message.message.content);
+  }
+}
+
+session.close();
+```

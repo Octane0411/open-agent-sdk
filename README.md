@@ -95,14 +95,16 @@ session.close();
 - [API Reference](./docs/api-reference.md)
 - [Introduction](./docs/introduction.md)
 - [Comparison with Claude Agent SDK](./docs/claude-agent-sdk-comparison.md)
+- Docs site (Astro + Starlight): `packages/docs` (`bun run docs:dev`)
 
 ## Monorepo Structure
 
 ```text
 packages/
   core/        # SDK implementation
+  docs/        # documentation site (Astro + Starlight)
 examples/      # usage examples
-docs/          # technical docs, workflows, ADRs
+docs/          # engineering docs, workflows, ADRs
 ```
 
 ## Development

@@ -1,0 +1,137 @@
+:root {
+  --sl-font: 'Manrope Variable', 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --sl-font-system: var(--sl-font);
+  --sl-font-system-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+  --sl-line-height: 1.6;
+
+  --sl-color-accent-low: hsl(220 42% 93%);
+  --sl-color-accent: hsl(221 72% 54%);
+  --sl-color-accent-high: hsl(223 58% 33%);
+
+  --sl-color-text-accent: var(--sl-color-accent-high);
+  --sl-color-bg-nav: hsla(0 0% 100% / 0.82);
+  --sl-color-bg-sidebar: hsl(220 20% 98%);
+  --sl-color-hairline: hsl(220 16% 86%);
+  --sl-color-hairline-light: hsl(220 14% 90%);
+
+  --sl-shadow-sm: 0 2px 12px -8px rgba(12, 16, 24, 0.2);
+  --sl-shadow-md: 0 8px 28px -16px rgba(12, 16, 24, 0.22);
+  --sl-shadow-lg: 0 16px 40px -22px rgba(12, 16, 24, 0.24);
+}
+
+:root[data-theme='dark'] {
+  --sl-color-accent-low: hsl(223 31% 16%);
+  --sl-color-accent: hsl(219 90% 66%);
+  --sl-color-accent-high: hsl(214 98% 80%);
+
+  --sl-color-text-accent: var(--sl-color-accent-high);
+  --sl-color-bg-nav: hsla(222 27% 10% / 0.82);
+  --sl-color-bg-sidebar: hsl(221 27% 11%);
+  --sl-color-hairline: hsl(220 16% 25%);
+  --sl-color-hairline-light: hsl(220 18% 18%);
+}
+
+body {
+  background-image:
+    radial-gradient(1300px 760px at 100% -25%, rgba(83, 121, 255, 0.06), transparent 58%),
+    radial-gradient(900px 660px at -24% -22%, rgba(83, 121, 255, 0.04), transparent 70%);
+  background-attachment: fixed;
+}
+
+header {
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+.sidebar-pane,
+.right-sidebar {
+  background: color-mix(in oklab, var(--sl-color-bg-sidebar) 92%, transparent);
+}
+
+.site-title {
+  color: var(--sl-color-gray-1);
+}
+
+.site-title img {
+  height: 28px;
+  max-width: 228px;
+  width: auto;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.42));
+}
+
+:root[data-theme='dark'] .site-title img {
+  filter: none;
+}
+
+@media (max-width: 50rem) {
+  .site-title img {
+    height: 24px;
+    max-width: 68vw;
+  }
+}
+
+main .sl-markdown-content :is(h1, h2, h3) {
+  letter-spacing: -0.02em;
+}
+
+main .sl-markdown-content h1 {
+  font-size: clamp(2rem, 2.7vw, 2.45rem);
+  font-weight: 700;
+}
+
+main .sl-markdown-content :is(pre, .expressive-code) {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 10px;
+  box-shadow: var(--sl-shadow-sm);
+}
+
+.card,
+.sl-link-card {
+  border-radius: 10px;
+  border: 1px solid var(--sl-color-hairline-light);
+  background: color-mix(in oklab, var(--sl-color-bg) 95%, white 5%);
+  box-shadow: var(--sl-shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card:hover,
+.sl-link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sl-shadow-md);
+}
+
+.pagination-links a {
+  border-radius: 9px;
+}
+
+#starlight__sidebar a {
+  border-radius: 0;
+  color: color-mix(in oklab, var(--sl-color-gray-2) 88%, var(--sl-color-accent-high) 12%);
+}
+
+#starlight__sidebar a:hover,
+#starlight__sidebar a:focus {
+  color: var(--sl-color-gray-1);
+  background: color-mix(in oklab, var(--sl-color-accent-low) 28%, var(--sl-color-bg) 72%);
+}
+
+#starlight__sidebar a[aria-current='page'],
+#starlight__sidebar a[aria-current='page']:hover,
+#starlight__sidebar a[aria-current='page']:focus {
+  color: var(--sl-color-accent-high);
+  background: color-mix(in oklab, var(--sl-color-accent-low) 44%, var(--sl-color-bg) 56%);
+  font-weight: 500;
+  box-shadow: inset 1px 0 0 var(--sl-color-accent);
+}
+
+.right-sidebar a[aria-current='true'] {
+  color: var(--sl-color-accent-high);
+  font-weight: 600;
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--sl-color-accent) 74%, white 26%);
+  outline-offset: 2px;
+}
