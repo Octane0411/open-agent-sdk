@@ -46,8 +46,8 @@ export default function HomePage() {
           <Link className="btn btn-primary" href={docsUrl}>
             Start with the docs
           </Link>
-          <a className="btn btn-secondary" href={npmUrl} target="_blank" rel="noreferrer">
-            Install open-agent-sdk
+          <a className="btn btn-secondary" href={githubUrl} target="_blank" rel="noreferrer">
+            Star on GitHub
           </a>
         </div>
       </section>
@@ -109,9 +109,9 @@ export default function HomePage() {
           choose providers and extensions as your product evolves.
         </p>
         <div className="hero-cta">
-          <Link className="btn btn-primary" href={docsUrl}>
-            Start with the docs
-          </Link>
+          <a className="btn btn-primary" href={npmUrl} target="_blank" rel="noreferrer">
+            Install open-agent-sdk
+          </a>
           <a className="btn btn-secondary" href={githubUrl} target="_blank" rel="noreferrer">
             Star on GitHub
           </a>
