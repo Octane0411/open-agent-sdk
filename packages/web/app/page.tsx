@@ -52,106 +52,54 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="proof-strip" aria-label="Key proof points">
-        <div>
-          <strong>MIT licensed</strong>
-          <p>Open codebase, transparent roadmap, zero black-box lock-in.</p>
-        </div>
-        <div>
-          <strong>API-aligned with Claude Agent SDK</strong>
-          <p>Keep familiar workflows while extending beyond a single provider.</p>
-        </div>
-        <div>
-          <strong>Built for production control</strong>
-          <p>Tools, sessions, permissions, hooks, and MCP integration included.</p>
-        </div>
-      </section>
-
       <section className="portal-grid" aria-label="Primary entries">
-        <Link className="portal-card" href={docsUrl}>
-          <h2>Docs</h2>
-          <p>Install, quickstart, API reference, and migration guides.</p>
-          <span>Read docs</span>
+        <Link className="portal-card portal-card-primary" href={docsQuickstartUrl}>
+          <h2>Start Building</h2>
+          <p>Install the SDK and run your first workflow in minutes.</p>
+          <span>Open quickstart</span>
         </Link>
-        <Link className="portal-card" href="/blog">
-          <h2>Blog</h2>
-          <p>Release notes, implementation decisions, and benchmark updates.</p>
-          <span>See updates</span>
+        <Link className="portal-card" href={docsMigrationUrl}>
+          <h2>Migrate from Claude Agent SDK</h2>
+          <p>Use aligned API concepts and move existing flows with less friction.</p>
+          <span>See migration path</span>
         </Link>
-        <Link className="portal-card" href="/playground">
-          <h2>Playground</h2>
-          <p>Run agent workflows and validate tool behavior end-to-end.</p>
-          <span>Try playground</span>
+        <Link className="portal-card" href={docsApiUrl}>
+          <h2>Evaluate the API Surface</h2>
+          <p>Review sessions, permissions, providers, hooks, and tool interfaces.</p>
+          <span>Browse API reference</span>
         </Link>
       </section>
 
-      <section className="value-grid" aria-label="Why teams choose Open Agent SDK">
-        <article>
-          <h3>Use familiar API patterns</h3>
+      <section className="faq" aria-label="Frequently asked questions">
+        <h2>FAQ</h2>
+        <details>
+          <summary>Why not just use Claude Agent SDK directly?</summary>
           <p>
-            Implement with Claude Agent SDK-style primitives so teams can adopt fast
-            without relearning the core model.
+            Use Open Agent SDK when you want Claude Agent SDK-style APIs plus broader
+            provider and plugin options in one MIT-licensed codebase.
           </p>
-        </article>
-        <article>
-          <h3>Keep provider optionality</h3>
+        </details>
+        <details>
+          <summary>How open is this project?</summary>
           <p>
-            Work across OpenAI, Gemini, and Anthropic providers without rewriting your
-            runtime architecture.
+            The core SDK is open-source under MIT. You can inspect, fork, and extend
+            runtime behavior without black-box constraints.
           </p>
-        </article>
-        <article>
-          <h3>Extend without framework fights</h3>
+        </details>
+        <details>
+          <summary>Can we start simple and add controls later?</summary>
           <p>
-            Add custom tools, hooks, and integrations with a strict TypeScript API
-            surface designed for long-term maintainability.
+            Yes. Start with one-shot prompts, then add sessions, permissions, hooks,
+            and tool policies as your workflows become more complex.
           </p>
-        </article>
-      </section>
-
-      <section className="segment-grid" aria-label="Choose your path">
-        <article className="segment-card">
-          <p className="segment-label">Path 1</p>
-          <h3>New to agent runtimes</h3>
-          <p>Start with quickstart and ship your first tool-enabled workflow today.</p>
-          <a href={docsQuickstartUrl}>Open quickstart</a>
-        </article>
-        <article className="segment-card">
-          <p className="segment-label">Path 2</p>
-          <h3>Migrating from Claude Agent SDK</h3>
-          <p>Map concepts and move existing flows with minimal API friction.</p>
-          <a href={docsMigrationUrl}>See migration guide</a>
-        </article>
-        <article className="segment-card">
-          <p className="segment-label">Path 3</p>
-          <h3>Evaluating for production</h3>
-          <p>Review API surface, control primitives, and extension points.</p>
-          <a href={docsApiUrl}>Browse API reference</a>
-        </article>
-      </section>
-
-      <section className="objection-grid" aria-label="Common objections">
-        <article>
-          <h3>Why not just use Claude Agent SDK directly?</h3>
+        </details>
+        <details>
+          <summary>Which providers are supported?</summary>
           <p>
-            Use Open Agent SDK when you want Claude-style APIs plus multi-provider and
-            plugin-style extensibility in one open-source runtime.
+            OpenAI, Google Gemini, and Anthropic are supported today, with explicit
+            provider configuration and compatible endpoint patterns.
           </p>
-        </article>
-        <article>
-          <h3>Is this too heavy for our team?</h3>
-          <p>
-            Start with one-shot prompts, then add sessions, permissions, and tools as
-            your workflows mature.
-          </p>
-        </article>
-        <article>
-          <h3>What if requirements change later?</h3>
-          <p>
-            The core is MIT-licensed and TypeScript-first, so you can customize,
-            audit, and evolve without black-box constraints.
-          </p>
-        </article>
+        </details>
       </section>
 
       <section className="final-cta" aria-label="Final call to action">

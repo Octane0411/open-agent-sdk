@@ -133,34 +133,6 @@ a {
   background: rgba(12, 18, 31, 0.82);
 }
 
-.proof-strip {
-  margin-top: 36px;
-  border: 1px solid var(--line);
-  background: rgba(9, 13, 24, 0.68);
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.proof-strip div {
-  padding: 16px 18px;
-}
-
-.proof-strip div + div {
-  border-left: 1px solid var(--line);
-}
-
-.proof-strip strong {
-  font-size: 14px;
-  letter-spacing: 0.01em;
-}
-
-.proof-strip p {
-  margin: 6px 0 0;
-  color: var(--text-1);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
 .portal-grid {
   margin-top: 44px;
   display: grid;
@@ -204,93 +176,39 @@ a {
   font-weight: 600;
 }
 
-.value-grid {
+.portal-card-primary {
+  border-color: #405a95;
+}
+
+.faq {
   margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.value-grid article {
   border: 1px solid var(--line);
-  background: rgba(10, 14, 27, 0.72);
-  padding: 18px;
+  background: rgba(9, 13, 24, 0.72);
+  padding: 20px;
 }
 
-.value-grid h3 {
-  margin: 0;
-  font-size: 19px;
+.faq h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
   letter-spacing: -0.01em;
 }
 
-.value-grid p {
-  margin: 8px 0 0;
-  color: var(--text-1);
-  line-height: 1.55;
+.faq details {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
 }
 
-.segment-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.faq details:first-of-type {
+  border-top: 0;
+  padding-top: 0;
 }
 
-.segment-card {
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(11, 16, 29, 0.92), rgba(8, 12, 22, 0.88));
-  padding: 18px;
-}
-
-.segment-label {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.segment-card h3 {
-  margin: 8px 0 0;
-  font-size: 20px;
-  letter-spacing: -0.01em;
-}
-
-.segment-card p {
-  margin: 8px 0 0;
-  color: var(--text-1);
-  line-height: 1.5;
-}
-
-.segment-card a {
-  display: inline-block;
-  margin-top: 14px;
-  color: var(--accent);
-  text-decoration: none;
+.faq summary {
+  cursor: pointer;
   font-weight: 600;
 }
 
-.objection-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.objection-grid article {
-  border: 1px solid var(--line);
-  background: rgba(9, 14, 27, 0.6);
-  padding: 18px;
-}
-
-.objection-grid h3 {
-  margin: 0;
-  font-size: 18px;
-  letter-spacing: -0.01em;
-}
-
-.objection-grid p {
+.faq p {
   margin: 8px 0 0;
   color: var(--text-1);
   line-height: 1.55;
@@ -372,22 +290,7 @@ time {
 }
 
 @media (max-width: 920px) {
-  .proof-strip,
   .portal-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .proof-strip div + div {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-  }
-
-  .value-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .segment-grid,
-  .objection-grid {
     grid-template-columns: 1fr;
   }
 
