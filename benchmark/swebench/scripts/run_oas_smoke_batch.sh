@@ -28,6 +28,13 @@ DATASET="${SWEBENCH_DATASET:-princeton-nlp/SWE-bench_Lite}"
 BATCH_ID="oas-smoke-batch-$(date +%Y%m%d-%H%M%S)"
 BATCH_LOG="${REPORT_DIR}/${BATCH_ID}.log"
 BATCH_SUMMARY_JSONL="${REPORT_DIR}/${BATCH_ID}.jsonl"
+touch "${BATCH_SUMMARY_JSONL}"
+
+on_exit() {
+  echo "" | tee -a "${BATCH_LOG}"
+  echo "batch_summary=${BATCH_SUMMARY_JSONL}" | tee -a "${BATCH_LOG}"
+}
+trap on_exit EXIT
 
 echo "batch_id=${BATCH_ID}" | tee -a "${BATCH_LOG}"
 echo "dataset=${DATASET} split=${SPLIT} count=${COUNT} start_index=${START_INDEX}" | tee -a "${BATCH_LOG}"
@@ -71,20 +78,43 @@ fi
 for instance_id in "${INSTANCE_IDS[@]}"; do
   echo "" | tee -a "${BATCH_LOG}"
   echo "=== instance=${instance_id} ===" | tee -a "${BATCH_LOG}"
+  set +e
   RUN_OUTPUT="$(
     SWEBENCH_INSTANCE_ID="${instance_id}" \
     "${SCRIPT_DIR}/run_oas_smoke_one.sh" 2>&1 | tee -a "${BATCH_LOG}"
   )"
+  run_exit_code=$?
+  set -e
 
   run_id="$(printf '%s\n' "${RUN_OUTPUT}" | awk -F= '/^run_id=/{print $2}' | tail -1)"
+  if [[ "${run_exit_code}" -ne 0 && -z "${run_id}" ]]; then
+    echo "{\"instance_id\":\"${instance_id}\",\"run_id\":null,\"status\":\"runner_error\",\"exit_code\":${run_exit_code}}" >> "${BATCH_SUMMARY_JSONL}"
+    continue
+  fi
   if [[ -z "${run_id}" ]]; then
-    echo "{\"instance_id\":\"${instance_id}\",\"run_id\":null,\"status\":\"runner_error\"}" >> "${BATCH_SUMMARY_JSONL}"
+    echo "{\"instance_id\":\"${instance_id}\",\"run_id\":null,\"status\":\"runner_error\",\"exit_code\":${run_exit_code}}" >> "${BATCH_SUMMARY_JSONL}"
     continue
   fi
 
   report_file="$(find "${REPORT_DIR}" -maxdepth 1 -type f -name "*.${run_id}.json" | head -1)"
   if [[ -z "${report_file}" ]]; then
-    echo "{\"instance_id\":\"${instance_id}\",\"run_id\":\"${run_id}\",\"status\":\"missing_report\"}" >> "${BATCH_SUMMARY_JSONL}"
+    report_file="$(find "${REPO_ROOT}" -maxdepth 1 -type f -name "*.${run_id}.json" | head -1)"
+    if [[ -n "${report_file}" ]]; then
+      report_base="$(basename "${report_file}")"
+      mv "${report_file}" "${REPORT_DIR}/${report_base}"
+      report_file="${REPORT_DIR}/${report_base}"
+    fi
+  fi
+  if [[ -z "${report_file}" ]]; then
+    report_file="$(find "${SWEBENCH_DIR}" -maxdepth 1 -type f -name "*.${run_id}.json" | head -1)"
+    if [[ -n "${report_file}" ]]; then
+      report_base="$(basename "${report_file}")"
+      mv "${report_file}" "${REPORT_DIR}/${report_base}"
+      report_file="${REPORT_DIR}/${report_base}"
+    fi
+  fi
+  if [[ -z "${report_file}" ]]; then
+    echo "{\"instance_id\":\"${instance_id}\",\"run_id\":\"${run_id}\",\"status\":\"missing_report\",\"exit_code\":${run_exit_code}}" >> "${BATCH_SUMMARY_JSONL}"
     continue
   fi
 
@@ -119,7 +149,4 @@ row = {
 print(json.dumps(row, ensure_ascii=True))
 PY
 done
-
-echo "" | tee -a "${BATCH_LOG}"
-echo "batch_summary=${BATCH_SUMMARY_JSONL}" | tee -a "${BATCH_LOG}"
 python "${SCRIPT_DIR}/summarize_reports.py" --reports-dir "${REPORT_DIR}" --limit 20 | tee -a "${BATCH_LOG}"

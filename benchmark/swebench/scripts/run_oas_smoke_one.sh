@@ -119,6 +119,8 @@ fi
 REPORT_BASENAME="${OAS_MODEL}.${RUN_ID}.json"
 if [[ -f "${SWEBENCH_DIR}/${REPORT_BASENAME}" ]]; then
   mv "${SWEBENCH_DIR}/${REPORT_BASENAME}" "${REPORT_DIR}/${REPORT_BASENAME}"
+elif [[ -f "${REPO_ROOT}/${REPORT_BASENAME}" ]]; then
+  mv "${REPO_ROOT}/${REPORT_BASENAME}" "${REPORT_DIR}/${REPORT_BASENAME}"
 fi
 
 echo "[3/3] Done"
