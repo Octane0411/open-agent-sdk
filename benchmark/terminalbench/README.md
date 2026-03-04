@@ -70,6 +70,40 @@ harbor run -d terminal-bench@2.0 \
   --n-concurrent 4
 ```
 
+## Overnight Automation (Low Disk)
+
+Use the provided runner to execute tasks sequentially while automatically cleaning old terminal-bench images between batches.
+
+Scripts:
+
+- `benchmark/terminalbench/scripts/run-terminalbench-overnight.sh`
+- `benchmark/terminalbench/scripts/cleanup-terminalbench-images.sh`
+
+The overnight runner always sources **main workspace** `.env` (via git common dir), so it works correctly even when executed from a git worktree.
+
+Example (sleep-safe smoke run):
+
+```bash
+chmod +x benchmark/terminalbench/scripts/*.sh
+
+./benchmark/terminalbench/scripts/run-terminalbench-overnight.sh \
+  --tasks-file benchmark/terminalbench/task-lists/smoke-5.txt \
+  --batch-size 2 \
+  --keep-images 1 \
+  --task-repeats 1 \
+  --agent-timeout-multiplier 0.6
+```
+
+Image cleanup only (manual):
+
+```bash
+# Preview
+./benchmark/terminalbench/scripts/cleanup-terminalbench-images.sh --dry-run --keep 2
+
+# Apply
+./benchmark/terminalbench/scripts/cleanup-terminalbench-images.sh --keep 2
+```
+
 ## Where to Check Results
 
 ```bash

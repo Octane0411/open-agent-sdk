@@ -1,0 +1,6 @@
+# One task per line; lines starting with # are ignored
+fix-git
+configure-git-webserver
+llm-inference-batching-scheduler
+gpt2-codegolf
+prove-plus-comm
