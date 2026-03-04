@@ -108,14 +108,6 @@ export default function HomePage() {
           Ship with Claude Agent SDK-style APIs while keeping the flexibility to
           choose providers and extensions as your product evolves.
         </p>
-        <div className="hero-cta">
-          <a className="btn btn-primary" href={npmUrl} target="_blank" rel="noreferrer">
-            Install open-agent-sdk
-          </a>
-          <a className="btn btn-secondary" href={githubUrl} target="_blank" rel="noreferrer">
-            Star on GitHub
-          </a>
-        </div>
       </section>
     </main>
   );
