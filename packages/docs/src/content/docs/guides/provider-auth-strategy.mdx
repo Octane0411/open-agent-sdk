@@ -1,0 +1,52 @@
+---
+title: Provider & Auth Strategy
+description: Choose providers, credentials, and runtime defaults for stable production use.
+---
+
+Open Agent SDK is API-aligned with Claude Agent SDK workflows, but intentionally supports a broader provider strategy.
+
+Use this guide to decide how to configure providers without locking your architecture too early.
+
+## Provider selection model
+
+Pick one default provider per environment, then keep at least one fallback provider for operational resilience.
+
+- **Primary provider:** best fit for your latency, cost, and model quality targets
+- **Fallback provider:** used for outages, quota limits, or targeted workloads
+- **Migration provider:** temporary provider during staged migrations
+
+## Authentication patterns
+
+Recommended pattern:
+
+1. Store provider keys in environment variables
+2. Resolve credentials at runtime by environment
+3. Keep provider selection explicit in integration code
+
+Typical variables:
+
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `ANTHROPIC_API_KEY`
+
+## Base URL strategy
+
+Use `baseURL` only when you need:
+
+- API gateway routing
+- enterprise proxy requirements
+- compatible endpoints in controlled environments
+
+Keep default base URLs in local development unless you have a hard requirement to override.
+
+## Rollout checklist
+
+- Start with one stable provider in production
+- Add integration tests for one fallback provider
+- Validate session, permission, and tool behavior for both providers
+- Track cost and latency before switching defaults
+
+## Continue
+
+- [Permissions & Safety](/guides/permissions-and-safety/)
+- [API Reference](/api-reference/overview/)

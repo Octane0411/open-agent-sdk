@@ -29,23 +29,31 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: 'Getting Started',
+          label: 'Start Here',
           items: [
+            { label: 'Documentation Overview', link: '/' },
             { label: 'Installation', link: '/getting-started/installation/' },
             { label: 'Quickstart', link: '/getting-started/quickstart/' }
           ]
         },
         {
-          label: 'API Reference',
+          label: 'Build',
           items: [
-            { label: 'API Reference', link: '/api-reference/overview/' }
+            { label: 'Provider & Auth Strategy', link: '/guides/provider-auth-strategy/' },
+            { label: 'Permissions & Safety', link: '/guides/permissions-and-safety/' }
           ]
         },
         {
-          label: 'Migration',
+          label: 'Migrate',
           items: [
-            { label: 'Diff vs Claude Agent SDK', link: '/migration/claude-agent-sdk-diff/' },
-            { label: 'Quick Migration Guide', link: '/migration/quick-migration/' }
+            { label: 'Quick Migration Guide', link: '/migration/quick-migration/' },
+            { label: 'Diff vs Claude Agent SDK', link: '/migration/claude-agent-sdk-diff/' }
+          ]
+        },
+        {
+          label: 'Reference',
+          items: [
+            { label: 'API Reference', link: '/api-reference/overview/' }
           ]
         }
       ]

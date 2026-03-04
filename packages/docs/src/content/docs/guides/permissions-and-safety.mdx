@@ -1,0 +1,47 @@
+---
+title: Permissions & Safety
+description: Configure permission modes and guardrails before enabling autonomous tool usage.
+---
+
+Use this guide to set a safe default before broad rollout.
+
+## Permission modes
+
+Open Agent SDK supports these permission modes:
+
+- `default`
+- `acceptEdits`
+- `bypassPermissions`
+- `plan`
+
+Start with `default` for most production traffic.
+
+Only use `bypassPermissions` for trusted automation contexts where safety controls are handled externally.
+
+## Recommended rollout path
+
+1. Start with `permissionMode: 'default'`
+2. Add a typed `canUseTool` callback for allow/deny policy
+3. Audit sensitive tools (`Bash`, write/edit actions, network calls)
+4. Gate high-risk actions with explicit approval or environment checks
+
+## Policy patterns
+
+Good patterns:
+
+- deny shell execution in untrusted user contexts
+- allow read-only tools broadly
+- restrict write and network tools by environment or tenant
+- log denied actions for policy tuning
+
+## Validation checklist
+
+- One happy-path tool execution flow
+- One denied sensitive tool flow
+- One resumed session with same policy behavior
+- One forked session preserving safety constraints
+
+## Continue
+
+- [Quick Migration Guide](/migration/quick-migration/)
+- [API Reference](/api-reference/overview/)

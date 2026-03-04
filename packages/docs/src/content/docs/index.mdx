@@ -1,25 +1,42 @@
 ---
 title: Open Agent SDK Documentation
-description: Practical docs for API usage, TypeScript integration, and migration from Claude Agent SDK.
+description: Open-source docs for Claude Agent SDK-style APIs, TypeScript integration, and multi-provider agent workflows.
 ---
 
-Open Agent SDK is a TypeScript SDK for building production-grade AI agents with tool use, session persistence, permissions, hooks, and multi-provider support.
+Open Agent SDK is an open-source TypeScript agent SDK implemented around Claude Agent SDK API patterns, with broader provider and extension options for production teams.
 
-This docs site is organized around:
+Use this documentation to move from install to production-ready workflows:
 
-- API reference for prompt/session/provider usage
-- TypeScript type reference for strict integration
-- Migration guidance from Claude Agent SDK
+- Learn the runtime model and API surface quickly
+- Implement tools, sessions, permissions, and hooks with confidence
+- Migrate Claude Agent SDK-style code with minimal friction
 
 ## Quick links
 
 - [Installation](/getting-started/installation/)
 - [Quickstart](/getting-started/quickstart/)
+- [Provider & Auth Strategy](/guides/provider-auth-strategy/)
+- [Permissions & Safety](/guides/permissions-and-safety/)
 - [API Reference](/api-reference/overview/)
 - [Diff vs Claude Agent SDK](/migration/claude-agent-sdk-diff/)
 - [Quick Migration Guide](/migration/quick-migration/)
+
+## Why teams adopt Open Agent SDK
+
+- **Open-source by default:** MIT-licensed core and transparent implementation
+- **Claude-style API ergonomics:** Familiar mental model and aligned workflow patterns
+- **Provider flexibility:** Integrate OpenAI, Gemini, and Anthropic without architecture rewrites
+- **Production controls:** First-class tooling for sessions, permissions, hooks, and MCP
 
 ## Notes
 
 - Engineering workflows and ADRs still live in repository root `docs/`.
 - Current release line: `0.1.0-alpha.x`.
+
+## Suggested path
+
+1. [Install the SDK](/getting-started/installation/)
+2. [Run Quickstart](/getting-started/quickstart/)
+3. [Set provider/auth defaults](/guides/provider-auth-strategy/)
+4. [Configure permissions and safety](/guides/permissions-and-safety/)
+5. [Review migration details](/migration/quick-migration/)
