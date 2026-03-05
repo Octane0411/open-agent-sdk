@@ -1,0 +1,66 @@
+---
+import EditLink from 'virtual:starlight/components/EditLink';
+import LastUpdated from 'virtual:starlight/components/LastUpdated';
+import Pagination from 'virtual:starlight/components/Pagination';
+---
+
+<footer class="sl-flex">
+  <div class="meta sl-flex">
+    <EditLink />
+    <LastUpdated />
+  </div>
+
+  <Pagination />
+
+  <div class="brand-links sl-flex" aria-label="Open Agent SDK links">
+    <a href="https://oasai.studio/" target="_blank" rel="noreferrer">Official Website</a>
+    <a href="https://x.com/OasAIStudio" target="_blank" rel="noreferrer">X</a>
+    <a href="https://github.com/OasAIStudio/open-agent-sdk" target="_blank" rel="noreferrer">GitHub</a>
+  </div>
+</footer>
+
+<style>
+  @layer starlight.core {
+    footer {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .meta {
+      gap: 0.75rem 3rem;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-top: 3rem;
+      font-size: var(--sl-text-sm);
+      color: var(--sl-color-gray-3);
+    }
+
+    .meta > :global(p:only-child) {
+      margin-inline-start: auto;
+    }
+  }
+
+  @layer starlight.components {
+    .brand-links {
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--sl-color-hairline-light);
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-sm);
+    }
+
+    .brand-links a {
+      color: var(--sl-color-gray-2);
+      text-decoration: none;
+    }
+
+    .brand-links a:hover,
+    .brand-links a:focus-visible {
+      color: var(--sl-color-accent-high);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+  }
+</style>
