@@ -3,7 +3,7 @@
 
   <h1>Open Agent SDK</h1>
 
-  <p><strong>Minimal, production-ready TypeScript SDK for building tool-using AI agents.</strong></p>
+  <p><strong>Build production AI agents in TypeScript with tool use, permissions, and multi-provider support.</strong></p>
 
   <p>
     <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License: MIT"></a>
@@ -12,7 +12,7 @@
   </p>
 </div>
 
-Build agents with a ReAct loop, tool permissions, hooks, subagents, session persistence, and multi-provider support.
+Lightweight open-source alternative to Claude Agent SDK concepts, focused on permissioned runtime and practical agent workflows.
 
 ## 1-Minute Quickstart
 
@@ -30,19 +30,38 @@ Or with Bun:
 bunx open-agent-sdk@alpha init my-agent
 ```
 
-## 30-Second Demo
+## What You Can Build
 
-<div align="center">
-  <img src="./docs/branding/pixel-demo.svg" alt="Open Agent SDK Demo" width="100%">
-</div>
-
-More runnable demos: [Demo Gallery](./DEMO_GALLERY.md).
+- Coding agents (read repo, edit files, run commands, validate changes)
+- Research agents (search, fetch, summarize, and structure outputs)
+- CLI copilots (interactive sessions with resumable history)
+- Permissioned automation workflows (control risky tools at runtime)
 
 ## Why Open Agent SDK
 
-- Production safety controls: permission modes (`default`, `plan`, `acceptEdits`, `bypassPermissions`) and per-tool gating via `canUseTool`.
-- Agent extensibility core: hooks, skills, subagents, and MCP-compatible tool integration.
-- Reproducible evaluation path: local SWE-bench and Terminal-bench harnesses in `benchmark/`.
+- Permissioned runtime by default: control tool execution with 4 explicit modes.
+- Extensibility primitives: hooks, skills, subagents, and MCP-compatible tools.
+- Reproducible eval path: local SWE-bench and Terminal-bench harnesses.
+
+### Permission System (Core Differentiator)
+
+```ts
+const session = await createSession({
+  provider: "openai",
+  model: "gpt-5.3-codex",
+  apiKey: process.env.OPENAI_API_KEY,
+  permissionMode: "default", // or: plan | acceptEdits | bypassPermissions
+  canUseTool: async (toolName, input) => {
+    if (toolName === "Bash") return { behavior: "deny", message: "Bash blocked in this environment" };
+    if ((toolName === "Write" || toolName === "Edit") && String(input.file_path || "").startsWith("src/")) {
+      return { behavior: "allow" };
+    }
+    return { behavior: "ask" };
+  },
+});
+```
+
+See permission API details in [API Reference](./docs/api-reference.md#permissions).
 
 See details in:
 - [API Reference](./docs/api-reference.md)
@@ -50,13 +69,24 @@ See details in:
 - [Terminal-bench Guide](./benchmark/terminalbench/README.md)
 - [Benchmarks](./BENCHMARKS.md)
 
-## Concepts
+## Architecture
 
-- `Agent loop`: multi-turn ReAct with tool execution.
-- `Tool permissions`: explicit allow/deny policy hooks.
-- `Hooks`: lifecycle/tool events for observability and control.
-- `Subagents`: task delegation and orchestration.
-- `Sessions`: create, save, resume, and fork conversations.
+```mermaid
+flowchart TD
+  LLM[LLM Provider] --> LOOP[Agent Loop]
+  LOOP --> TOOLS[Tools]
+  TOOLS --> PERM[Permission Layer]
+  LOOP --> HOOKS[Hooks / Observability]
+  LOOP --> SESS[Session Storage]
+  LOOP --> SUB[Subagents / Task Orchestration]
+```
+
+## Demo (Updating)
+
+Demo assets will be refreshed with a coding-agent run sequence.
+
+- Current runnable scripts: [Demo Gallery](./DEMO_GALLERY.md)
+- Upcoming featured demo: repo read -> test -> patch -> re-test
 
 ## Example Gallery
 
