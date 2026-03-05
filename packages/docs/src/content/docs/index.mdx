@@ -1,9 +1,10 @@
 ---
 title: Open Agent SDK Documentation
 description: Open-source docs for Claude Agent SDK-style APIs, TypeScript integration, and multi-provider agent workflows.
+tableOfContents: false
 ---
 
-import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import { LinkCard, CardGrid, Steps } from '@astrojs/starlight/components';
 
 Open Agent SDK is an open-source TypeScript SDK for building production agent workflows with Claude Agent SDK-style APIs, plus multi-provider support and extension points for real systems.
 
@@ -19,49 +20,27 @@ Use Open Agent SDK when you need:
 ## Start Here
 
 <CardGrid>
-  <Card title="Installation" href="/getting-started/installation/">
-    Install the package and verify runtime prerequisites.
-  </Card>
-  <Card title="Quickstart" href="/getting-started/quickstart/">
-    Run your first one-shot prompt and stateful session.
-  </Card>
-  <Card title="Provider & Auth" href="/guides/provider-auth-strategy/">
-    Set stable provider defaults and credential strategy.
-  </Card>
-  <Card title="Permissions & Safety" href="/guides/permissions-and-safety/">
-    Configure `permissionMode` and policy callbacks.
-  </Card>
+  <LinkCard title="Installation" href="/getting-started/installation/" description="Install the package and verify runtime prerequisites." />
+  <LinkCard title="Quickstart" href="/getting-started/quickstart/" description="Run your first one-shot prompt and stateful session." />
+  <LinkCard title="Provider & Auth" href="/guides/provider-auth-strategy/" description="Set stable provider defaults and credential strategy." />
+  <LinkCard title="Permissions & Safety" href="/guides/permissions-and-safety/" description="Configure permissionMode and policy callbacks." />
 </CardGrid>
 
 ## API Reference
 
 <CardGrid>
-  <Card title="API Overview" href="/api-reference/overview/">
-    Module boundaries, exports, and reference map.
-  </Card>
-  <Card title="Core Functions" href="/api-reference/overview/#core-functions">
-    `prompt`, `createSession`, `resumeSession`, `forkSession`.
-  </Card>
-  <Card title="Session Lifecycle" href="/api-reference/overview/#session-lifecycle">
-    Session object methods, streaming, and state transitions.
-  </Card>
-  <Card title="Types" href="/api-reference/overview/#types">
-    Prompt/session options, permissions, output formats, and hooks.
-  </Card>
-  <Card title="Tool Input/Output Types" href="/api-reference/overview/#tool-inputoutput-types">
-    Built-in tool input and output type exports.
-  </Card>
+  <LinkCard title="API Overview" href="/api-reference/overview/" description="Module boundaries, exports, and reference map." />
+  <LinkCard title="Core Functions" href="/api-reference/overview/#core-functions" description="prompt, createSession, resumeSession, forkSession." />
+  <LinkCard title="Session Lifecycle" href="/api-reference/overview/#session-lifecycle" description="Session object methods, streaming, and state transitions." />
+  <LinkCard title="Types" href="/api-reference/overview/#types" description="Prompt/session options, permissions, output formats, and hooks." />
+  <LinkCard title="Tool Input/Output Types" href="/api-reference/overview/#tool-inputoutput-types" description="Built-in tool input and output type exports." />
 </CardGrid>
 
 ## Migration
 
 <CardGrid>
-  <Card title="Quick Migration Guide" href="/migration/quick-migration/">
-    Step-by-step migration checklist for existing integrations.
-  </Card>
-  <Card title="Diff vs Claude Agent SDK" href="/migration/claude-agent-sdk-diff/">
-    Capability-level and API-shape differences.
-  </Card>
+  <LinkCard title="Quick Migration Guide" href="/migration/quick-migration/" description="Step-by-step migration checklist for existing integrations." />
+  <LinkCard title="Diff vs Claude Agent SDK" href="/migration/claude-agent-sdk-diff/" description="Capability-level and API-shape differences." />
 </CardGrid>
 
 ## Recommended Learning Path
