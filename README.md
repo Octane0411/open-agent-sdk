@@ -92,7 +92,6 @@ Ecosystem integrations:
 - GitHub: https://github.com/OasAIStudio/open-agent-sdk
 - [Introduction](./docs/introduction.md)
 - [Comparison with Claude Agent SDK](./docs/claude-agent-sdk-comparison.md)
-- [1000+ Stars Execution Plan](./docs/workflows/1000-stars-execution.md)
 
 ## Monorepo Layout
 
