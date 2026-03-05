@@ -79,10 +79,19 @@ main .sl-markdown-content h1 {
   font-weight: 700;
 }
 
-main .sl-markdown-content :is(pre, .expressive-code) {
+main .sl-markdown-content pre {
   border: 1px solid var(--sl-color-hairline);
   border-radius: 10px;
   box-shadow: var(--sl-shadow-sm);
+}
+
+main .sl-markdown-content .expressive-code {
+  border: 0;
+  box-shadow: none;
+}
+
+main .sl-markdown-content .expressive-code .frame.is-terminal .header {
+  display: none;
 }
 
 .card,

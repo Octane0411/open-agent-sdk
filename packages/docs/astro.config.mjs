@@ -18,7 +18,8 @@ export default defineConfig({
       ],
       components: {
         ThemeSelect: './src/components/ThemeToggle.astro',
-        SiteTitle: './src/components/SiteTitle.astro'
+        SiteTitle: './src/components/SiteTitle.astro',
+        Footer: './src/components/Footer.astro'
       },
       social: [
         {

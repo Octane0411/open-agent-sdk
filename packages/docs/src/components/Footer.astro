@@ -1,0 +1,125 @@
+---
+import EditLink from 'virtual:starlight/components/EditLink';
+import LastUpdated from 'virtual:starlight/components/LastUpdated';
+import Pagination from 'virtual:starlight/components/Pagination';
+import { logos } from 'virtual:starlight/user-images';
+import config from 'virtual:starlight/user-config';
+---
+
+<footer class="sl-flex">
+  <div class="meta sl-flex">
+    <EditLink />
+    <LastUpdated />
+  </div>
+
+  <Pagination />
+
+  <div class="brand-strip sl-flex" aria-label="Open Agent SDK brand and social links">
+    <div class="brand-mark sl-flex">
+      {
+        config.logo && logos.dark && (
+          <>
+            <img
+              class:list={{ 'light:sl-hidden print:hidden': !('src' in config.logo) }}
+              alt={config.logo.alt}
+              src={logos.dark.src}
+              width={logos.dark.width}
+              height={logos.dark.height}
+            />
+            {!('src' in config.logo) && (
+              <img
+                class="dark:sl-hidden print:block"
+                alt={config.logo.alt}
+                src={logos.light?.src}
+                width={logos.light?.width}
+                height={logos.light?.height}
+              />
+            )}
+          </>
+        )
+      }
+      <p>Open-source agent SDK for production workflows</p>
+    </div>
+    <div class="brand-links sl-flex">
+      <a href="https://x.com/OasAIStudio" target="_blank" rel="noreferrer">X</a>
+      <a href="https://github.com/OasAIStudio/open-agent-sdk" target="_blank" rel="noreferrer">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  @layer starlight.core {
+    footer {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .meta {
+      gap: 0.75rem 3rem;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-top: 3rem;
+      font-size: var(--sl-text-sm);
+      color: var(--sl-color-gray-3);
+    }
+
+    .meta > :global(p:only-child) {
+      margin-inline-start: auto;
+    }
+  }
+
+  @layer starlight.components {
+    .brand-strip {
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--sl-color-hairline-light);
+    }
+
+    .brand-mark {
+      align-items: center;
+      gap: 0.8rem;
+      min-height: 2rem;
+    }
+
+    .brand-mark img {
+      height: 22px;
+      width: auto;
+      max-width: 210px;
+      opacity: 0.95;
+    }
+
+    .brand-mark p {
+      margin: 0;
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-xs);
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+    }
+
+    .brand-links {
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: var(--sl-text-sm);
+    }
+
+    .brand-links a {
+      color: var(--sl-color-gray-2);
+      text-decoration: none;
+      border: 1px solid var(--sl-color-hairline);
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem;
+      line-height: 1;
+    }
+
+    .brand-links a:hover,
+    .brand-links a:focus-visible {
+      color: var(--sl-color-accent-high);
+      border-color: color-mix(in oklab, var(--sl-color-accent) 45%, var(--sl-color-hairline) 55%);
+      background: color-mix(in oklab, var(--sl-color-accent-low) 24%, var(--sl-color-bg) 76%);
+    }
+  }
+</style>
