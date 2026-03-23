@@ -117,6 +117,15 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         """Path to the install script template."""
         return Path(__file__).parent / "install-open-agent-sdk.sh.j2"
 
+    def _setup_env(self) -> dict[str, str]:
+        """Pass mirror/local-install env vars to install script."""
+        env = super()._setup_env()
+        for key in ("OAS_GITHUB_MIRROR", "OAS_NPM_REGISTRIES", "OAS_LOCAL_TARBALL_URL"):
+            val = os.environ.get(key)
+            if val:
+                env[key] = val
+        return env
+
     def create_run_agent_commands(self, instruction: str) -> list[ExecInput]:
         model = self.model_name or "gemini-2.0-flash"
 
@@ -138,21 +147,44 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         if is_minimax_model(model):
             cli_flags = f'--provider anthropic --base-url "$ANTHROPIC_BASE_URL" {cli_flags}'
         elif is_codex_model(model):
-            # Codex provider with API key or OAuth credentials
+            # Codex provider with API key or OAuth credentials.
+            # OAuth JSON is written to a temp file to avoid shell quoting issues
+            # (JSON contains double quotes that break $VAR expansion in shell).
             codex_auth_flags = '--provider codex'
             if os.environ.get("OAS_CODEX_API_KEY"):
                 codex_auth_flags += ' --codex-api-key "$OAS_CODEX_API_KEY"'
             elif os.environ.get("OAS_CODEX_OAUTH_JSON"):
-                codex_auth_flags += ' --codex-oauth-json "$OAS_CODEX_OAUTH_JSON"'
+                codex_auth_flags += ' --codex-auth-path /tmp/.oas-codex-creds.json'
             cli_flags = f'{codex_auth_flags} {cli_flags}'
 
         # Use heredoc to safely pass instruction without escaping
         # This handles multi-line text and special characters correctly
         # Unset proxy variables to avoid connection issues in Docker containers
         # (containers can't access host's 127.0.0.1 proxy)
+        # Write OAuth JSON to credentials file using heredoc (avoids shell quoting issues).
+        # Also unset OAS_CODEX_OAUTH_JSON so the CLI doesn't try to parse it from env.
+        codex_creds_setup = ""
+        oauth_json = os.environ.get("OAS_CODEX_OAUTH_JSON", "").strip()
+        if is_codex_model(model) and oauth_json:
+            # Wrap in provider map format: {"openai-codex": <credentials>}
+            import json
+            try:
+                creds = json.loads(oauth_json)
+                # If already wrapped, use as-is; otherwise wrap it
+                if "openai-codex" not in creds:
+                    creds = {"openai-codex": creds}
+                wrapped_json = json.dumps(creds)
+            except json.JSONDecodeError:
+                wrapped_json = oauth_json
+            codex_creds_setup = f"""cat > /tmp/.oas-codex-creds.json <<'CREDS_EOF'
+{wrapped_json}
+CREDS_EOF
+unset OAS_CODEX_OAUTH_JSON && \\
+"""
+
         command = f"""export PATH="/root/.bun/bin:$HOME/.bun/bin:$PATH" && \\
 unset https_proxy http_proxy all_proxy HTTPS_PROXY HTTP_PROXY ALL_PROXY && \\
-WORKDIR="/workspace" && \\
+{codex_creds_setup}WORKDIR="/workspace" && \\
 if [ ! -d "$WORKDIR" ]; then \\
   if [ -d /app/personal-site ]; then WORKDIR="/app/personal-site"; \\
   elif [ -d /app ]; then WORKDIR="/app"; \\

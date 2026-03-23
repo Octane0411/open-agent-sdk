@@ -213,11 +213,12 @@ run_single_trial() {
     cmd+=(--ae "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}")
     cmd+=(--ae "ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}")
   elif [ "$is_codex" = true ]; then
+    # Note: OAS_CODEX_OAUTH_JSON is NOT passed via --ae because:
+    # 1. JSON with quotes breaks shell escaping in Docker env vars
+    # 2. The adapter embeds credentials directly in the command via heredoc
+    # The adapter reads OAS_CODEX_OAUTH_JSON from the host's os.environ instead.
     if [ -n "${OAS_CODEX_API_KEY:-}" ]; then
       cmd+=(--ae "OAS_CODEX_API_KEY=${OAS_CODEX_API_KEY}")
-    fi
-    if [ -n "${OAS_CODEX_OAUTH_JSON:-}" ]; then
-      cmd+=(--ae "OAS_CODEX_OAUTH_JSON=${OAS_CODEX_OAUTH_JSON}")
     fi
   elif [[ "$model_lower" == gemini* ]] || [[ "$model_lower" == google* ]]; then
     cmd+=(--ae "GEMINI_API_KEY=${GEMINI_API_KEY:-}")

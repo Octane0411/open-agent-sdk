@@ -61,8 +61,26 @@ if ! command -v bun &> /dev/null; then
 fi
 export PATH="$HOME/.bun/bin:$PATH"
 
-# Install CLI from npm globally (force latest canary)
-install_cli_with_registry_fallback
+# Install CLI: from local tarballs (OAS_LOCAL_TARBALL_URL) or npm registry
+if [ -n "${OAS_LOCAL_TARBALL_URL:-}" ]; then
+    echo "Installing from local tarballs at ${OAS_LOCAL_TARBALL_URL}"
+    mkdir -p /tmp/oas-local && cd /tmp/oas-local
+    curl -fsSL "${OAS_LOCAL_TARBALL_URL}/open-agent-sdk-0.1.0-alpha.1.tgz" -o sdk.tgz
+    curl -fsSL "${OAS_LOCAL_TARBALL_URL}/open-agent-sdk-cli-0.1.0-alpha.1.tgz" -o cli.tgz
+    mkdir -p sdk cli
+    tar xzf sdk.tgz -C sdk --strip-components=1
+    tar xzf cli.tgz -C cli --strip-components=1
+    # Wire CLI to use local SDK via workspace
+    printf '{"private":true,"workspaces":["sdk","cli"]}\n' > package.json
+    cd cli && sed -i 's|"open-agent-sdk": "[^"]*"|"open-agent-sdk": "workspace:*"|' package.json && cd ..
+    bun install --no-save
+    # Symlink CLI binary globally
+    ln -sf /tmp/oas-local/cli/src/index.ts "$HOME/.bun/bin/oas"
+    chmod +x "$HOME/.bun/bin/oas"
+    cd /
+else
+    install_cli_with_registry_fallback
+fi
 
 # Daytona may execute agent commands as non-root user.
 # Keep using bun global install under /root, but make it traversable/readable.
