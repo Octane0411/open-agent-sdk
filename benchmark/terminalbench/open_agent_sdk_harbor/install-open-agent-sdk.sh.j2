@@ -22,7 +22,7 @@ install_cli_with_registry_fallback() {
     # Comma-separated registries, can be overridden by environment.
     # Example:
     #   OAS_NPM_REGISTRIES="https://registry.npmjs.org,https://registry.npmmirror.com"
-    local registries="${OAS_NPM_REGISTRIES:-https://registry.npmjs.org,https://registry.npmmirror.com}"
+    local registries="${OAS_NPM_REGISTRIES:-https://registry.npmmirror.com,https://registry.npmjs.org}"
     local pkg="@open-agent-sdk/cli@canary"
 
     IFS=',' read -r -a registry_list <<< "$registries"
@@ -50,8 +50,14 @@ elif command -v apt-get &> /dev/null; then
 fi
 
 # Install Bun if not present
+# The official installer downloads from github.com which may be blocked in China.
+# Set OAS_GITHUB_MIRROR to use a GitHub mirror (e.g., https://gh-proxy.com/github.com).
+# The bun install script respects the GITHUB env var for the download URL.
 if ! command -v bun &> /dev/null; then
+    export GITHUB="${OAS_GITHUB_MIRROR:-https://github.com}"
+    echo "Installing Bun (GITHUB=${GITHUB})"
     retry 5 3 bash -c "curl -fsSL --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors https://bun.sh/install | bash"
+    unset GITHUB
 fi
 export PATH="$HOME/.bun/bin:$PATH"
 

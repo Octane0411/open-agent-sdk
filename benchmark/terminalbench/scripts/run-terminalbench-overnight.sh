@@ -134,6 +134,8 @@ while IFS= read -r task_name; do
     --ae "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
     --ae "ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL"
     --ae "OAS_HARBOR_SAVE_TRAJECTORY=1"
+    ${OAS_GITHUB_MIRROR:+--ae "OAS_GITHUB_MIRROR=$OAS_GITHUB_MIRROR"}
+    ${OAS_NPM_REGISTRIES:+--ae "OAS_NPM_REGISTRIES=$OAS_NPM_REGISTRIES"}
     --task-name "$task_name"
     --n-concurrent 1
     -k "$TASK_REPEATS"
