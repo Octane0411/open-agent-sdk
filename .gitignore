@@ -66,6 +66,10 @@ RELEASE_NOTES.md
 jobs/
 trajectories/
 run-bench-test.sh
+benchmark/terminalbench/.local-tarballs/
+open-agent-sdk*.tgz
+packages/cli/open-agent-sdk-cli*.tgz
+packages/core/open-agent-sdk*.tgz
 
 # Next.js build output
 .next/

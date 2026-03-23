@@ -78,6 +78,25 @@ Scripts:
 
 - `benchmark/terminalbench/scripts/run-terminalbench-overnight.sh`
 - `benchmark/terminalbench/scripts/cleanup-terminalbench-images.sh`
+- `benchmark/terminalbench/scripts/pack-local-tarballs.sh`
+
+To pre-install the local SDK/CLI build into cached task images and avoid repeated
+registry installs on every trial:
+
+```bash
+./benchmark/terminalbench/prewarm-images.sh \
+  --tasks-file benchmark/terminalbench/task-lists/smoke-5.txt \
+  --pack-local-tarballs
+```
+
+Notes:
+
+- This builds fresh local tarballs, serves them temporarily on `host.docker.internal`,
+  and bakes `bun`, `oas`, `uv`, and `pytest` into each task image.
+- Override `--tarball-host` or `--tarball-port` if your Docker runtime cannot reach
+  `host.docker.internal:8765`.
+- After pre-warm, normal Harbor runs reuse the pre-installed `oas` fast path and do
+  not need `OAS_LOCAL_TARBALL_URL`.
 
 The overnight runner always sources **main workspace** `.env` (via git common dir), so it works correctly even when executed from a git worktree.
 

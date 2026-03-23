@@ -120,6 +120,9 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
     def _setup_env(self) -> dict[str, str]:
         """Pass mirror/local-install env vars to install script."""
         env = super()._setup_env()
+        version = self.version()
+        if version:
+            env["OAS_PACKAGE_VERSION"] = version
         for key in ("OAS_GITHUB_MIRROR", "OAS_NPM_REGISTRIES", "OAS_LOCAL_TARBALL_URL"):
             val = os.environ.get(key)
             if val:
