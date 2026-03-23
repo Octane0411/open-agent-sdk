@@ -25,7 +25,7 @@ When k=1, all metrics collapse to the same number (simple pass rate).
 4. Create a git branch: `git checkout -b autoresearch/<your-tag>` (use a short, descriptive tag).
 5. Run a **baseline evaluation**:
    ```bash
-   ./benchmark/autoresearch/evaluate.sh -k 3 --tag baseline --output benchmark/autoresearch/results.tsv
+   bash ./benchmark/autoresearch/run-experiment.sh --tag baseline
    ```
 6. Review the baseline numbers before proceeding.
 
@@ -73,11 +73,17 @@ git commit -m "experiment: <description of what you changed and why>"
 
 ### Step 5: Evaluate
 
+Preferred:
+```bash
+bash ./benchmark/autoresearch/run-experiment.sh --tag "<short-label>"
+```
+
+Manual fallback:
 ```bash
 ./benchmark/autoresearch/evaluate.sh -k 3 --tag "<short-label>" --output benchmark/autoresearch/results.tsv
 ```
 
-Wait for it to complete. The script outputs pass@k, pass^k, and avg_trial_rate.
+Wait for it to complete. The scripts output pass@k, pass^k, and avg_trial_rate.
 
 ### Step 6: Analyze & Decide
 
@@ -92,9 +98,14 @@ Read the results and compare against the previous baseline in `results.tsv`.
 - pass@k decreased (lost capability)
 - pass^k decreased AND pass@k didn't improve (net negative)
 
-To revert:
+To revert manually:
 ```bash
 git reset --hard HEAD~1
+```
+
+If you use the helper script below, it can decide and revert automatically:
+```bash
+bash ./benchmark/autoresearch/run-experiment.sh --tag "<short-label>" --revert-on-regress
 ```
 
 Record failed experiments in `results.tsv` anyway — append `[REVERTED]` to the description.

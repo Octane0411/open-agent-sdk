@@ -94,12 +94,71 @@ echo "=== autoresearch evaluate ==="
 echo "tasks=$TASK_COUNT  k=$K  model=$MODEL  tag=$TAG"
 echo ""
 
-# ── Helper: extract reward from harbor result.json ──
-# Harbor prints "Results written to <dir>/result.json" in stdout.
-# The run-level result.json contains stats.evals.*.metrics[0].mean
-# The trial-level result.json contains verifier_result.reward
-#
-# We parse the run-level result.json for the mean reward.
+# ── Helper: extract reward from a task-level Harbor result.json ──
+extract_reward_from_result_file() {
+  local result_file="$1"
+
+  if [ ! -f "$result_file" ]; then
+    echo "-1"
+    return
+  fi
+
+  python3 - "$result_file" <<'PY' 2>/dev/null
+import json
+import sys
+
+path = sys.argv[1]
+
+try:
+    with open(path) as f:
+        d = json.load(f)
+
+    vr = d.get("verifier_result") or {}
+    rewards = vr.get("rewards") or {}
+    reward = vr.get("reward", rewards.get("reward"))
+
+    if reward is not None:
+        print(int(float(reward) >= 0.5))
+    elif d.get("exception_info"):
+        print(-1)
+    else:
+        print(0)
+except Exception:
+    print(-1)
+PY
+}
+
+# ── Helper: find the newest task-level result.json produced after a marker ──
+find_latest_task_result() {
+  local task_name="$1"
+  local marker_file="$2"
+
+  python3 - "$REPO_ROOT" "$task_name" "$marker_file" <<'PY' 2>/dev/null
+import glob
+import os
+import sys
+
+repo_root, task_name, marker_file = sys.argv[1:]
+marker_mtime = os.path.getmtime(marker_file)
+
+pattern = os.path.join(repo_root, "jobs", "*", f"{task_name}__*", "result.json")
+candidates = []
+
+for path in glob.glob(pattern):
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        continue
+    if mtime >= marker_mtime:
+        candidates.append((mtime, path))
+
+if candidates:
+    candidates.sort()
+    print(candidates[-1][1])
+PY
+}
+
+# ── Helper: fallback to parsing Harbor stdout when artifacts are unavailable ──
 extract_reward_from_output() {
   local run_output="$1"
 
@@ -117,32 +176,7 @@ extract_reward_from_output() {
   trial_result=$(find "$result_dir" -mindepth 2 -name "result.json" 2>/dev/null | head -1)
 
   if [ -n "$trial_result" ] && [ -f "$trial_result" ]; then
-    # Check verifier_result.reward in trial result
-    local reward
-    reward=$(python3 -c "
-import json, sys
-try:
-    d = json.load(open('$trial_result'))
-    vr = d.get('verifier_result') or {}
-    # Harbor stores reward in different formats:
-    #   verifier_result.reward (flat)
-    #   verifier_result.rewards.reward (nested)
-    r = vr.get('reward')
-    if r is None:
-        rewards = vr.get('rewards') or {}
-        r = rewards.get('reward')
-    if r is not None:
-        print(int(float(r) >= 0.5))
-        sys.exit(0)
-    # No verifier result — check if there was an exception
-    if d.get('exception_info'):
-        print(-1)
-    else:
-        print(0)
-except Exception:
-    print(-1)
-" 2>/dev/null)
-    echo "${reward:--1}"
+    extract_reward_from_result_file "$trial_result"
     return
   fi
 
@@ -179,6 +213,8 @@ except Exception:
 # ── Helper: run one trial, return 1=pass 0=fail -1=error ──
 run_single_trial() {
   local task_name="$1"
+  local marker_file
+  marker_file="$(mktemp)"
 
   # Build harbor command as array
   local -a cmd=(
@@ -236,9 +272,18 @@ run_single_trial() {
   rc=$?
   set -e
 
+  local latest_result reward
+  latest_result="$(find_latest_task_result "$task_name" "$marker_file")"
+  rm -f "$marker_file"
+
+  if [ -n "$latest_result" ]; then
+    reward="$(extract_reward_from_result_file "$latest_result")"
+    echo "${reward:--1}"
+    return
+  fi
+
   if [ "$rc" -ne 0 ]; then
     # Harbor exited non-zero, but still may have written result.json
-    local reward
     reward=$(extract_reward_from_output "$run_output")
     if [ "$reward" != "-1" ]; then
       echo "$reward"
