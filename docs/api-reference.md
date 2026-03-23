@@ -123,6 +123,8 @@ const result = await prompt("Analyze the codebase", {
 
 For Codex OAuth, run `codex login` once before your first SDK call. By default the SDK imports credentials from `~/.codex/auth.json` and persists refreshed provider credentials under `~/.open-agent/auth/providers.json`.
 
+If you already manage Codex OAuth elsewhere, pass `codexOAuth.credentials` directly, point `codexOAuth.codexAuthPath` at another provider-auth file, or pass a short-lived token via `apiKey`.
+
 ---
 
 ### `PromptResult`
@@ -878,6 +880,8 @@ Tool execution output.
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `CODEX_HOME` | Override the Codex credential directory. Defaults to `~/.codex` |
 | `OAS_CODEX_AUTH_PATH` | Override the Codex auth file path used by SDK and tests |
+| `OAS_CODEX_OAUTH_JSON` | Inject refreshable Codex OAuth credentials JSON for CLI usage |
+| `OAS_CODEX_API_KEY` | Inject a short-lived Codex access token for CLI usage |
 | `OPEN_AGENT_SDK_LOG_LEVEL` | Log level: `debug`, `info`, `warn`, `error`, `silent` |
 
 ---

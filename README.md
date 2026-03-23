@@ -16,6 +16,8 @@ Build agents with a ReAct loop, tool permissions, hooks, subagents, session pers
 
 For Codex OAuth, run `codex login` once, then use `provider: 'codex'` in the SDK or `oas --provider codex` in the CLI. The SDK will reuse your local Codex login state from `~/.codex/auth.json`.
 
+If you already manage Codex OAuth outside the CLI, you can also point `oas` at another auth file with `OAS_CODEX_AUTH_PATH`, inject a refreshable credentials JSON blob with `OAS_CODEX_OAUTH_JSON`, or inject a short-lived token with `OAS_CODEX_API_KEY`.
+
 ## 1-Minute Quickstart
 
 ```bash

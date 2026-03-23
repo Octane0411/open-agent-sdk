@@ -116,4 +116,45 @@ describe('Codex OAuth helpers', () => {
     const saved = JSON.parse(await readFile(credentialsPath, 'utf8')) as Record<string, Record<string, unknown>>;
     expect(saved['openai-codex']?.accountId).toBe('acct_interactive');
   });
+
+  test('uses explicitly provided OAuth credentials without importing Codex CLI state', async () => {
+    const credentialsPath = path.join(tempDir, 'providers.json');
+    const codexAuthPath = path.join(tempDir, 'missing-codex-auth.json');
+
+    mockGetOAuthApiKey.mockImplementation(async (_providerId, credentialsMap) => {
+      const credentials = credentialsMap['openai-codex'];
+      expect(credentials?.access).toBe('provided_access');
+      expect(credentials?.refresh).toBe('provided_refresh');
+      expect(credentials?.accountId).toBe('acct_provided');
+
+      return {
+        apiKey: 'resolved_from_provided_credentials',
+        newCredentials: {
+          access: 'provided_access_next',
+          refresh: 'provided_refresh_next',
+          expires: Date.now() + 7200_000,
+          accountId: 'acct_provided',
+        },
+      };
+    });
+
+    const result = await resolveCodexOAuthApiKey({
+      credentialsPath,
+      codexAuthPath,
+      credentials: {
+        access: 'provided_access',
+        refresh: 'provided_refresh',
+        expires: Date.now() + 3600_000,
+        accountId: 'acct_provided',
+      },
+    });
+
+    expect(result.apiKey).toBe('resolved_from_provided_credentials');
+    expect(result.importedFromCodexCli).toBe(false);
+    expect(result.accountId).toBe('acct_provided');
+
+    const saved = JSON.parse(await readFile(credentialsPath, 'utf8')) as Record<string, Record<string, unknown>>;
+    expect(saved['openai-codex']?.access).toBe('provided_access_next');
+    expect(saved['openai-codex']?.refresh).toBe('provided_refresh_next');
+  });
 });

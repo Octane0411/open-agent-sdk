@@ -31,6 +31,8 @@ export interface CodexOAuthOptions {
   credentialsPath?: string;
   /** Path to import existing Codex CLI credentials from */
   codexAuthPath?: string;
+  /** Explicit OAuth credentials to use instead of importing from a file */
+  credentials?: OAuthCredentials | Record<string, OAuthCredentials>;
   /** Allow starting an interactive browser login flow if no cached credentials are available */
   allowInteractiveLogin?: boolean;
   /** Called when interactive login requires the user to open a URL */
@@ -154,6 +156,20 @@ function normalizeCodexCliCredentials(value: unknown): OAuthCredentials | null {
   };
 }
 
+function normalizeProvidedCredentials(value: unknown): OAuthCredentials | null {
+  const direct = normalizeOAuthCredentials(value);
+  if (direct) {
+    return direct;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const providerEntry = (value as Record<string, unknown>)[OPENAI_CODEX_PROVIDER_ID];
+  return normalizeOAuthCredentials(providerEntry);
+}
+
 async function loadProviderCredentialsMap(credentialsPath: string): Promise<ProviderCredentialsMap> {
   try {
     const content = await readFile(credentialsPath, 'utf8');
@@ -249,8 +265,17 @@ export async function resolveCodexOAuthApiKey(
 
   let credentialsMap = await loadProviderCredentialsMap(credentialsPath);
   let importedFromCodexCli = false;
+  const providedCredentials = normalizeProvidedCredentials(options.credentials);
 
-  if (!credentialsMap[OPENAI_CODEX_PROVIDER_ID]) {
+  if (providedCredentials) {
+    credentialsMap = {
+      ...credentialsMap,
+      [OPENAI_CODEX_PROVIDER_ID]: providedCredentials,
+    };
+    await saveProviderCredentialsMap(credentialsPath, credentialsMap);
+  }
+
+  if (!providedCredentials && !credentialsMap[OPENAI_CODEX_PROVIDER_ID]) {
     const imported = await importFromCodexCliAuthPath(codexAuthPath);
     if (imported) {
       credentialsMap = {

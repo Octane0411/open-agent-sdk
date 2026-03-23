@@ -49,6 +49,14 @@ Recommended setup:
 2. Let the SDK import `~/.codex/auth.json`
 3. Only override `codexOAuth.codexAuthPath` or `OAS_CODEX_AUTH_PATH` when you need a non-default login location
 
+For non-interactive runners such as terminal-bench, you can also:
+
+- pass a refreshable credentials blob via `OAS_CODEX_OAUTH_JSON`
+- point at another provider-auth file via `OAS_CODEX_AUTH_PATH`
+- pass a short-lived access token via `OAS_CODEX_API_KEY`
+
+Prefer `OAS_CODEX_OAUTH_JSON` or `OAS_CODEX_AUTH_PATH` when you want automatic refresh behavior.
+
 Use `provider: 'openai'` with `OPENAI_API_KEY` when you want standard usage-based OpenAI Platform billing instead of Codex OAuth.
 
 ## Base URL strategy
