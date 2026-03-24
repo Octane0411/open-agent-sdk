@@ -24,6 +24,8 @@ FORCE=false
 RESTORE=false
 BACKUP_PREFIX="oas-original"
 PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
+PYPI_FALLBACK_INDEX="https://pypi.org/simple"
+UV_PREWARM_TIMEOUT="600"
 PACK_LOCAL_TARBALLS=false
 TARBALL_DIR="${REPO_ROOT}/benchmark/terminalbench/.local-tarballs"
 TARBALL_PORT="8765"
@@ -43,6 +45,10 @@ Options:
   --force              Force rebuild even if already pre-warmed
   --restore            Restore original images from backup
   --pypi-mirror URL    PyPI mirror for pytest install (default: tsinghua)
+  --pypi-fallback URL  Fallback PyPI index when the mirror misses packages
+                       (default: https://pypi.org/simple)
+  --uv-prewarm-timeout N
+                     Best-effort verifier prewarm timeout in seconds (default: 600)
   --pack-local-tarballs
                      Build repo-local SDK/CLI tarballs and serve them temporarily
   --tarball-dir DIR    Directory used for generated local tarballs
@@ -60,6 +66,8 @@ while (($#)); do
     --force) FORCE=true; shift ;;
     --restore) RESTORE=true; shift ;;
     --pypi-mirror) PYPI_MIRROR="${2:-}"; shift 2 ;;
+    --pypi-fallback) PYPI_FALLBACK_INDEX="${2:-}"; shift 2 ;;
+    --uv-prewarm-timeout) UV_PREWARM_TIMEOUT="${2:-}"; shift 2 ;;
     --pack-local-tarballs) PACK_LOCAL_TARBALLS=true; shift ;;
     --tarball-dir) TARBALL_DIR="${2:-}"; shift 2 ;;
     --tarball-port) TARBALL_PORT="${2:-}"; shift 2 ;;
@@ -205,19 +213,18 @@ while IFS= read -r image; do
   echo "[BUILD] $image"
   echo "  tasks: $tasks"
 
-  # Pull original if needed
-  if ! docker image inspect "$image" &>/dev/null; then
+  if docker image inspect "$backup" &>/dev/null; then
+    # Prefer the local backup to avoid unnecessary registry pulls on rebuild.
+    echo "  restoring original image from backup before rebuild"
+    docker tag "$backup" "$image"
+  elif ! docker image inspect "$image" &>/dev/null; then
     echo "  pulling $image ..."
     if ! docker pull "$image"; then
       echo "  FAIL: pull failed"
       FAILED=$((FAILED + 1))
       continue
     fi
-  fi
-
-  if docker image inspect "$backup" &>/dev/null; then
-    echo "  restoring original image from backup before rebuild"
-    docker tag "$backup" "$image"
+    docker tag "$image" "$backup"
   else
     # Backup original image on first pre-warm
     docker tag "$image" "$backup"
@@ -245,11 +252,68 @@ if ! command -v curl &>/dev/null; then
 fi
 curl -LsSf https://astral.sh/uv/0.9.5/install.sh | sh
 export PATH="\$HOME/.local/bin:\$PATH"
-UV_INDEX_URL="${PYPI_MIRROR}" UV_HTTP_TIMEOUT=300 uvx \\
-  -p 3.13 \\
-  -w pytest==8.4.1 \\
-  -w pytest-json-ctrf==0.3.5 \\
-  pytest --version
+
+install_verifier_packages() {
+  local python_bin="/opt/oas-verifier/bin/python"
+  local index=""
+  for index in "${PYPI_FALLBACK_INDEX}" "${PYPI_MIRROR}"; do
+    [ -z "\$index" ] && continue
+    echo "Installing verifier packages via \${index}"
+    if "\$python_bin" -m pip install \
+      --disable-pip-version-check \
+      --default-timeout 15 \
+      --retries 1 \
+      -i "\$index" \
+      pytest==8.4.1 \
+      pytest-json-ctrf==0.3.5; then
+      return 0
+    fi
+    echo "Verifier package install failed on \${index}, trying next index..."
+  done
+  return 1
+}
+
+build_verifier_env() {
+  rm -rf /opt/oas-verifier
+  UV_HTTP_TIMEOUT=300 uv venv --python 3.13 /opt/oas-verifier
+  /opt/oas-verifier/bin/python -m ensurepip >/dev/null
+  install_verifier_packages
+  /opt/oas-verifier/bin/python -m pytest --version
+  chmod -R a+rX /opt/oas-verifier || true
+}
+
+prewarm_verifier_env() {
+  local uv_pid=""
+  local watchdog_pid=""
+  local status=0
+
+  (
+    build_verifier_env
+  ) &
+  uv_pid=\$!
+
+  (
+    sleep "${UV_PREWARM_TIMEOUT}"
+    if kill -0 "\$uv_pid" >/dev/null 2>&1; then
+      echo "WARN: uv/pytest prewarm timed out after ${UV_PREWARM_TIMEOUT}s; continuing without verifier cache"
+      kill -TERM "\$uv_pid" >/dev/null 2>&1 || true
+      sleep 3
+      kill -KILL "\$uv_pid" >/dev/null 2>&1 || true
+    fi
+  ) &
+  watchdog_pid=\$!
+
+  wait "\$uv_pid" || status=\$?
+  kill "\$watchdog_pid" >/dev/null 2>&1 || true
+  wait "\$watchdog_pid" 2>/dev/null || true
+  return "\$status"
+}
+
+if prewarm_verifier_env; then
+  echo "Verifier environment ready: /opt/oas-verifier"
+else
+  echo "WARN: uv/pytest prewarm failed; continuing without /opt/oas-verifier"
+fi
 echo "=== Pre-warm complete ==="
 SETUP_FOOTER
 

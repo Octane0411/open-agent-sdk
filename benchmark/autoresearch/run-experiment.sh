@@ -114,6 +114,18 @@ PY
   echo ""
 }
 
+patch_cached_verifiers() {
+  local patcher="${REPO_ROOT}/benchmark/terminalbench/scripts/patch-task-verifiers.sh"
+  if [ ! -f "$patcher" ]; then
+    echo "WARN: verifier patcher not found: $patcher" >&2
+    return 0
+  fi
+
+  echo "=== Patching cached verifier scripts ==="
+  bash "$patcher" --tasks-file "$TASKS_FILE"
+  echo ""
+}
+
 if [ -z "$TAG" ]; then
   echo "--tag is required" >&2
   exit 1
@@ -176,6 +188,7 @@ PY
 fi
 
 ensure_harbor_registration
+patch_cached_verifiers
 
 if [ "$SKIP_TESTS" != true ]; then
   if [ "$FULL_TESTS" = true ]; then
