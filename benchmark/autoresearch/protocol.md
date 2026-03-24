@@ -93,6 +93,8 @@ bash benchmark/autoresearch/run-experiment.sh \
 Notes:
 
 - `run-experiment.sh` re-patches cached Harbor verifier scripts before each run.
+- `run-experiment.sh` fails fast in `--no-local-tarballs` mode if a required
+  task image is missing or does not contain the expected pre-warmed assets.
 - The verifier patch makes cached `tests/test.sh` prefer `/opt/oas-verifier`
   when available.
 - Pre-warmed images avoid repeated OAS setup. Patched verifiers avoid repeated

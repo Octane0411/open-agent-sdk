@@ -102,6 +102,8 @@ For `k > 1`, the default mode should be:
 3. let `run-experiment.sh` patch cached verifier scripts before each run
 
 This avoids repeated OAS installation and repeated `uv` / `pytest` downloads.
+`run-experiment.sh` now also fails fast in `--no-local-tarballs` mode if any task
+image is missing locally or lacks the expected pre-warmed assets.
 
 ## Expected Output
 

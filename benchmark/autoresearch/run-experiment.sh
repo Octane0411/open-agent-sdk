@@ -34,6 +34,7 @@ TARBALL_SERVER_PID=""
 TARBALL_SERVER_LOG=""
 HARBOR_BIN="${HARBOR_BIN:-harbor}"
 HARBOR_PYTHON="${HARBOR_PYTHON:-}"
+SKIP_PREWARM_CHECK=false
 
 usage() {
   cat <<'EOF'
@@ -59,6 +60,7 @@ Options:
   --tarball-host HOST     Hostname containers should use for tarball server
   --full-tests            Run full `bun test` instead of the targeted autoresearch gate
   --skip-tests            Skip `bun test`
+  --skip-prewarm-check    Skip the pre-warmed image readiness check
   --revert-on-regress     If decision is REVERT, reset HEAD~1 and restore results.tsv
   -h, --help              Show help
 EOF
@@ -78,6 +80,7 @@ while (($#)); do
     --tarball-host) TARBALL_HOST="${2:-}"; shift 2 ;;
     --full-tests) FULL_TESTS=true; shift ;;
     --skip-tests) SKIP_TESTS=true; shift ;;
+    --skip-prewarm-check) SKIP_PREWARM_CHECK=true; shift ;;
     --revert-on-regress) REVERT_ON_REGRESS=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
@@ -166,6 +169,22 @@ patch_cached_verifiers() {
   echo ""
 }
 
+check_prewarmed_images() {
+  if [ "$USE_LOCAL_TARBALLS" = true ] || [ "$SKIP_PREWARM_CHECK" = true ]; then
+    return 0
+  fi
+
+  local checker="${REPO_ROOT}/benchmark/terminalbench/scripts/check-prewarmed-images.sh"
+  if [ ! -f "$checker" ]; then
+    echo "Missing prewarm checker: $checker" >&2
+    exit 1
+  fi
+
+  echo "=== Verifying pre-warmed images ==="
+  bash "$checker" --tasks-file "$TASKS_FILE"
+  echo ""
+}
+
 if [ -z "$TAG" ]; then
   echo "--tag is required" >&2
   exit 1
@@ -232,6 +251,7 @@ fi
 resolve_harbor_python
 ensure_harbor_registration
 patch_cached_verifiers
+check_prewarmed_images
 
 if [ "$SKIP_TESTS" != true ]; then
   if [ "$FULL_TESTS" = true ]; then
