@@ -107,11 +107,13 @@ chmod +x benchmark/terminalbench/scripts/*.sh
 
 ./benchmark/terminalbench/scripts/run-terminalbench-overnight.sh \
   --tasks-file benchmark/terminalbench/task-lists/smoke-5.txt \
-  --batch-size 2 \
-  --keep-images 1 \
+  --batch-size 0 \
   --task-repeats 1 \
   --agent-timeout-multiplier 0.6
 ```
+
+`run-terminalbench-overnight.sh` now defaults to `--batch-size 0`, so terminal-bench
+images are kept unless you explicitly opt into periodic cleanup.
 
 Image cleanup only (manual):
 
