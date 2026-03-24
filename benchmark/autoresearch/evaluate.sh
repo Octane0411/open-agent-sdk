@@ -26,6 +26,8 @@ ENV_TYPE="docker"
 AGENT_IMPORT_PATH="harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent"
 AGENT_TIMEOUT_MULTIPLIER="0.6"
 SLEEP_BETWEEN=3
+HARBOR_BIN="${HARBOR_BIN:-harbor}"
+TIMEOUT_MULTIPLIER_FLAG=""
 
 usage() {
   cat <<'EOF'
@@ -79,8 +81,18 @@ if [ -f "$MAIN_ENV_FILE" ]; then
   set +a
 fi
 
-if ! command -v harbor >/dev/null 2>&1; then
-  echo "harbor not found in PATH" >&2
+if ! command -v "$HARBOR_BIN" >/dev/null 2>&1 && [ ! -x "$HARBOR_BIN" ]; then
+  echo "harbor not found: $HARBOR_BIN" >&2
+  exit 1
+fi
+
+HARBOR_RUN_HELP="$("$HARBOR_BIN" run --help 2>&1 || true)"
+if echo "$HARBOR_RUN_HELP" | grep -q -- '--agent-timeout-multiplier'; then
+  TIMEOUT_MULTIPLIER_FLAG="--agent-timeout-multiplier"
+elif echo "$HARBOR_RUN_HELP" | grep -q -- '--timeout-multiplier'; then
+  TIMEOUT_MULTIPLIER_FLAG="--timeout-multiplier"
+else
+  echo "Could not determine Harbor timeout multiplier flag from: $HARBOR_BIN run --help" >&2
   exit 1
 fi
 
@@ -218,14 +230,14 @@ run_single_trial() {
 
   # Build harbor command as array
   local -a cmd=(
-    harbor run -d "$DATASET"
+    "$HARBOR_BIN" run -d "$DATASET"
     --env "$ENV_TYPE"
     --agent-import-path "$AGENT_IMPORT_PATH"
     --model "$MODEL"
     --task-name "$task_name"
     --n-concurrent 1
     -k 1
-    --agent-timeout-multiplier "$AGENT_TIMEOUT_MULTIPLIER"
+    "$TIMEOUT_MULTIPLIER_FLAG" "$AGENT_TIMEOUT_MULTIPLIER"
   )
 
   # Pass mirror/registry env vars for faster installs in China

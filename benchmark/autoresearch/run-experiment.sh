@@ -32,6 +32,8 @@ TARBALL_PORT="8765"
 TARBALL_HOST="host.docker.internal"
 TARBALL_SERVER_PID=""
 TARBALL_SERVER_LOG=""
+HARBOR_BIN="${HARBOR_BIN:-harbor}"
+HARBOR_PYTHON="${HARBOR_PYTHON:-}"
 
 usage() {
   cat <<'EOF'
@@ -94,9 +96,45 @@ cleanup() {
 
 trap cleanup EXIT
 
+resolve_harbor_python() {
+  if [ -n "$HARBOR_PYTHON" ]; then
+    if [ ! -x "$HARBOR_PYTHON" ]; then
+      echo "HARBOR_PYTHON is not executable: $HARBOR_PYTHON" >&2
+      exit 1
+    fi
+    return
+  fi
+
+  if command -v "$HARBOR_BIN" >/dev/null 2>&1; then
+    local harbor_path
+    local harbor_shebang
+    harbor_path="$(command -v "$HARBOR_BIN")"
+    harbor_shebang="$(head -n 1 "$harbor_path" 2>/dev/null || true)"
+    if [[ "$harbor_shebang" == '#!'* ]]; then
+      local candidate="${harbor_shebang#\#!}"
+      candidate="${candidate%% *}"
+      if [ -x "$candidate" ]; then
+        HARBOR_PYTHON="$candidate"
+        return
+      fi
+    fi
+  fi
+
+  if python3 -c 'import harbor' >/dev/null 2>&1; then
+    HARBOR_PYTHON="python3"
+    return
+  fi
+
+  echo "Could not resolve a Python interpreter that can import harbor." >&2
+  echo "Set HARBOR_PYTHON and HARBOR_BIN explicitly, for example:" >&2
+  echo "  HARBOR_PYTHON=\$HOME/.local/share/oas-harbor/bin/python" >&2
+  echo "  HARBOR_BIN=\$HOME/.local/share/oas-harbor/bin/harbor" >&2
+  exit 1
+}
+
 ensure_harbor_registration() {
   local agents_dir
-  agents_dir="$(python3 - <<'PY'
+  agents_dir="$("$HARBOR_PYTHON" - <<'PY'
 import harbor
 from pathlib import Path
 print(Path(harbor.__path__[0]) / "agents" / "installed")
@@ -109,6 +147,8 @@ PY
     "${agents_dir}/install-open-agent-sdk.sh.j2"
 
   echo "Harbor agent registered from current repo:"
+  echo "  harbor bin: ${HARBOR_BIN}"
+  echo "  harbor python: ${HARBOR_PYTHON}"
   echo "  ${agents_dir}/open_agent_sdk.py"
   echo "  ${agents_dir}/install-open-agent-sdk.sh.j2"
   echo ""
@@ -187,6 +227,7 @@ PY
   echo ""
 fi
 
+resolve_harbor_python
 ensure_harbor_registration
 patch_cached_verifiers
 
