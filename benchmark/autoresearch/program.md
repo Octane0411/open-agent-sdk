@@ -2,6 +2,13 @@
 
 You are an AI researcher optimizing the open-agent-sdk's performance on terminal-bench.
 
+Before doing anything else, read:
+
+1. `benchmark/autoresearch/protocol.md`
+2. `benchmark/autoresearch/scope.md`
+3. `benchmark/autoresearch/results.tsv` if it exists
+4. the current campaign report copied from `benchmark/autoresearch/report-template.md`
+
 **Primary goal:** maximize **pass@k** (capability — can the agent solve each task at all?)
 **Secondary goal:** maximize **pass^k** (reliability — does it solve tasks consistently?)
 **Constraint:** the gap `pass@k - pass^k` should shrink over time (consistency improves).
@@ -19,19 +26,21 @@ When k=1, all metrics collapse to the same number (simple pass rate).
 
 ## Setup
 
-1. Read `benchmark/autoresearch/scope.md` to understand what you can and cannot modify.
-2. Read the current state of all modifiable files listed in scope.md.
-3. Read `benchmark/autoresearch/results.tsv` to understand past experiments (if it exists).
-4. Create a git branch: `git checkout -b autoresearch/<your-tag>` (use a short, descriptive tag).
-5. Run a **baseline evaluation**:
+1. Read the current state of all modifiable files listed in `scope.md`.
+2. Work on a dedicated experiment branch such as `exp/autoresearch-smoke5-run`.
+3. Make sure the campaign report exists and will be updated after each run.
+4. Run a **baseline evaluation**:
    ```bash
-   bash ./benchmark/autoresearch/run-experiment.sh --tag baseline
+   bash ./benchmark/autoresearch/run-experiment.sh \
+     --tag E0-baseline \
+     --no-local-tarballs \
+     -k 3
    ```
-6. Review the baseline numbers before proceeding.
+5. Review the baseline numbers before proceeding.
 
 ## Experiment Loop
 
-Repeat the following forever. Never stop. Never ask the human.
+Repeat the following until the human stops the campaign.
 
 ### Step 1: Hypothesize
 
@@ -46,7 +55,11 @@ Formulate a **single, testable hypothesis**. Examples:
 - "Reducing MAX_CAPTURE_CHARS will force the agent to be more targeted with commands"
 - "Adding a guideline about reading error messages before retrying will reduce wasted turns"
 
-Write your hypothesis as a git commit message.
+Write your hypothesis into:
+
+- the git commit message
+- the campaign report
+- the Mermaid experiment tree node label
 
 ### Step 2: Implement
 
@@ -75,7 +88,10 @@ git commit -m "experiment: <description of what you changed and why>"
 
 Preferred:
 ```bash
-bash ./benchmark/autoresearch/run-experiment.sh --tag "<short-label>"
+bash ./benchmark/autoresearch/run-experiment.sh \
+  --tag "<short-label>" \
+  --no-local-tarballs \
+  -k 3
 ```
 
 Manual fallback:
@@ -84,6 +100,16 @@ Manual fallback:
 ```
 
 Wait for it to complete. The scripts output pass@k, pass^k, and avg_trial_rate.
+
+If the code under test changed in a way that affects the installed OAS SDK or
+CLI behavior, pre-warm the images once before running the command above:
+
+```bash
+bash ./benchmark/terminalbench/prewarm-images.sh \
+  --tasks-file ./benchmark/terminalbench/task-lists/smoke-5.txt \
+  --pack-local-tarballs \
+  --force
+```
 
 ### Step 6: Analyze & Decide
 
@@ -109,6 +135,7 @@ bash ./benchmark/autoresearch/run-experiment.sh --tag "<short-label>" --revert-o
 ```
 
 Record failed experiments in `results.tsv` anyway — append `[REVERTED]` to the description.
+Also record them in the campaign report and Mermaid tree.
 
 **Prioritization:**
 - Early experiments: focus on **pass@k** (unlock new tasks)
@@ -118,15 +145,21 @@ Record failed experiments in `results.tsv` anyway — append `[REVERTED]` to the
 
 ## Rules
 
-1. **Never stop.** Run experiments indefinitely until interrupted by the human.
-2. **Never ask the human.** Make your own decisions about what to try.
-3. **Never modify read-only files** listed in scope.md.
-4. **Never modify this file** (program.md), evaluate.sh, scope.md, or results.tsv format.
-5. **Never add dependencies** to package.json.
-6. **Always run tests** before evaluation. Broken code wastes an expensive evaluation cycle.
-7. **One variable per experiment.** Multi-variable changes make results uninterpretable.
-8. **Log everything.** Even failed experiments are valuable data — they narrow the search space.
-9. **Weigh complexity vs. improvement.** A 1% gain that adds 50 lines of code is probably not worth it. A 10% gain that adds 50 lines might be.
+1. **Do not mix infrastructure work with experiment work.** Harness changes go on
+   a separate branch from experiment runs.
+2. **Use a dedicated experiment branch.** Keep only winning code commits there.
+3. **Always update the report.** The report and Mermaid tree are mandatory
+   outputs, not optional notes.
+4. **Do not lose reverted experiments.** Reverted code commits can disappear from
+   branch history, but their metrics and notes must remain in the report and
+   `results.tsv`.
+5. **Never modify read-only files** listed in scope.md.
+6. **Never modify this file** (program.md), evaluate.sh, scope.md, or results.tsv format.
+7. **Never add dependencies** to package.json.
+8. **Always run tests** before evaluation. Broken code wastes an expensive evaluation cycle.
+9. **One variable per experiment.** Multi-variable changes make results uninterpretable.
+10. **Log everything.** Even failed experiments are valuable data — they narrow the search space.
+11. **Weigh complexity vs. improvement.** A 1% gain that adds 50 lines of code is probably not worth it. A 10% gain that adds 50 lines might be.
 
 ## What to Try (Ordered by Expected Impact)
 

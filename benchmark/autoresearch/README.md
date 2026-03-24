@@ -3,6 +3,13 @@
 This directory adapts the `program.md`-driven workflow popularized by
 Karpathy's `autoresearch` project to Open Agent SDK and Terminal-bench.
 
+Start with:
+
+- `benchmark/autoresearch/protocol.md`
+- `benchmark/autoresearch/program.md`
+- `benchmark/autoresearch/scope.md`
+- `benchmark/autoresearch/report-template.md`
+
 ## Design
 
 - The optimizing agent edits a narrow search surface:
@@ -24,16 +31,34 @@ https://github.com/karpathy/autoresearch:
 
 ## Recommended Loop
 
-1. Read `program.md` and `scope.md`
-2. Make one small hypothesis-driven change
-3. Commit it
-4. Run:
+1. Create a dedicated experiment branch such as
+   `exp/autoresearch-smoke5-run`
+2. Read `protocol.md`, `program.md`, and `scope.md`
+3. Copy `report-template.md` into a run-specific report file
+4. Make one small hypothesis-driven change
+5. Commit it
+6. If the OAS code under test changed and you plan to run with `k > 1`,
+   pre-warm once:
 
 ```bash
-bash ./benchmark/autoresearch/run-experiment.sh --tag "<short-label>"
+bash ./benchmark/terminalbench/prewarm-images.sh \
+  --tasks-file ./benchmark/terminalbench/task-lists/smoke-5.txt \
+  --pack-local-tarballs \
+  --force
 ```
 
-5. If you want automatic rollback on regressions:
+7. Run:
+
+```bash
+bash ./benchmark/autoresearch/run-experiment.sh \
+  --tag "<short-label>" \
+  --no-local-tarballs \
+  -k 3
+```
+
+8. Update the report and experiment tree
+
+9. If you want automatic rollback on regressions:
 
 ```bash
 bash ./benchmark/autoresearch/run-experiment.sh \
@@ -69,3 +94,20 @@ bash ./benchmark/autoresearch/run-experiment.sh \
 For Terminal-bench, benchmark cost matters more than in single-metric toy setups.
 Use the existing pre-warmed image path under `benchmark/terminalbench/` so
 experiments do not repeatedly reinstall Bun and the OAS CLI during agent setup.
+
+For `k > 1`, the default mode should be:
+
+1. pre-warm once
+2. run with `--no-local-tarballs`
+3. let `run-experiment.sh` patch cached verifier scripts before each run
+
+This avoids repeated OAS installation and repeated `uv` / `pytest` downloads.
+
+## Expected Output
+
+Each campaign should leave behind:
+
+- a dedicated experiment branch
+- append-only rows in `results.tsv`
+- a run report copied from `report-template.md`
+- a Mermaid experiment tree that shows the hypothesis and metrics for each node
