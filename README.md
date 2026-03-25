@@ -1,9 +1,7 @@
 <div align="center">
-  <img src="./docs/branding/pixel-banner.svg" alt="Open Agent SDK Banner" width="100%">
-
   <h1>Open Agent SDK</h1>
 
-  <p><strong>Minimal, production-ready TypeScript SDK for building tool-using AI agents.</strong></p>
+  <p><strong>Lightweight, general-purpose TypeScript agent runtime. Open-source alternative to Claude Agent SDK.</strong></p>
 
   <p>
     <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License: MIT"></a>
@@ -12,13 +10,17 @@
   </p>
 </div>
 
-Build agents with a ReAct loop, tool permissions, hooks, subagents, session persistence, and multi-provider support.
+Lightweight, general-purpose TypeScript agent runtime. Open-source alternative to Claude Agent SDK.
 
-For Codex OAuth, run `codex login` once, then use `provider: 'codex'` in the SDK or `oas --provider codex` in the CLI. The SDK will reuse your local Codex login state from `~/.codex/auth.json`.
+Use it when you want a lightweight open runtime with sessions, tools, hooks, subagents, and multi-provider support in a codebase you can actually inspect and extend.
 
-If you already manage Codex OAuth outside the CLI, you can also point `oas` at another auth file with `OAS_CODEX_AUTH_PATH`, inject a refreshable credentials JSON blob with `OAS_CODEX_OAUTH_JSON`, or inject a short-lived token with `OAS_CODEX_API_KEY`.
+<div align="center">
+  <img src="./docs/branding/pixel-demo.svg" alt="Open Agent SDK Demo" width="100%">
+</div>
 
-## 1-Minute Quickstart
+More runnable examples: [Demo Gallery](./DEMO_GALLERY.md).
+
+## Quickstart
 
 ```bash
 npx open-agent-sdk@alpha init my-agent
@@ -28,75 +30,53 @@ cp .env.example .env
 npm run dev
 ```
 
-Or with Bun:
+With Bun:
 
 ```bash
 bunx open-agent-sdk@alpha init my-agent
 ```
 
-## 30-Second Demo
+Run `codex login` once first if you want to use Codex OAuth. The SDK reuses your local Codex login state from `~/.codex/auth.json`.
 
-<div align="center">
-  <img src="./docs/branding/pixel-demo.svg" alt="Open Agent SDK Demo" width="100%">
-</div>
-
-More runnable demos: [Demo Gallery](./DEMO_GALLERY.md).
+If you already manage Codex OAuth outside the CLI, you can point `oas` at another auth file with `OAS_CODEX_AUTH_PATH`, inject refreshable credentials JSON with `OAS_CODEX_OAUTH_JSON`, or pass a short-lived token with `OAS_CODEX_API_KEY`.
 
 ## Why Open Agent SDK
 
-- Production safety controls: permission modes (`default`, `plan`, `acceptEdits`, `bypassPermissions`) and per-tool gating via `canUseTool`.
-- Agent extensibility core: hooks, skills, subagents, and MCP-compatible tool integration.
-- Reproducible evaluation path: local SWE-bench and Terminal-bench harnesses in `benchmark/`.
+- Open runtime, not a black box: MIT-licensed core, readable implementation, and extension points you can actually own.
+- Real workflow model: prompts, sessions, resume, fork, storage, and tool execution in one TypeScript surface.
+- Safety and control built in: permission modes, per-tool gating, and lifecycle hooks for product-grade behavior.
+- Provider flexibility: Codex OAuth, OpenAI, Gemini, and Anthropic support without changing the overall mental model.
+- Evaluation path included: local SWE-bench and Terminal-bench harnesses live in the same repo.
 
-See details in:
-- [API Reference](./docs/api-reference.md)
-- [SWE-bench Guide](./benchmark/swebench/README.md)
-- [Terminal-bench Guide](./benchmark/terminalbench/README.md)
-- [Benchmarks](./BENCHMARKS.md)
+## What You Can Ship
 
-## Concepts
+- One-shot prompts and long-lived session workflows
+- Create, resume, and fork sessions with storage-backed history
+- Tool-enabled loops with bash, file operations, web search, web fetch, MCP, and task delegation
+- Hook surfaces for observability, safety policy, and runtime customization
+- CLI-first local development and migration from Claude-style workflows
+- Benchmark-oriented evaluation flows for harder agent tasks
 
-- `Agent loop`: multi-turn ReAct with tool execution.
-- `Tool permissions`: explicit allow/deny policy hooks.
-- `Hooks`: lifecycle/tool events for observability and control.
-- `Subagents`: task delegation and orchestration.
-- `Sessions`: create, save, resume, and fork conversations.
-
-## Example Gallery
-
-- [Interactive Code Agent CLI](./examples/code-agent/README.md)
-- [Quickstart Tests (basic/session/tools)](./examples/quickstart/README.md)
-- [Skill System Demo](./examples/README.md#skill-system-demo)
-- [Structured Output Demo](./examples/structured-output-demo.ts)
-- [File Checkpoint Demo](./examples/file-checkpoint-demo.ts)
-
-## Evaluation
-
-- SWE-bench Lite smoke/batch runners: `benchmark/swebench/scripts/`
-- Terminal-bench Harbor adapter and runbook: `benchmark/terminalbench/`
-- Result summarization scripts and artifacts: see [BENCHMARKS.md](./BENCHMARKS.md)
-
-## Integrations
-
-Current provider support in core SDK:
-
-- Codex OAuth
-- OpenAI
-- Google Gemini
-- Anthropic
-
-Ecosystem integrations:
-
-- MCP server integration support
-- Harbor adapter for Terminal-bench
-
-## Docs
+## Start Here
 
 - Homepage: https://openagentsdk.dev
 - Docs: https://docs.openagentsdk.dev
-- GitHub: https://github.com/OasAIStudio/open-agent-sdk
-- [Introduction](./docs/introduction.md)
-- [Comparison with Claude Agent SDK](./docs/claude-agent-sdk-comparison.md)
+- Quickstart: https://docs.openagentsdk.dev/getting-started/quickstart/
+- API Reference: https://docs.openagentsdk.dev/api-reference/overview/
+- Provider & Auth Strategy: https://docs.openagentsdk.dev/guides/provider-auth-strategy/
+- Permissions & Safety: https://docs.openagentsdk.dev/guides/permissions-and-safety/
+- Quick Migration Guide: https://docs.openagentsdk.dev/migration/quick-migration/
+- [Demo Gallery](./DEMO_GALLERY.md)
+- [Benchmarks](./BENCHMARKS.md)
+
+## Product Surface
+
+- `packages/core/`: published SDK package
+- `packages/web/`: product homepage
+- `packages/docs/`: docs site
+- `examples/`: runnable usage examples
+- `benchmark/`: evaluation harnesses and scripts
+- `docs/`: engineering docs, ADRs, workflows, and supporting research
 
 ## Monorepo Layout
 
@@ -113,7 +93,6 @@ docs/          # engineering docs, workflows, ADRs
 ## Development
 
 ```bash
-# install dependencies
 bun install
 
 # build core package
@@ -141,6 +120,13 @@ Codex smoke test with your existing local login:
 cd packages/core
 bun test tests/e2e/providers/codex.test.ts
 ```
+
+## Additional Reading
+
+- [Introduction](./docs/introduction.md)
+- [Comparison with Claude Agent SDK](./docs/claude-agent-sdk-comparison.md)
+- [SWE-bench Guide](./benchmark/swebench/README.md)
+- [Terminal-bench Guide](./benchmark/terminalbench/README.md)
 
 ## Project Status
 
