@@ -5,9 +5,21 @@ set -euo pipefail
 # PATH before the fast-path check so setup can detect the existing CLI.
 export PATH="/root/.bun/bin:$HOME/.bun/bin:$PATH"
 
+is_truthy() {
+    case "${1:-}" in
+        1|true|TRUE|yes|YES|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+USE_LOCAL_TARBALLS=false
+if [ -n "${OAS_LOCAL_TARBALL_URL:-}" ] && ! is_truthy "${OAS_DISABLE_LOCAL_TARBALLS:-}"; then
+    USE_LOCAL_TARBALLS=true
+fi
+
 # Fast path: skip install if oas CLI is already available (pre-warmed image)
 # unless this run explicitly requests a fresh local tarball install.
-if [ -z "${OAS_LOCAL_TARBALL_URL:-}" ] && command -v oas &>/dev/null && command -v bun &>/dev/null; then
+if [ "$USE_LOCAL_TARBALLS" != true ] && command -v oas &>/dev/null && command -v bun &>/dev/null; then
     echo "oas CLI already installed (pre-warmed image), skipping setup"
     echo "Bun ready: $(bun --version)"
     echo "CLI ready: $(which oas)"
@@ -94,7 +106,7 @@ if ! command -v bun &> /dev/null; then
 fi
 
 # Install CLI: from local tarballs (OAS_LOCAL_TARBALL_URL) or npm registry
-if [ -n "${OAS_LOCAL_TARBALL_URL:-}" ]; then
+if [ "$USE_LOCAL_TARBALLS" = true ]; then
     echo "Installing from local tarballs at ${OAS_LOCAL_TARBALL_URL}"
     mkdir -p /tmp/oas-local && cd /tmp/oas-local
     package_version="${OAS_PACKAGE_VERSION:-0.1.0-alpha.1}"

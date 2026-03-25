@@ -24,7 +24,7 @@ OUTPUT=""
 DATASET="terminal-bench@2.0"
 ENV_TYPE="docker"
 AGENT_IMPORT_PATH="harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent"
-AGENT_TIMEOUT_MULTIPLIER="0.6"
+AGENT_TIMEOUT_MULTIPLIER="1.0"
 SLEEP_BETWEEN=3
 HARBOR_BIN="${HARBOR_BIN:-harbor}"
 TIMEOUT_MULTIPLIER_FLAG=""
@@ -80,6 +80,10 @@ if [ -f "$MAIN_ENV_FILE" ]; then
   # shellcheck disable=SC1090
   source "$MAIN_ENV_FILE"
   set +a
+fi
+
+if [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "1" ] || [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "true" ]; then
+  unset OAS_LOCAL_TARBALL_URL
 fi
 
 if ! command -v "$HARBOR_BIN" >/dev/null 2>&1 && [ ! -x "$HARBOR_BIN" ]; then
@@ -231,6 +235,10 @@ run_single_trial() {
   local task_name="$1"
   local marker_file
   marker_file="$(mktemp)"
+  local disable_local_tarballs=false
+  if [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "1" ] || [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "true" ]; then
+    disable_local_tarballs=true
+  fi
 
   # Build harbor command as array
   local -a cmd=(
@@ -243,6 +251,9 @@ run_single_trial() {
     -k 1
     "$TIMEOUT_MULTIPLIER_FLAG" "$AGENT_TIMEOUT_MULTIPLIER"
   )
+  if [ "$disable_local_tarballs" = true ]; then
+    cmd+=(--no-delete)
+  fi
 
   # Pass mirror/registry env vars for faster installs in China
   if [ -n "$AGENT_ENV_FLAG" ] && [ -n "${OAS_GITHUB_MIRROR:-}" ]; then
@@ -288,11 +299,22 @@ run_single_trial() {
     fi
   fi
 
+  local -a run_env=(
+    env
+    -u http_proxy
+    -u https_proxy
+    -u all_proxy
+    -u HTTP_PROXY
+    -u HTTPS_PROXY
+    -u ALL_PROXY
+  )
+  if [ "$disable_local_tarballs" = true ]; then
+    run_env+=(-u OAS_LOCAL_TARBALL_URL "OAS_DISABLE_LOCAL_TARBALLS=1")
+  fi
+
   local run_output rc
   set +e
-  run_output=$(env -u http_proxy -u https_proxy -u all_proxy \
-    -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-    "${cmd[@]}" 2>&1)
+  run_output=$("${run_env[@]}" "${cmd[@]}" 2>&1)
   rc=$?
   set -e
 

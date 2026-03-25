@@ -8,7 +8,7 @@ AGENT_IMPORT_PATH="harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent"
 TASKS_FILE=""
 BATCH_SIZE=0
 KEEP_IMAGES=2
-AGENT_TIMEOUT_MULTIPLIER="0.6"
+AGENT_TIMEOUT_MULTIPLIER="1.0"
 TIMEOUT_MULTIPLIER=""
 SLEEP_SECONDS=5
 TASK_REPEATS=1
@@ -29,7 +29,7 @@ Options:
   --keep-images N            Keep newest N terminal-bench images (default: 2)
   --task-repeats K           Harbor -k value per task (default: 1)
   --agent-timeout-multiplier X
-                             Harbor --agent-timeout-multiplier (default: 0.6)
+                             Harbor --agent-timeout-multiplier (default: 1.0)
   --timeout-multiplier X     Harbor --timeout-multiplier (optional)
   --sleep-seconds N          Sleep between tasks (default: 5)
   --keep-proxy               Do not unset proxy env for harbor run

@@ -181,7 +181,7 @@ check_prewarmed_images() {
   fi
 
   echo "=== Verifying pre-warmed images ==="
-  bash "$checker" --tasks-file "$TASKS_FILE"
+  bash "$checker" --tasks-file "$TASKS_FILE" --restore-missing-from-backup
   echo ""
 }
 
@@ -242,9 +242,11 @@ PY
     exit 1
   fi
   export OAS_LOCAL_TARBALL_URL="http://${TARBALL_HOST}:${TARBALL_PORT}"
+  unset OAS_DISABLE_LOCAL_TARBALLS
   echo "Local tarball URL: $OAS_LOCAL_TARBALL_URL"
   echo ""
 else
+  export OAS_DISABLE_LOCAL_TARBALLS=1
   unset OAS_LOCAL_TARBALL_URL
 fi
 

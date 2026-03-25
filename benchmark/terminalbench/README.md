@@ -109,7 +109,7 @@ chmod +x benchmark/terminalbench/scripts/*.sh
   --tasks-file benchmark/terminalbench/task-lists/smoke-5.txt \
   --batch-size 0 \
   --task-repeats 1 \
-  --agent-timeout-multiplier 0.6
+  --agent-timeout-multiplier 1.0
 ```
 
 `run-terminalbench-overnight.sh` now defaults to `--batch-size 0`, so terminal-bench

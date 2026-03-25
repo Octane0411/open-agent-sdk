@@ -23,6 +23,7 @@ PREWARM_ALL=false
 FORCE=false
 RESTORE=false
 BACKUP_PREFIX="oas-original"
+PREWARMED_PREFIX="oas-prewarmed"
 PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 PYPI_FALLBACK_INDEX="https://pypi.org/simple"
 UV_PREWARM_TIMEOUT="600"
@@ -88,6 +89,36 @@ cleanup() {
   fi
 }
 
+build_commit_change_args() {
+  local image="$1"
+  local -n out_ref="$2"
+  local entrypoint_json=""
+  local cmd_json=""
+  local workdir=""
+  local user=""
+
+  entrypoint_json="$(docker image inspect "$image" --format '{{json .Config.Entrypoint}}')"
+  cmd_json="$(docker image inspect "$image" --format '{{json .Config.Cmd}}')"
+  workdir="$(docker image inspect "$image" --format '{{.Config.WorkingDir}}')"
+  user="$(docker image inspect "$image" --format '{{.Config.User}}')"
+
+  out_ref=()
+  if [ "$entrypoint_json" = "null" ]; then
+    out_ref+=(--change 'ENTRYPOINT []')
+  else
+    out_ref+=(--change "ENTRYPOINT ${entrypoint_json}")
+  fi
+  if [ "$cmd_json" != "null" ]; then
+    out_ref+=(--change "CMD ${cmd_json}")
+  fi
+  if [ -n "$workdir" ]; then
+    out_ref+=(--change "WORKDIR ${workdir}")
+  fi
+  if [ -n "$user" ]; then
+    out_ref+=(--change "USER ${user}")
+  fi
+}
+
 # Load env
 MAIN_GIT_DIR="$(git -C "$REPO_ROOT" rev-parse --git-common-dir)"
 MAIN_ENV_FILE="$(cd "$MAIN_GIT_DIR/.." && pwd)/.env"
@@ -114,13 +145,17 @@ else
   while IFS= read -r task_name; do
     [ -z "$task_name" ] && continue
     [[ "$task_name" == \#* ]] && continue
-    toml=$(find ~/.cache/harbor/tasks/ -path "*/$task_name/task.toml" 2>/dev/null | head -1)
-    if [ -z "$toml" ]; then
+    found=false
+    while IFS= read -r toml; do
+      [ -z "$toml" ] && continue
+      found=true
+      image=$(grep -E '^docker_image|^# original_docker_image' "$toml" | head -1 | sed 's/.*= *"//;s/"//')
+      [ -z "$image" ] && continue
+      printf '%s\t%s\n' "$task_name" "$image" >> "$TASK_MAP"
+    done < <(find ~/.cache/harbor/tasks/ -path "*/$task_name/task.toml" 2>/dev/null | sort)
+    if [ "$found" != true ]; then
       echo "WARN: task '$task_name' not found in cache, skipping"
-      continue
     fi
-    image=$(grep -E '^docker_image|^# original_docker_image' "$toml" | head -1 | sed 's/.*= *"//;s/"//')
-    printf '%s\t%s\n' "$task_name" "$image" >> "$TASK_MAP"
   done < "$TASKS_FILE"
 fi
 
@@ -201,6 +236,7 @@ while IFS= read -r image; do
 
   image_base=$(echo "$image" | sed 's|.*/||')
   backup="${BACKUP_PREFIX}/${image_base}"
+  prewarmed_backup="${PREWARMED_PREFIX}/${image_base}"
   tasks=$(awk -F'\t' -v img="$image" '$2==img {printf "%s ", $1}' "$TASK_MAP")
 
   # Check if already pre-warmed (backup exists = already done)
@@ -230,6 +266,9 @@ while IFS= read -r image; do
     docker tag "$image" "$backup"
   fi
 
+  COMMIT_CHANGE_ARGS=()
+  build_commit_change_args "$image" COMMIT_CHANGE_ARGS
+
   container_name="oas-prewarm-$$"
 
   # Build combined setup script
@@ -237,6 +276,7 @@ while IFS= read -r image; do
   cat > "$SETUP_SCRIPT" << 'SETUP_HEADER'
 #!/bin/bash
 set -euo pipefail
+mkdir -p /installed-agent
 SETUP_HEADER
 
   # Append agent install script (strip jinja)
@@ -328,9 +368,10 @@ SETUP_FOOTER
     bash -c "$(cat "$SETUP_SCRIPT")" 2>&1 | tail -5; then
 
     # Replace original image with pre-warmed version
-    docker commit "$container_name" "$image" > /dev/null
+    docker commit "${COMMIT_CHANGE_ARGS[@]}" "$container_name" "$image" > /dev/null
+    docker tag "$image" "$prewarmed_backup"
     docker rm -f "$container_name" > /dev/null
-    echo "  OK: pre-warmed (backup: $backup)"
+    echo "  OK: pre-warmed (original: $backup, warm: $prewarmed_backup)"
     WARMED=$((WARMED + 1))
   else
     echo "  FAIL: setup exited with error"
