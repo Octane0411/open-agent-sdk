@@ -9,6 +9,7 @@ Start with:
 - `benchmark/autoresearch/program.md`
 - `benchmark/autoresearch/scope.md`
 - `benchmark/autoresearch/report-template.md`
+- `benchmark/autoresearch/report-template.html`
 
 ## Design
 
@@ -36,10 +37,11 @@ https://github.com/karpathy/autoresearch:
 1. Create a dedicated experiment branch such as
    `exp/autoresearch-smoke5-run`
 2. Read `protocol.md`, `program.md`, and `scope.md`
-3. Copy `report-template.md` into a run-specific report file
-4. Make one small hypothesis-driven change
-5. Commit it
-6. If the OAS code under test changed and you plan to run with `k > 1`,
+3. Copy `report-template.html` into a run-specific review file
+4. Optionally copy `report-template.md` into a working notes file
+5. Make one small hypothesis-driven change
+6. Commit it
+7. If the OAS code under test changed and you plan to run with `k > 1`,
    pre-warm once:
 
 ```bash
@@ -49,7 +51,7 @@ bash ./benchmark/terminalbench/prewarm-images.sh \
   --force
 ```
 
-7. Run:
+8. Run:
 
 ```bash
 bash ./benchmark/autoresearch/run-experiment.sh \
@@ -58,9 +60,9 @@ bash ./benchmark/autoresearch/run-experiment.sh \
   -k 3
 ```
 
-8. Update the report and experiment tree
+9. Update the HTML report and experiment tree
 
-9. If you want automatic rollback on regressions:
+10. If you want automatic rollback on regressions:
 
 ```bash
 bash ./benchmark/autoresearch/run-experiment.sh \
@@ -115,7 +117,8 @@ Each campaign should leave behind:
 - a dedicated experiment branch
 - append-only rows in `results.tsv`
 - append-only rows in `results_tasks.tsv`
-- a run report copied from `report-template.md`
+- a review-ready HTML report copied from `report-template.html`
+- optional markdown working notes copied from `report-template.md`
 - a Mermaid experiment tree that shows the hypothesis and metrics for each node
 
 ## Reading Task Stability

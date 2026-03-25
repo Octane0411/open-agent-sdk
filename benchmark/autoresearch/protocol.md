@@ -16,23 +16,25 @@ Optimize OAS CLI and prompt behavior on Terminal Bench while keeping experiments
 
 ## Required Deliverables
 
-Every autoresearch session is expected to produce four artifacts:
+Every autoresearch session is expected to produce the following artifacts:
 
 1. An experiment branch, usually named `exp/autoresearch-<tag>`
 2. An append-only metric log in `benchmark/autoresearch/results.tsv`
 3. An append-only task-level log in `benchmark/autoresearch/results_tasks.tsv`
-4. A human-readable experiment report copied from
+4. A review-ready HTML report copied from
+   `benchmark/autoresearch/report-template.html`
+5. Optional markdown working notes copied from
    `benchmark/autoresearch/report-template.md`
-5. A Mermaid experiment tree embedded in the report, showing:
+6. A Mermaid experiment tree embedded in the report, showing:
    - experiment IDs
    - parent/child relationships
    - the hypothesis for each node
    - pass@k and pass^k for each node
    - whether the node was kept or reverted
 
-The git branch is not the source of truth for experiment history. The report,
-`results.tsv`, and `results_tasks.tsv` must record both successful and reverted
-experiments.
+The git branch is not the source of truth for experiment history. The HTML
+report, `results.tsv`, and `results_tasks.tsv` must record both successful and
+reverted experiments.
 
 ## Branch Strategy
 
@@ -116,7 +118,7 @@ Each experiment should test one hypothesis.
 5. Commit the candidate change.
 6. If the change affects installed OAS behavior, re-run pre-warm once.
 7. Run `run-experiment.sh`.
-8. Update the report and experiment tree.
+8. Update the HTML report and experiment tree.
 9. Keep or revert the candidate change.
 
 ## Decision Rules
@@ -134,7 +136,18 @@ experiment ID and mark the earlier result as inconclusive in the report.
 
 ## Report Requirements
 
-The report should let a new reader reconstruct the search path quickly.
+The HTML report is the review artifact. It should let a new reader reconstruct
+the search path quickly without opening the raw TSV files.
+
+The report should include:
+
+- a high-level campaign summary
+- a visual experiment tree
+- a metric snapshot for the best current experiment
+- a task stability section that makes strings like `PPP`, `FFF`, and `EPP`
+  immediately understandable
+- enough experiment detail that a reviewer can connect each node to the code
+  change and outcome
 
 For each experiment node, record:
 
@@ -166,6 +179,11 @@ Also keep a short summary section with:
 - best `pass^k`
 - largest solved-task gain
 - biggest regression seen so far
+
+Preferred workflow:
+
+- use `report-template.html` for the actual review surface
+- use `report-template.md` only as a drafting aid if needed
 
 ## Operational Rules
 

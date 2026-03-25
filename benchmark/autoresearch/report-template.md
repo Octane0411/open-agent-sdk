@@ -3,6 +3,10 @@
 Copy this file to a run-specific report such as
 `benchmark/autoresearch/reports/<date>-smoke5.md` before starting a campaign.
 
+Use this markdown file as working notes only. The review artifact that should be
+shared in PRs and experiment summaries is the companion HTML report copied from
+`benchmark/autoresearch/report-template.html`.
+
 ## Summary
 
 - Campaign:

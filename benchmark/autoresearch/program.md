@@ -7,7 +7,7 @@ Before doing anything else, read:
 1. `benchmark/autoresearch/protocol.md`
 2. `benchmark/autoresearch/scope.md`
 3. `benchmark/autoresearch/results.tsv` if it exists
-4. the current campaign report copied from `benchmark/autoresearch/report-template.md`
+4. the current campaign report copied from `benchmark/autoresearch/report-template.html`
 
 **Primary goal:** maximize **pass@k** (capability — can the agent solve each task at all?)
 **Secondary goal:** maximize **pass^k** (reliability — does it solve tasks consistently?)
@@ -28,7 +28,7 @@ When k=1, all metrics collapse to the same number (simple pass rate).
 
 1. Read the current state of all modifiable files listed in `scope.md`.
 2. Work on a dedicated experiment branch such as `exp/autoresearch-smoke5-run`.
-3. Make sure the campaign report exists and will be updated after each run.
+3. Make sure the campaign HTML report exists and will be updated after each run.
 4. Run a **baseline evaluation**:
    ```bash
    bash ./benchmark/autoresearch/run-experiment.sh \
@@ -58,7 +58,7 @@ Formulate a **single, testable hypothesis**. Examples:
 Write your hypothesis into:
 
 - the git commit message
-- the campaign report
+- the campaign HTML report
 - the Mermaid experiment tree node label
 
 ### Step 2: Implement
@@ -135,7 +135,7 @@ bash ./benchmark/autoresearch/run-experiment.sh --tag "<short-label>" --revert-o
 ```
 
 Record failed experiments in `results.tsv` anyway — append `[REVERTED]` to the description.
-Also record them in the campaign report and Mermaid tree.
+Also record them in the campaign HTML report and Mermaid tree.
 
 **Prioritization:**
 - Early experiments: focus on **pass@k** (unlock new tasks)
@@ -148,7 +148,7 @@ Also record them in the campaign report and Mermaid tree.
 1. **Do not mix infrastructure work with experiment work.** Harness changes go on
    a separate branch from experiment runs.
 2. **Use a dedicated experiment branch.** Keep only winning code commits there.
-3. **Always update the report.** The report and Mermaid tree are mandatory
+3. **Always update the HTML report.** The report and Mermaid tree are mandatory
    outputs, not optional notes.
 4. **Do not lose reverted experiments.** Reverted code commits can disappear from
    branch history, but their metrics and notes must remain in the report and

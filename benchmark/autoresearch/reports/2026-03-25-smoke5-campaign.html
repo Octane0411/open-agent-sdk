@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smoke-5 Autoresearch Campaign</title>
+  <style>
+    :root {
+      --bg: #08111a;
+      --bg-soft: #0e1b28;
+      --panel: rgba(9, 20, 30, 0.7);
+      --panel-strong: rgba(13, 27, 40, 0.92);
+      --line: rgba(123, 167, 204, 0.22);
+      --text: #ecf3f8;
+      --muted: #97a9ba;
+      --accent: #56d2c6;
+      --accent-strong: #8df2d4;
+      --warn: #f4b46a;
+      --fail: #ff7070;
+      --pass: #7ff0b0;
+      --error: #ffd873;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      --radius: 24px;
+      --mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
+      --sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      --serif: "Iowan Old Style", "Georgia", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 18%, rgba(86, 210, 198, 0.18), transparent 24%),
+        radial-gradient(circle at 85% 16%, rgba(244, 180, 106, 0.14), transparent 26%),
+        radial-gradient(circle at 50% 120%, rgba(141, 242, 212, 0.12), transparent 32%),
+        linear-gradient(180deg, #09131c 0%, #08111a 46%, #0a141e 100%);
+      min-height: 100vh;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      width: min(1240px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 44px 44px 34px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 32px;
+      background:
+        linear-gradient(130deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+        linear-gradient(180deg, rgba(11, 28, 41, 0.92), rgba(7, 16, 24, 0.96));
+      box-shadow: var(--shadow);
+      isolation: isolate;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      border-radius: 999px;
+      filter: blur(24px);
+      opacity: 0.8;
+      z-index: -1;
+      animation: float 9s ease-in-out infinite;
+    }
+
+    .hero::before {
+      width: 320px;
+      height: 320px;
+      right: -80px;
+      top: -60px;
+      background: rgba(86, 210, 198, 0.18);
+    }
+
+    .hero::after {
+      width: 260px;
+      height: 260px;
+      left: -60px;
+      bottom: -90px;
+      background: rgba(244, 180, 106, 0.16);
+      animation-delay: -3s;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: var(--accent-strong);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+      gap: 28px;
+      margin-top: 26px;
+      align-items: end;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(50px, 8vw, 88px);
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+      max-width: 9ch;
+    }
+
+    .hero-copy p {
+      margin: 18px 0 0;
+      max-width: 54ch;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .hero-callout {
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(4, 12, 19, 0.48);
+      backdrop-filter: blur(10px);
+    }
+
+    .callout-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .callout-value {
+      margin-top: 8px;
+      font-size: 44px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--accent-strong);
+    }
+
+    .callout-copy {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .link-row,
+    .metric-strip,
+    .section {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: reveal 0.7s ease forwards;
+    }
+
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 26px;
+      animation-delay: 0.06s;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+      color: #dce7ef;
+      font-size: 14px;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+      animation-delay: 0.12s;
+    }
+
+    .metric {
+      padding: 18px 18px 20px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric .value {
+      margin-top: 10px;
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric .sub {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 28px 28px 30px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, var(--panel-strong), rgba(9, 20, 30, 0.82));
+      box-shadow: var(--shadow);
+    }
+
+    .section:nth-of-type(1) { animation-delay: 0.16s; }
+    .section:nth-of-type(2) { animation-delay: 0.22s; }
+    .section:nth-of-type(3) { animation-delay: 0.28s; }
+    .section:nth-of-type(4) { animation-delay: 0.34s; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .section-kicker {
+      color: var(--accent-strong);
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+    }
+
+    h2 {
+      margin: 8px 0 0;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .section-head p {
+      margin: 0;
+      max-width: 46ch;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .experiment-track {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .experiment-track::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 38px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(86, 210, 198, 0.16), rgba(244, 180, 106, 0.3));
+      z-index: 0;
+    }
+
+    .node {
+      position: relative;
+      z-index: 1;
+      padding-top: 4px;
+    }
+
+    .node-badge {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 22px;
+      background: radial-gradient(circle at 30% 30%, rgba(141, 242, 212, 0.18), rgba(86, 210, 198, 0.08));
+      border: 1px solid rgba(141, 242, 212, 0.35);
+      box-shadow: 0 0 0 12px rgba(86, 210, 198, 0.05);
+    }
+
+    .node.pending .node-badge {
+      border-style: dashed;
+      color: var(--warn);
+      box-shadow: 0 0 0 12px rgba(244, 180, 106, 0.05);
+    }
+
+    .node-meta {
+      margin-top: 18px;
+      padding: 16px 0 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .node-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .node-meta p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .score-mini {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .score-mini span {
+      display: inline-flex;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.045);
+      color: #d9e6ee;
+      font-size: 13px;
+    }
+
+    .status-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: minmax(200px, 1.1fr) minmax(140px, 0.7fr) minmax(220px, 0.9fr) minmax(140px, 0.7fr);
+      gap: 16px;
+      align-items: center;
+      padding: 14px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .status-row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .task-name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .task-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-code {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-family: var(--mono);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .chip.pass {
+      color: #042b17;
+      background: var(--pass);
+      border-color: rgba(127, 240, 176, 0.5);
+    }
+
+    .chip.fail {
+      color: #3c1010;
+      background: var(--fail);
+      border-color: rgba(255, 112, 112, 0.5);
+    }
+
+    .chip.error {
+      color: #392300;
+      background: var(--error);
+      border-color: rgba(255, 216, 115, 0.5);
+    }
+
+    .metric-bar {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    }
+
+    .bar-fill.warn {
+      background: linear-gradient(90deg, #f4b46a, #ffd88c);
+    }
+
+    .bar-fill.low {
+      background: linear-gradient(90deg, #ff7070, #ff9586);
+    }
+
+    .metric-bar small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .reading {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .essay {
+      padding: 18px 0 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .essay h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .essay p,
+    .essay li {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .essay ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.95em;
+      color: var(--accent-strong);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(10px) scale(1.03); }
+    }
+
+    @keyframes reveal {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .two-col,
+      .metric-strip,
+      .experiment-track,
+      .status-row {
+        grid-template-columns: 1fr;
+      }
+
+      .experiment-track::before {
+        display: none;
+      }
+
+      .page {
+        width: min(100vw - 24px, 1240px);
+        padding-top: 12px;
+      }
+
+      .hero,
+      .section {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Open Agent SDK / Autoresearch / Smoke-5</div>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>E1 -> E2 campaign review</h1>
+          <p>
+            这一页只做一件事：把第一次 autoresearch 闭环讲清楚。
+            <code>E1</code> 建立了第一条可信 baseline，
+            <code>E2</code> 把结果从“一个总分”升级成“每个任务都可审查”的账本。
+          </p>
+        </div>
+        <aside class="hero-callout">
+          <div class="callout-label">Current best baseline</div>
+          <div class="callout-value">E2</div>
+          <div class="callout-copy">
+            <strong>pass@3 = 0.6000</strong><br />
+            <strong>pass^3 = 0.2000</strong><br />
+            3/5 任务至少成功一次，1/5 任务稳定 3/3。
+          </div>
+        </aside>
+      </div>
+
+      <div class="link-row">
+        <a class="pill" href="./2026-03-25-smoke5-campaign.md">Open markdown report</a>
+        <a class="pill" href="../results.tsv">Open aggregate ledger</a>
+        <a class="pill" href="../results_tasks.tsv">Open task ledger</a>
+      </div>
+
+      <div class="metric-strip">
+        <div class="metric">
+          <div class="label">Campaign branch</div>
+          <div class="value">exp/*</div>
+          <div class="sub">实验与基础设施分离，闭环都跑在专用实验分支上。</div>
+        </div>
+        <div class="metric">
+          <div class="label">Best experiment</div>
+          <div class="value">E2</div>
+          <div class="sub">第一次真正可 review 的 smoke-5 k=3 基线。</div>
+        </div>
+        <div class="metric">
+          <div class="label">Solved at least once</div>
+          <div class="value">3 / 5</div>
+          <div class="sub">来自 <code>pass@3</code>，看能力上限。</div>
+        </div>
+        <div class="metric">
+          <div class="label">Stable 3 / 3</div>
+          <div class="value">1 / 5</div>
+          <div class="sub">来自 <code>pass^3</code>，看可靠性下限。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Experiment Arc</div>
+          <h2>从“能跑”到“能审查”</h2>
+        </div>
+        <p>E1 和 E2 不是行为优化，而是把评测和结果组织成一个能继续往下滚动的研究面板。</p>
+      </div>
+
+      <div class="experiment-track">
+        <article class="node">
+          <div class="node-badge">E1</div>
+          <div class="node-meta">
+            <div class="node-title">Official baseline</div>
+            <p>第一条可信的 <code>smoke-5 / k=3</code> fast-path 基线。</p>
+            <div class="score-mini">
+              <span>pass@3 <strong>0.4000</strong></span>
+              <span>pass^3 <strong>0.2000</strong></span>
+              <span>avg <strong>0.2667</strong></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="node">
+          <div class="node-badge">E2</div>
+          <div class="node-meta">
+            <div class="node-title">Task-ledger baseline</div>
+            <p>补上 task-level 账本，让每个任务的稳定性都可以单独看。</p>
+            <div class="score-mini">
+              <span>pass@3 <strong>0.6000</strong></span>
+              <span>pass^3 <strong>0.2000</strong></span>
+              <span>avg <strong>0.4000</strong></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="node pending">
+          <div class="node-badge">E3</div>
+          <div class="node-meta">
+            <div class="node-title">Pending candidate</div>
+            <p>当前候选是假设空 <code>cwd</code> 让 agent 丢失路径上下文，导致大量无效探索。</p>
+            <div class="score-mini">
+              <span>commit <strong>759c251</strong></span>
+              <span>status <strong>pending</strong></span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Task Stability</div>
+          <h2>每个任务到底发生了什么</h2>
+        </div>
+        <p><code>P</code> 代表通过，<code>F</code> 代表跑完但没过 verifier，<code>E</code> 代表基础设施或运行时错误。</p>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-row">
+          <div>
+            <div class="task-name">fix-git</div>
+            <div class="task-note">E2 里唯一稳定 3/3 的任务</div>
+          </div>
+          <div class="status-code">
+            <span class="chip pass">P</span>
+            <span class="chip pass">P</span>
+            <span class="chip pass">P</span>
+          </div>
+          <div class="metric-bar">
+            <small>pass@3 / pass^3</small>
+            <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+            <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+          </div>
+          <div class="reading">可靠解，说明 fast path 和 OAS 安装链路已经稳了。</div>
+        </div>
+
+        <div class="status-row">
+          <div>
+            <div class="task-name">configure-git-webserver</div>
+            <div class="task-note">主要问题不是 setup，而是 agent 在 900 秒内收不住</div>
+          </div>
+          <div class="status-code">
+            <span class="chip fail">F</span>
+            <span class="chip fail">F</span>
+            <span class="chip fail">F</span>
+          </div>
+          <div class="metric-bar">
+            <small>pass@3 / pass^3</small>
+            <div class="bar-track"><div class="bar-fill low" style="width:0%"></div></div>
+            <div class="bar-track"><div class="bar-fill low" style="width:0%"></div></div>
+          </div>
+          <div class="reading">完全没解出来，属于优先优化对象。</div>
+        </div>
+
+        <div class="status-row">
+          <div>
+            <div class="task-name">llm-inference-batching-scheduler</div>
+            <div class="task-note">已经从早期 ERROR 演进到偶发成功</div>
+          </div>
+          <div class="status-code">
+            <span class="chip fail">F</span>
+            <span class="chip fail">F</span>
+            <span class="chip pass">P</span>
+          </div>
+          <div class="metric-bar">
+            <small>pass@3 / pass^3</small>
+            <div class="bar-track"><div class="bar-fill warn" style="width:100%"></div></div>
+            <div class="bar-track"><div class="bar-fill low" style="width:0%"></div></div>
+          </div>
+          <div class="reading">能解，但不稳定；这类任务更像 prompt 与搜索策略问题。</div>
+        </div>
+
+        <div class="status-row">
+          <div>
+            <div class="task-name">gpt2-codegolf</div>
+            <div class="task-note">大部分时间在做格式和 checkpoint 猜测，没能及时收敛</div>
+          </div>
+          <div class="status-code">
+            <span class="chip fail">F</span>
+            <span class="chip fail">F</span>
+            <span class="chip fail">F</span>
+          </div>
+          <div class="metric-bar">
+            <small>pass@3 / pass^3</small>
+            <div class="bar-track"><div class="bar-fill low" style="width:0%"></div></div>
+            <div class="bar-track"><div class="bar-fill low" style="width:0%"></div></div>
+          </div>
+          <div class="reading">完全没解出来，也是优先优化对象。</div>
+        </div>
+
+        <div class="status-row">
+          <div>
+            <div class="task-name">prove-plus-comm</div>
+            <div class="task-note">两次通过，一次运行时异常</div>
+          </div>
+          <div class="status-code">
+            <span class="chip error">E</span>
+            <span class="chip pass">P</span>
+            <span class="chip pass">P</span>
+          </div>
+          <div class="metric-bar">
+            <small>pass@3 / pass^3</small>
+            <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+            <div class="bar-track"><div class="bar-fill low" style="width:0%"></div></div>
+          </div>
+          <div class="reading">通常可解，但仍有基础设施噪声，不适合作为早期主攻对象。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">What E1 / E2 Actually Did</div>
+          <h2>不是“变聪明”，而是“把实验搭对”</h2>
+        </div>
+        <p>这两轮最重要的产出是研究基础设施，而不是 prompt 微调本身。</p>
+      </div>
+
+      <div class="two-col">
+        <div class="essay">
+          <h3>E1</h3>
+          <p>
+            <code>E1-baseline-smoke5-k3-official</code> 的任务，是第一次在 pre-warmed fast path
+            上拿到一条可信的 <code>smoke-5 / k=3</code> 基线。
+          </p>
+          <ul>
+            <li>没有改 agent 行为</li>
+            <li>验证了 run-experiment、结果统计、官方超时口径能一起工作</li>
+            <li>给后续优化提供了第一条可比较的基准线</li>
+          </ul>
+        </div>
+
+        <div class="essay">
+          <h3>E2</h3>
+          <p>
+            <code>E2-baseline-smoke5-k3-task-ledger</code> 的任务，是把“一个总分”拆成“每个任务自己的稳定性画像”。
+          </p>
+          <ul>
+            <li>新增 task-level ledger</li>
+            <li>把 <code>PPP / FFF / FFP / EPP</code> 这种稳定性串持久化</li>
+            <li>让每一轮 experiment 都能知道具体该打哪个任务</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        当前 campaign 真正的第一轮 agent 优化，是下一步的 <code>E3</code>。
+        当前候选 commit 为 <code>759c251</code>，核心假设是空 <code>cwd</code> 让 agent 在任务里失去路径上下文。
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Source of Truth</div>
+          <h2>你可以从哪里继续往下看</h2>
+        </div>
+        <p>如果要做更细的人工 review，下面三个文件就是当前最该看的源头。</p>
+      </div>
+
+      <div class="two-col">
+        <div class="essay">
+          <h3>Aggregate ledger</h3>
+          <p><code>benchmark/autoresearch/results.tsv</code> 记录每一轮实验的总指标。</p>
+        </div>
+        <div class="essay">
+          <h3>Task ledger</h3>
+          <p><code>benchmark/autoresearch/results_tasks.tsv</code> 记录每个任务自己的稳定性和 trial-rate。</p>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        当前 HTML 文件路径：
+        <code>benchmark/autoresearch/reports/2026-03-25-smoke5-campaign.html</code>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
