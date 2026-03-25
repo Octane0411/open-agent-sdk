@@ -1,18 +1,25 @@
 :root {
-  --sl-font: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
+  --sl-font: 'Avenir Next', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Noto Sans', Arial, sans-serif;
   --sl-font-system: var(--sl-font);
   --sl-font-system-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
   --sl-line-height: 1.6;
 
-  --sl-color-accent-low: hsl(220 42% 93%);
-  --sl-color-accent: hsl(221 72% 54%);
-  --sl-color-accent-high: hsl(223 58% 33%);
+  --sl-color-accent-low: hsl(24 68% 93%);
+  --sl-color-accent: hsl(18 60% 50%);
+  --sl-color-accent-high: hsl(16 56% 31%);
 
   --sl-color-text-accent: var(--sl-color-accent-high);
-  --sl-color-bg-nav: hsla(0 0% 100% / 0.82);
-  --sl-color-bg-sidebar: hsl(220 20% 98%);
-  --sl-color-hairline: hsl(220 16% 86%);
-  --sl-color-hairline-light: hsl(220 14% 90%);
+  --sl-color-bg: hsl(38 52% 97%);
+  --sl-color-bg-nav: hsla(38 70% 98% / 0.84);
+  --sl-color-bg-sidebar: hsl(36 46% 95%);
+  --sl-color-gray-1: hsl(210 16% 12%);
+  --sl-color-gray-2: hsl(208 12% 28%);
+  --sl-color-gray-3: hsl(206 8% 41%);
+  --sl-color-gray-4: hsl(25 8% 53%);
+  --sl-color-gray-5: hsl(32 16% 78%);
+  --sl-color-gray-6: hsl(35 24% 88%);
+  --sl-color-hairline: hsl(28 18% 82%);
+  --sl-color-hairline-light: hsl(31 22% 88%);
 
   --sl-shadow-sm: 0 2px 12px -8px rgba(12, 16, 24, 0.2);
   --sl-shadow-md: 0 8px 28px -16px rgba(12, 16, 24, 0.22);
@@ -20,21 +27,28 @@
 }
 
 :root[data-theme='dark'] {
-  --sl-color-accent-low: hsl(223 31% 16%);
-  --sl-color-accent: hsl(219 90% 66%);
-  --sl-color-accent-high: hsl(214 98% 80%);
+  --sl-color-accent-low: hsl(16 28% 17%);
+  --sl-color-accent: hsl(18 61% 56%);
+  --sl-color-accent-high: hsl(27 88% 83%);
 
   --sl-color-text-accent: var(--sl-color-accent-high);
-  --sl-color-bg-nav: hsla(222 27% 10% / 0.82);
-  --sl-color-bg-sidebar: hsl(221 27% 11%);
-  --sl-color-hairline: hsl(220 16% 25%);
-  --sl-color-hairline-light: hsl(220 18% 18%);
+  --sl-color-bg: hsl(210 15% 10%);
+  --sl-color-bg-nav: hsla(210 14% 10% / 0.84);
+  --sl-color-bg-sidebar: hsl(210 14% 11%);
+  --sl-color-gray-1: hsl(40 48% 94%);
+  --sl-color-gray-2: hsl(33 20% 78%);
+  --sl-color-gray-3: hsl(30 11% 62%);
+  --sl-color-gray-4: hsl(28 8% 50%);
+  --sl-color-gray-5: hsl(212 12% 28%);
+  --sl-color-gray-6: hsl(212 14% 20%);
+  --sl-color-hairline: hsl(212 12% 24%);
+  --sl-color-hairline-light: hsl(212 14% 18%);
 }
 
 body {
   background-image:
-    radial-gradient(1300px 760px at 100% -25%, rgba(83, 121, 255, 0.06), transparent 58%),
-    radial-gradient(900px 660px at -24% -22%, rgba(83, 121, 255, 0.04), transparent 70%);
+    radial-gradient(1200px 720px at 100% -25%, rgba(201, 95, 52, 0.08), transparent 56%),
+    radial-gradient(840px 640px at -24% -22%, rgba(23, 29, 33, 0.05), transparent 68%);
   background-attachment: fixed;
 }
 
@@ -53,14 +67,9 @@ header {
 }
 
 .site-title img {
-  height: 28px;
-  max-width: 228px;
+  height: 30px;
+  max-width: 248px;
   width: auto;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.42));
-}
-
-:root[data-theme='dark'] .site-title img {
-  filter: none;
 }
 
 @media (max-width: 50rem) {
@@ -77,17 +86,18 @@ main .sl-markdown-content :is(h1, h2, h3) {
 main .sl-markdown-content h1 {
   font-size: clamp(2rem, 2.7vw, 2.45rem);
   font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 main .sl-markdown-content :is(pre, .expressive-code) {
   border: 1px solid var(--sl-color-hairline);
-  border-radius: 10px;
+  border-radius: 14px;
   box-shadow: var(--sl-shadow-sm);
 }
 
 .card,
 .sl-link-card {
-  border-radius: 10px;
+  border-radius: 16px;
   border: 1px solid var(--sl-color-hairline-light);
   background: color-mix(in oklab, var(--sl-color-bg) 95%, white 5%);
   box-shadow: var(--sl-shadow-sm);
@@ -119,7 +129,7 @@ main .sl-markdown-content :is(pre, .expressive-code) {
 #starlight__sidebar a[aria-current='page']:hover,
 #starlight__sidebar a[aria-current='page']:focus {
   color: var(--sl-color-accent-high);
-  background: color-mix(in oklab, var(--sl-color-accent-low) 44%, var(--sl-color-bg) 56%);
+  background: color-mix(in oklab, var(--sl-color-accent-low) 52%, var(--sl-color-bg) 48%);
   font-weight: 500;
   box-shadow: inset 1px 0 0 var(--sl-color-accent);
 }
@@ -137,7 +147,7 @@ starlight-theme-select .theme-toggle {
   height: 2rem;
   border: 1px solid var(--sl-color-hairline);
   border-radius: 999px;
-  background: color-mix(in oklab, var(--sl-color-bg-nav) 88%, var(--sl-color-bg) 12%);
+  background: color-mix(in oklab, var(--sl-color-bg-nav) 90%, var(--sl-color-bg) 10%);
   color: var(--sl-color-gray-2);
   cursor: pointer;
   box-shadow: none;

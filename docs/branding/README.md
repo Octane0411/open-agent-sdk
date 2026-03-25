@@ -2,8 +2,8 @@
 
 ## Files
 
-- `open-agent-sdk-banner.svg`: default banner for light backgrounds
-- `open-agent-sdk-banner-dark.svg`: banner variant for dark backgrounds
+- `open-agent-sdk-banner.svg`: primary horizontal logo lockup for light backgrounds
+- `open-agent-sdk-banner-dark.svg`: horizontal logo lockup for dark backgrounds
 
 ## Usage
 
@@ -12,6 +12,7 @@
 
 ## Design Intent
 
-- Mark combines an abstract "O" and "A" path to suggest agent loop + tool routing
-- Color direction avoids purple-heavy AI branding defaults
-- Horizontal lockup optimized for repository headers and website hero areas
+- Mark uses a single operator tile symbol instead of decorative gradients or pixel art
+- Shape hints at an open loop, a route stroke, and an active tool signal in one silhouette
+- Color direction matches the warm web palette: deep ink, warm paper, rust accent
+- Horizontal lockup is optimized for repository headers, docs navigation, and website branding

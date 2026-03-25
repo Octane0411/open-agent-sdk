@@ -1,33 +1,15 @@
-<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Open Agent SDK banner logo dark</title>
-  <desc id="desc">Horizontal logo with abstract agent mark and Open Agent SDK wordmark for dark backgrounds.</desc>
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Open Agent SDK logo lockup dark</title>
+  <desc id="desc">Open Agent SDK logo with an operator tile symbol and horizontal wordmark for dark backgrounds.</desc>
 
-  <defs>
-    <linearGradient id="markBgDark" x1="40" y1="40" x2="280" y2="280" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0F172A"/>
-      <stop offset="1" stop-color="#1E293B"/>
-    </linearGradient>
-    <linearGradient id="signalDark" x1="72" y1="72" x2="248" y2="248" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#67E8F9"/>
-      <stop offset="1" stop-color="#6EE7B7"/>
-    </linearGradient>
-    <linearGradient id="sparkDark" x1="68" y1="252" x2="108" y2="292" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FBBF24"/>
-      <stop offset="1" stop-color="#FB923C"/>
-    </linearGradient>
-  </defs>
+  <rect x="18" y="22" width="136" height="136" rx="34" fill="#171d21"/>
+  <rect x="25" y="29" width="122" height="122" rx="28" stroke="#2A3338" stroke-width="2"/>
+  <path d="M111 53A32 32 0 1 0 112 106" stroke="#FFF7EA" stroke-width="13" stroke-linecap="round"/>
+  <path d="M67 106L100 57" stroke="#C95F34" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="113" cy="53" r="6.5" fill="#C95F34"/>
 
-  <rect x="40" y="40" width="240" height="240" rx="58" fill="url(#markBgDark)"/>
-
-  <path d="M100 160C100 126.863 126.863 100 160 100H214" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
-  <path d="M220 100L238 100" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
-  <path d="M214 100C180.863 100 154 126.863 154 160V220" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
-  <path d="M154 220L154 238" stroke="url(#signalDark)" stroke-width="18" stroke-linecap="round"/>
-
-  <rect x="112" y="112" width="96" height="96" rx="28" stroke="#CBD5E1" stroke-opacity="0.4" stroke-width="2"/>
-  <circle cx="248" cy="88" r="12" fill="#67E8F9"/>
-  <circle cx="94" cy="244" r="11" fill="url(#sparkDark)"/>
-
-  <text x="330" y="146" font-size="72" font-family="'Sora', 'Avenir Next', 'Segoe UI', sans-serif" font-weight="700" fill="#F8FAFC" letter-spacing="-1.2">Open Agent SDK</text>
-  <text x="334" y="198" font-size="28" font-family="'Sora', 'Avenir Next', 'Segoe UI', sans-serif" font-weight="500" fill="#CBD5E1" letter-spacing="0.4">Open, extensible SDK for AI agents</text>
+  <g fill="#FFF7EA">
+    <text x="184" y="84" font-size="46" font-family="'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif" font-weight="700" letter-spacing="-1.6">Open Agent SDK</text>
+    <text x="187" y="116" font-size="19" font-family="'Avenir Next', 'SF Pro Text', 'Helvetica Neue', sans-serif" font-weight="500" fill="#D0C5B3">Open-source agent runtime</text>
+  </g>
 </svg>

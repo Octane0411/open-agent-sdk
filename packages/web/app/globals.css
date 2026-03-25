@@ -94,17 +94,10 @@ code {
 }
 
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: var(--ink);
-  color: var(--paper-strong);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  flex: 0 0 auto;
 }
 
 .brand-copy {

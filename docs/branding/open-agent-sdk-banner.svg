@@ -1,41 +1,15 @@
-<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Open Agent SDK banner logo</title>
-  <desc id="desc">Horizontal logo with abstract agent mark and Open Agent SDK wordmark.</desc>
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Open Agent SDK logo lockup</title>
+  <desc id="desc">Open Agent SDK logo with an operator tile symbol and horizontal wordmark.</desc>
 
-  <defs>
-    <linearGradient id="markBg" x1="40" y1="40" x2="280" y2="280" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0B1220"/>
-      <stop offset="1" stop-color="#14233F"/>
-    </linearGradient>
-    <linearGradient id="signal" x1="72" y1="72" x2="248" y2="248" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#22D3EE"/>
-      <stop offset="1" stop-color="#34D399"/>
-    </linearGradient>
-    <linearGradient id="spark" x1="68" y1="252" x2="108" y2="292" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F59E0B"/>
-      <stop offset="1" stop-color="#F97316"/>
-    </linearGradient>
-    <filter id="softGlow" x="48" y="48" width="224" height="224" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="10" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
-  </defs>
+  <rect x="18" y="22" width="136" height="136" rx="34" fill="#171d21"/>
+  <rect x="25" y="29" width="122" height="122" rx="28" stroke="#2A3338" stroke-width="2"/>
+  <path d="M111 53A32 32 0 1 0 112 106" stroke="#FFF7EA" stroke-width="13" stroke-linecap="round"/>
+  <path d="M67 106L100 57" stroke="#C95F34" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="113" cy="53" r="6.5" fill="#C95F34"/>
 
-  <rect x="40" y="40" width="240" height="240" rx="58" fill="url(#markBg)"/>
-
-  <g filter="url(#softGlow)">
-    <path d="M100 160C100 126.863 126.863 100 160 100H214" stroke="url(#signal)" stroke-width="18" stroke-linecap="round"/>
-    <path d="M220 100L238 100" stroke="url(#signal)" stroke-width="18" stroke-linecap="round"/>
-    <path d="M214 100C180.863 100 154 126.863 154 160V220" stroke="url(#signal)" stroke-width="18" stroke-linecap="round"/>
-    <path d="M154 220L154 238" stroke="url(#signal)" stroke-width="18" stroke-linecap="round"/>
-  </g>
-
-  <rect x="112" y="112" width="96" height="96" rx="28" stroke="#9CA3AF" stroke-opacity="0.45" stroke-width="2"/>
-  <circle cx="248" cy="88" r="12" fill="#67E8F9"/>
-  <circle cx="94" cy="244" r="11" fill="url(#spark)"/>
-
-  <g fill="#0F172A">
-    <text x="330" y="146" font-size="72" font-family="'Sora', 'Avenir Next', 'Segoe UI', sans-serif" font-weight="700" letter-spacing="-1.2">Open Agent SDK</text>
-    <text x="334" y="198" font-size="28" font-family="'Sora', 'Avenir Next', 'Segoe UI', sans-serif" font-weight="500" fill="#334155" letter-spacing="0.4">Open, extensible SDK for AI agents</text>
+  <g fill="#171D21">
+    <text x="184" y="84" font-size="46" font-family="'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif" font-weight="700" letter-spacing="-1.6">Open Agent SDK</text>
+    <text x="187" y="116" font-size="19" font-family="'Avenir Next', 'SF Pro Text', 'Helvetica Neue', sans-serif" font-weight="500" fill="#5E696E">Open-source agent runtime</text>
   </g>
 </svg>

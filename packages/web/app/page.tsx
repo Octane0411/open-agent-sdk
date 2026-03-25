@@ -153,7 +153,7 @@ export default function HomePage() {
       <header className="masthead">
         <div className="masthead-inner">
           <Link className="brand" href="/">
-            <span className="brand-mark">OAS</span>
+            <img className="brand-mark" src="/icon.svg" alt="" width="44" height="44" />
             <span className="brand-copy">
               <strong>Open Agent SDK</strong>
               <span>Open-source agent runtime</span>

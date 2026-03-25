@@ -1,4 +1,6 @@
 <div align="center">
+  <img src="./docs/branding/open-agent-sdk-banner.svg" alt="Open Agent SDK logo" width="420">
+
   <h1>Open Agent SDK</h1>
 
   <p><strong>Lightweight, general-purpose TypeScript agent runtime. Open-source alternative to Claude Agent SDK.</strong></p>
