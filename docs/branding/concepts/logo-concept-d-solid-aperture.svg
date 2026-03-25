@@ -1,8 +1,8 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="256" height="256" rx="56" fill="#14171B"/>
   <path fill-rule="evenodd" clip-rule="evenodd" d="M128 48C172.183 48 208 83.8172 208 128C208 172.183 172.183 208 128 208C83.8172 208 48 172.183 48 128C48 83.8172 83.8172 48 128 48ZM128 74C98.1766 74 74 98.1766 74 128C74 157.823 98.1766 182 128 182C157.823 182 182 157.823 182 128C182 98.1766 157.823 74 128 74Z" fill="#F5EFE6"/>
-  <path d="M94 178Q109 126 128 74" stroke="#F5EFE6" stroke-width="20" stroke-linecap="round"/>
-  <path d="M162 178Q147 126 128 74" stroke="#F5EFE6" stroke-width="20" stroke-linecap="round"/>
+  <path d="M88 178Q105 125 128 74" stroke="#F5EFE6" stroke-width="20" stroke-linecap="round"/>
+  <path d="M168 178Q151 125 128 74" stroke="#F5EFE6" stroke-width="20" stroke-linecap="round"/>
   <path d="M111 145Q128 148 145 145" stroke="#F5EFE6" stroke-width="18" stroke-linecap="round"/>
   <circle cx="200" cy="56" r="12" fill="#D97945"/>
 </svg>
