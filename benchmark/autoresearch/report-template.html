@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autoresearch Campaign Report</title>
+  <style>
+    :root {
+      --bg: #08111a;
+      --bg-soft: #0d1925;
+      --panel: rgba(10, 21, 31, 0.82);
+      --panel-soft: rgba(255, 255, 255, 0.035);
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #edf3f8;
+      --muted: #9fb0bf;
+      --accent: #57d4c7;
+      --accent-strong: #92f1d9;
+      --warn: #f5c06c;
+      --fail: #ff7f7f;
+      --pass: #86f2b7;
+      --error: #ffd56b;
+      --radius: 24px;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      --mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
+      --sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      --serif: "Iowan Old Style", "Georgia", serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at 10% 12%, rgba(87, 212, 199, 0.18), transparent 24%),
+        radial-gradient(circle at 85% 10%, rgba(245, 192, 108, 0.16), transparent 26%),
+        linear-gradient(180deg, #08111a 0%, #09131d 48%, #0b151f 100%);
+    }
+
+    code { font-family: var(--mono); color: var(--accent-strong); }
+
+    .page {
+      width: min(1220px, calc(100vw - 36px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+
+    .hero,
+    .section {
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(12, 24, 36, 0.96), rgba(8, 17, 26, 0.94));
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 44px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(24px);
+      opacity: 0.7;
+      z-index: 0;
+    }
+
+    .hero::before {
+      width: 300px;
+      height: 300px;
+      right: -80px;
+      top: -80px;
+      background: rgba(87, 212, 199, 0.18);
+    }
+
+    .hero::after {
+      width: 260px;
+      height: 260px;
+      left: -80px;
+      bottom: -100px;
+      background: rgba(245, 192, 108, 0.15);
+    }
+
+    .hero > * { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--accent-strong);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+      gap: 28px;
+      margin-top: 28px;
+      align-items: end;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(52px, 8vw, 88px);
+      line-height: 0.92;
+      letter-spacing: -0.05em;
+      max-width: 9ch;
+    }
+
+    .hero p {
+      margin: 18px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 56ch;
+    }
+
+    .hero-card {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 12px;
+    }
+
+    .hero-value {
+      margin-top: 10px;
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .metric {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .metric .value {
+      margin-top: 10px;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric .sub {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 48ch;
+      line-height: 1.6;
+    }
+
+    .kicker {
+      color: var(--accent-strong);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    h2 {
+      margin: 8px 0 0;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.03;
+      letter-spacing: -0.04em;
+    }
+
+    .tree {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      position: relative;
+    }
+
+    .tree::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 40px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(87, 212, 199, 0.2), rgba(245, 192, 108, 0.28));
+    }
+
+    .node {
+      position: relative;
+      z-index: 1;
+    }
+
+    .node-badge {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 22px;
+      border: 1px solid rgba(146, 241, 217, 0.35);
+      background: radial-gradient(circle at 30% 30%, rgba(146, 241, 217, 0.18), rgba(87, 212, 199, 0.06));
+      box-shadow: 0 0 0 12px rgba(87, 212, 199, 0.05);
+    }
+
+    .node.pending .node-badge {
+      border-style: dashed;
+      border-color: rgba(245, 192, 108, 0.35);
+      box-shadow: 0 0 0 12px rgba(245, 192, 108, 0.05);
+      color: var(--warn);
+    }
+
+    .node-meta {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .node-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .node-meta p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .mini-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .mini-row span {
+      display: inline-flex;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.045);
+      font-size: 13px;
+    }
+
+    .status-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: minmax(200px, 1.1fr) minmax(140px, 0.7fr) minmax(220px, 0.9fr) minmax(140px, 0.7fr);
+      gap: 16px;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .status-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .task-name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .task-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chips {
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+
+    .pass { background: var(--pass); color: #042b17; }
+    .fail { background: var(--fail); color: #401112; }
+    .error { background: var(--error); color: #3f2b03; }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    }
+
+    .bar-fill.low { background: linear-gradient(90deg, #ff7f7f, #ff9a9a); }
+    .bar-fill.warn { background: linear-gradient(90deg, #f5c06c, #ffd893); }
+
+    .bars small,
+    .reading,
+    .copy,
+    .detail li {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .cols {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .detail {
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .detail h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .detail p {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .detail ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .metric-strip,
+      .tree,
+      .status-row,
+      .cols {
+        grid-template-columns: 1fr;
+      }
+
+      .tree::before {
+        display: none;
+      }
+
+      .page {
+        width: min(100vw - 24px, 1220px);
+        padding-top: 12px;
+      }
+
+      .hero,
+      .section {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Autoresearch campaign report</div>
+      <div class="hero-grid">
+        <div>
+          <h1>[Campaign title]</h1>
+          <p>
+            Replace this paragraph with a one-screen summary of what the campaign
+            was trying to prove, what state the project is in now, and what a
+            reviewer should notice first.
+          </p>
+        </div>
+        <aside class="hero-card">
+          <div class="label">Current best experiment</div>
+          <div class="hero-value">E0</div>
+          <p class="copy">
+            <strong>pass@k = ?</strong><br />
+            <strong>pass^k = ?</strong><br />
+            State the current best line in plain language.
+          </p>
+        </aside>
+      </div>
+
+      <div class="metric-strip">
+        <div class="metric">
+          <div class="label">Branch</div>
+          <div class="value">exp/*</div>
+          <div class="sub">Which experiment branch this report covers.</div>
+        </div>
+        <div class="metric">
+          <div class="label">Task list</div>
+          <div class="value">smoke-5</div>
+          <div class="sub">The benchmark slice or campaign surface.</div>
+        </div>
+        <div class="metric">
+          <div class="label">Best pass@k</div>
+          <div class="value">?</div>
+          <div class="sub">How many tasks are solvable at least once.</div>
+        </div>
+        <div class="metric">
+          <div class="label">Best pass^k</div>
+          <div class="value">?</div>
+          <div class="sub">How many tasks are stable across all trials.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Experiment tree</div>
+          <h2>Visual search path</h2>
+        </div>
+        <p>Show the branching logic and make it obvious which nodes were kept, reverted, or are still pending.</p>
+      </div>
+
+      <div class="tree">
+        <article class="node">
+          <div class="node-badge">E0</div>
+          <div class="node-meta">
+            <div class="node-title">Baseline</div>
+            <p>Describe what made this the baseline.</p>
+            <div class="mini-row">
+              <span>pass@k <strong>?</strong></span>
+              <span>pass^k <strong>?</strong></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="node">
+          <div class="node-badge">E1</div>
+          <div class="node-meta">
+            <div class="node-title">First change</div>
+            <p>Summarize the one hypothesis tested here.</p>
+            <div class="mini-row">
+              <span>decision <strong>KEEP</strong></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="node pending">
+          <div class="node-badge">E2</div>
+          <div class="node-meta">
+            <div class="node-title">Pending / next</div>
+            <p>Use the last node to show the next candidate or open question.</p>
+            <div class="mini-row">
+              <span>status <strong>pending</strong></span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Task stability</div>
+          <h2>Per-task behavior</h2>
+        </div>
+        <p>Translate strings like <code>PPP</code>, <code>FFF</code>, and <code>EPP</code> into a reviewer-friendly explanation.</p>
+      </div>
+
+      <div class="status-list">
+        <div class="status-row">
+          <div>
+            <div class="task-name">task-name</div>
+            <div class="task-note">One-line note about why this task matters.</div>
+          </div>
+          <div class="chips">
+            <span class="chip pass">P</span>
+            <span class="chip fail">F</span>
+            <span class="chip error">E</span>
+          </div>
+          <div class="bars">
+            <small>pass@k / pass^k</small>
+            <div class="bar-track"><div class="bar-fill" style="width: 100%"></div></div>
+            <div class="bar-track"><div class="bar-fill low" style="width: 0%"></div></div>
+          </div>
+          <div class="reading">State what this pattern means and whether it is a capability, reliability, or infrastructure problem.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Experiment detail</div>
+          <h2>What changed and why</h2>
+        </div>
+        <p>Each card should let a reviewer connect one hypothesis, one code change, and one outcome.</p>
+      </div>
+
+      <div class="cols">
+        <div class="detail">
+          <h3>E0</h3>
+          <p>Describe the baseline or ancestor node in plain language.</p>
+          <ul>
+            <li>Commit: <code>abc1234</code></li>
+            <li>Files changed: <code>packages/...</code></li>
+            <li>Decision: KEEP / REVERT</li>
+          </ul>
+        </div>
+
+        <div class="detail">
+          <h3>E1</h3>
+          <p>Describe the single hypothesis tested in this experiment.</p>
+          <ul>
+            <li>Command: <code>bash benchmark/autoresearch/run-experiment.sh ...</code></li>
+            <li>Metrics: pass@k, pass^k, avg_trial_rate</li>
+            <li>Notes: regression, gain, or unresolved noise</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

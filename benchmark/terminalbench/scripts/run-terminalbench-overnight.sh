@@ -6,9 +6,9 @@ MODEL="MiniMax-M2.5"
 ENV_TYPE="docker"
 AGENT_IMPORT_PATH="harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent"
 TASKS_FILE=""
-BATCH_SIZE=5
+BATCH_SIZE=0
 KEEP_IMAGES=2
-AGENT_TIMEOUT_MULTIPLIER="0.6"
+AGENT_TIMEOUT_MULTIPLIER="1.0"
 TIMEOUT_MULTIPLIER=""
 SLEEP_SECONDS=5
 TASK_REPEATS=1
@@ -25,11 +25,11 @@ Options:
   --dataset NAME             Harbor dataset (default: terminal-bench@2.0)
   --model NAME               Model name (default: MiniMax-M2.5)
   --env NAME                 Harbor env type (default: docker)
-  --batch-size N             Cleanup every N tasks (default: 5)
+  --batch-size N             Cleanup every N tasks; 0 disables cleanup (default: 0)
   --keep-images N            Keep newest N terminal-bench images (default: 2)
   --task-repeats K           Harbor -k value per task (default: 1)
   --agent-timeout-multiplier X
-                             Harbor --agent-timeout-multiplier (default: 0.6)
+                             Harbor --agent-timeout-multiplier (default: 1.0)
   --timeout-multiplier X     Harbor --timeout-multiplier (optional)
   --sleep-seconds N          Sleep between tasks (default: 5)
   --keep-proxy               Do not unset proxy env for harbor run
@@ -38,7 +38,7 @@ Options:
 Example:
   ./benchmark/terminalbench/scripts/run-terminalbench-overnight.sh \
     --tasks-file benchmark/terminalbench/task-lists/smoke-5.txt \
-    --batch-size 3 --keep-images 1 --task-repeats 1
+    --batch-size 0 --task-repeats 1
 EOF
 }
 

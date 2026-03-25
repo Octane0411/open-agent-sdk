@@ -21,11 +21,15 @@ MODEL="MiniMax-M2.5"
 K=3
 TAG="eval"
 OUTPUT=""
+TASK_OUTPUT=""
 DATASET="terminal-bench@2.0"
 ENV_TYPE="docker"
 AGENT_IMPORT_PATH="harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent"
-AGENT_TIMEOUT_MULTIPLIER="0.6"
+AGENT_TIMEOUT_MULTIPLIER="1.0"
 SLEEP_BETWEEN=3
+HARBOR_BIN="${HARBOR_BIN:-harbor}"
+TIMEOUT_MULTIPLIER_FLAG=""
+AGENT_ENV_FLAG=""
 
 usage() {
   cat <<'EOF'
@@ -37,6 +41,7 @@ Options:
   -k N                 Trials per task (default: 3)
   --tag TAG            Label for this run (default: "eval")
   --output FILE        Append TSV summary to file
+  --task-output FILE   Append per-task TSV rows to file
   --sleep N            Seconds between trials (default: 3)
   -h, --help           Show help
 
@@ -53,6 +58,7 @@ while (($#)); do
     -k) K="${2:-}"; shift 2 ;;
     --tag) TAG="${2:-}"; shift 2 ;;
     --output) OUTPUT="${2:-}"; shift 2 ;;
+    --task-output) TASK_OUTPUT="${2:-}"; shift 2 ;;
     --sleep) SLEEP_BETWEEN="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
@@ -79,9 +85,26 @@ if [ -f "$MAIN_ENV_FILE" ]; then
   set +a
 fi
 
-if ! command -v harbor >/dev/null 2>&1; then
-  echo "harbor not found in PATH" >&2
+if [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "1" ] || [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "true" ]; then
+  unset OAS_LOCAL_TARBALL_URL
+fi
+
+if ! command -v "$HARBOR_BIN" >/dev/null 2>&1 && [ ! -x "$HARBOR_BIN" ]; then
+  echo "harbor not found: $HARBOR_BIN" >&2
   exit 1
+fi
+
+if "$HARBOR_BIN" run --agent-timeout-multiplier 1 --help >/dev/null 2>&1; then
+  TIMEOUT_MULTIPLIER_FLAG="--agent-timeout-multiplier"
+elif "$HARBOR_BIN" run --timeout-multiplier 1 --help >/dev/null 2>&1; then
+  TIMEOUT_MULTIPLIER_FLAG="--timeout-multiplier"
+else
+  echo "Could not determine Harbor timeout multiplier flag for: $HARBOR_BIN run" >&2
+  exit 1
+fi
+
+if "$HARBOR_BIN" run --ae FOO=bar --help >/dev/null 2>&1; then
+  AGENT_ENV_FLAG="--ae"
 fi
 
 # Parse tasks
@@ -94,12 +117,88 @@ echo "=== autoresearch evaluate ==="
 echo "tasks=$TASK_COUNT  k=$K  model=$MODEL  tag=$TAG"
 echo ""
 
-# ── Helper: extract reward from harbor result.json ──
-# Harbor prints "Results written to <dir>/result.json" in stdout.
-# The run-level result.json contains stats.evals.*.metrics[0].mean
-# The trial-level result.json contains verifier_result.reward
-#
-# We parse the run-level result.json for the mean reward.
+COMMIT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+
+ensure_tsv_header() {
+  local path="$1"
+  local header="$2"
+  if [ -z "$path" ]; then
+    return
+  fi
+  mkdir -p "$(dirname "$path")"
+  if [ ! -s "$path" ]; then
+    printf '%s\n' "$header" > "$path"
+  fi
+}
+
+ensure_tsv_header "$TASK_OUTPUT" \
+  'commit	tag	model	task_name	k	pass_count	fail_count	error_count	statuses	pass@k	pass^k	trial_rate'
+
+# ── Helper: extract reward from a task-level Harbor result.json ──
+extract_reward_from_result_file() {
+  local result_file="$1"
+
+  if [ ! -f "$result_file" ]; then
+    echo "-1"
+    return
+  fi
+
+  python3 - "$result_file" <<'PY' 2>/dev/null
+import json
+import sys
+
+path = sys.argv[1]
+
+try:
+    with open(path) as f:
+        d = json.load(f)
+
+    vr = d.get("verifier_result") or {}
+    rewards = vr.get("rewards") or {}
+    reward = vr.get("reward", rewards.get("reward"))
+
+    if reward is not None:
+        print(int(float(reward) >= 0.5))
+    elif d.get("exception_info"):
+        print(-1)
+    else:
+        print(0)
+except Exception:
+    print(-1)
+PY
+}
+
+# ── Helper: find the newest task-level result.json produced after a marker ──
+find_latest_task_result() {
+  local task_name="$1"
+  local marker_file="$2"
+
+  python3 - "$REPO_ROOT" "$task_name" "$marker_file" <<'PY' 2>/dev/null
+import glob
+import os
+import sys
+
+repo_root, task_name, marker_file = sys.argv[1:]
+marker_mtime = os.path.getmtime(marker_file)
+
+pattern = os.path.join(repo_root, "jobs", "*", f"{task_name}__*", "result.json")
+candidates = []
+
+for path in glob.glob(pattern):
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        continue
+    if mtime >= marker_mtime:
+        candidates.append((mtime, path))
+
+if candidates:
+    candidates.sort()
+    print(candidates[-1][1])
+PY
+}
+
+# ── Helper: fallback to parsing Harbor stdout when artifacts are unavailable ──
 extract_reward_from_output() {
   local run_output="$1"
 
@@ -117,32 +216,7 @@ extract_reward_from_output() {
   trial_result=$(find "$result_dir" -mindepth 2 -name "result.json" 2>/dev/null | head -1)
 
   if [ -n "$trial_result" ] && [ -f "$trial_result" ]; then
-    # Check verifier_result.reward in trial result
-    local reward
-    reward=$(python3 -c "
-import json, sys
-try:
-    d = json.load(open('$trial_result'))
-    vr = d.get('verifier_result') or {}
-    # Harbor stores reward in different formats:
-    #   verifier_result.reward (flat)
-    #   verifier_result.rewards.reward (nested)
-    r = vr.get('reward')
-    if r is None:
-        rewards = vr.get('rewards') or {}
-        r = rewards.get('reward')
-    if r is not None:
-        print(int(float(r) >= 0.5))
-        sys.exit(0)
-    # No verifier result — check if there was an exception
-    if d.get('exception_info'):
-        print(-1)
-    else:
-        print(0)
-except Exception:
-    print(-1)
-" 2>/dev/null)
-    echo "${reward:--1}"
+    extract_reward_from_result_file "$trial_result"
     return
   fi
 
@@ -179,25 +253,34 @@ except Exception:
 # ── Helper: run one trial, return 1=pass 0=fail -1=error ──
 run_single_trial() {
   local task_name="$1"
+  local marker_file
+  marker_file="$(mktemp)"
+  local disable_local_tarballs=false
+  if [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "1" ] || [ "${OAS_DISABLE_LOCAL_TARBALLS:-}" = "true" ]; then
+    disable_local_tarballs=true
+  fi
 
   # Build harbor command as array
   local -a cmd=(
-    harbor run -d "$DATASET"
+    "$HARBOR_BIN" run -d "$DATASET"
     --env "$ENV_TYPE"
     --agent-import-path "$AGENT_IMPORT_PATH"
     --model "$MODEL"
     --task-name "$task_name"
     --n-concurrent 1
     -k 1
-    --agent-timeout-multiplier "$AGENT_TIMEOUT_MULTIPLIER"
+    "$TIMEOUT_MULTIPLIER_FLAG" "$AGENT_TIMEOUT_MULTIPLIER"
   )
+  if [ "$disable_local_tarballs" = true ]; then
+    cmd+=(--no-delete)
+  fi
 
   # Pass mirror/registry env vars for faster installs in China
-  if [ -n "${OAS_GITHUB_MIRROR:-}" ]; then
-    cmd+=(--ae "OAS_GITHUB_MIRROR=${OAS_GITHUB_MIRROR}")
+  if [ -n "$AGENT_ENV_FLAG" ] && [ -n "${OAS_GITHUB_MIRROR:-}" ]; then
+    cmd+=("$AGENT_ENV_FLAG" "OAS_GITHUB_MIRROR=${OAS_GITHUB_MIRROR}")
   fi
-  if [ -n "${OAS_NPM_REGISTRIES:-}" ]; then
-    cmd+=(--ae "OAS_NPM_REGISTRIES=${OAS_NPM_REGISTRIES}")
+  if [ -n "$AGENT_ENV_FLAG" ] && [ -n "${OAS_NPM_REGISTRIES:-}" ]; then
+    cmd+=("$AGENT_ENV_FLAG" "OAS_NPM_REGISTRIES=${OAS_NPM_REGISTRIES}")
   fi
 
   local model_lower
@@ -210,45 +293,74 @@ run_single_trial() {
   fi
 
   if [[ "$model_lower" == minimax* ]]; then
-    cmd+=(--ae "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}")
-    cmd+=(--ae "ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}")
+    if [ -n "$AGENT_ENV_FLAG" ]; then
+      cmd+=("$AGENT_ENV_FLAG" "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}")
+      cmd+=("$AGENT_ENV_FLAG" "ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}")
+    fi
   elif [ "$is_codex" = true ]; then
     # Note: OAS_CODEX_OAUTH_JSON is NOT passed via --ae because:
     # 1. JSON with quotes breaks shell escaping in Docker env vars
     # 2. The adapter embeds credentials directly in the command via heredoc
     # The adapter reads OAS_CODEX_OAUTH_JSON from the host's os.environ instead.
-    if [ -n "${OAS_CODEX_API_KEY:-}" ]; then
-      cmd+=(--ae "OAS_CODEX_API_KEY=${OAS_CODEX_API_KEY}")
+    if [ -n "$AGENT_ENV_FLAG" ] && [ -n "${OAS_CODEX_API_KEY:-}" ]; then
+      cmd+=("$AGENT_ENV_FLAG" "OAS_CODEX_API_KEY=${OAS_CODEX_API_KEY}")
     fi
   elif [[ "$model_lower" == gemini* ]] || [[ "$model_lower" == google* ]]; then
-    cmd+=(--ae "GEMINI_API_KEY=${GEMINI_API_KEY:-}")
+    if [ -n "$AGENT_ENV_FLAG" ]; then
+      cmd+=("$AGENT_ENV_FLAG" "GEMINI_API_KEY=${GEMINI_API_KEY:-}")
+    fi
   elif [[ "$model_lower" == claude* ]]; then
-    cmd+=(--ae "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}")
+    if [ -n "$AGENT_ENV_FLAG" ]; then
+      cmd+=("$AGENT_ENV_FLAG" "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}")
+    fi
   elif [[ "$model_lower" == gpt* ]] || [[ "$model_lower" == openai* ]]; then
-    cmd+=(--ae "OPENAI_API_KEY=${OPENAI_API_KEY:-}")
+    if [ -n "$AGENT_ENV_FLAG" ]; then
+      cmd+=("$AGENT_ENV_FLAG" "OPENAI_API_KEY=${OPENAI_API_KEY:-}")
+    fi
+  fi
+
+  local -a run_env=(
+    env
+    -u http_proxy
+    -u https_proxy
+    -u all_proxy
+    -u HTTP_PROXY
+    -u HTTPS_PROXY
+    -u ALL_PROXY
+  )
+  if [ "$disable_local_tarballs" = true ]; then
+    run_env+=(-u OAS_LOCAL_TARBALL_URL "OAS_DISABLE_LOCAL_TARBALLS=1")
   fi
 
   local run_output rc
   set +e
-  run_output=$(env -u http_proxy -u https_proxy -u all_proxy \
-    -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-    "${cmd[@]}" 2>&1)
+  run_output=$("${run_env[@]}" "${cmd[@]}" 2>&1)
   rc=$?
   set -e
 
+  local latest_result reward
+  latest_result="$(find_latest_task_result "$task_name" "$marker_file")"
+  rm -f "$marker_file"
+
+  if [ -n "$latest_result" ]; then
+    reward="$(extract_reward_from_result_file "$latest_result")"
+    printf '%s\t%s\n' "${reward:--1}" "$latest_result"
+    return
+  fi
+
   if [ "$rc" -ne 0 ]; then
     # Harbor exited non-zero, but still may have written result.json
-    local reward
     reward=$(extract_reward_from_output "$run_output")
     if [ "$reward" != "-1" ]; then
-      echo "$reward"
+      printf '%s\t%s\n' "$reward" ""
     else
-      echo "-1"
+      printf '%s\t%s\n' "-1" ""
     fi
     return
   fi
 
-  extract_reward_from_output "$run_output"
+  reward="$(extract_reward_from_output "$run_output")"
+  printf '%s\t%s\n' "${reward:--1}" ""
 }
 
 # ── Main evaluation loop ──
@@ -275,19 +387,24 @@ while IFS= read -r task_name; do
   for trial in $(seq 1 "$K"); do
     echo -n "  trial $trial/$K ... "
 
-    result=$(run_single_trial "$task_name")
+    trial_output="$(run_single_trial "$task_name")"
+    IFS=$'\t' read -r result latest_result <<< "$trial_output"
+    status_word=""
 
     if [ "$result" = "1" ]; then
       task_pass=$((task_pass + 1))
       trial_results="${trial_results}P"
+      status_word="PASS"
       echo "PASS"
     elif [ "$result" = "0" ]; then
       task_fail=$((task_fail + 1))
       trial_results="${trial_results}F"
+      status_word="FAIL"
       echo "FAIL"
     else
       task_error=$((task_error + 1))
       trial_results="${trial_results}E"
+      status_word="ERROR"
       echo "ERROR"
     fi
 
@@ -320,8 +437,17 @@ while IFS= read -r task_name; do
   TASKS_ALL_PASS=$((TASKS_ALL_PASS + all_pass))
   TASKS_WITH_ERROR=$((TASKS_WITH_ERROR + has_error))
 
+  task_trial_rate="$(python3 -c "print(f'{$task_pass / $K:.4f}')")"
+
   echo "  => $task_name: $trial_results  ($task_pass/$K pass)  pass@k=$any_pass  pass^k=$all_pass"
   echo ""
+
+  if [ -n "$TASK_OUTPUT" ]; then
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$COMMIT" "$TAG" "$MODEL" "$task_name" "$K" \
+      "$task_pass" "$task_fail" "$task_error" "$trial_results" \
+      "$any_pass" "$all_pass" "$task_trial_rate" >> "$TASK_OUTPUT"
+  fi
 
 done < "$TASKS_TMP"
 
@@ -368,7 +494,6 @@ echo ""
 # ── Write machine-readable output ──
 if [ -n "$OUTPUT" ]; then
   # TSV line compatible with results.tsv
-  COMMIT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$COMMIT" "$PASS_AT_K" "$PASS_POW_K" "$AVG_TRIAL_RATE" \
     "$TASKS_ANY_PASS" "$TASKS_ALL_PASS" "$TOTAL_TRIAL_PASS" \

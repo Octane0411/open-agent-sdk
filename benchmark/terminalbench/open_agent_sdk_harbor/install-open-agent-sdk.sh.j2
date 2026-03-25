@@ -1,6 +1,31 @@
 #!/bin/bash
 set -euo pipefail
 
+# Pre-warmed images install bun/oas under /root/.bun/bin. Put those locations on
+# PATH before the fast-path check so setup can detect the existing CLI.
+export PATH="/root/.bun/bin:$HOME/.bun/bin:$PATH"
+
+is_truthy() {
+    case "${1:-}" in
+        1|true|TRUE|yes|YES|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+USE_LOCAL_TARBALLS=false
+if [ -n "${OAS_LOCAL_TARBALL_URL:-}" ] && ! is_truthy "${OAS_DISABLE_LOCAL_TARBALLS:-}"; then
+    USE_LOCAL_TARBALLS=true
+fi
+
+# Fast path: skip install if oas CLI is already available (pre-warmed image)
+# unless this run explicitly requests a fresh local tarball install.
+if [ "$USE_LOCAL_TARBALLS" != true ] && command -v oas &>/dev/null && command -v bun &>/dev/null; then
+    echo "oas CLI already installed (pre-warmed image), skipping setup"
+    echo "Bun ready: $(bun --version)"
+    echo "CLI ready: $(which oas)"
+    exit 0
+fi
+
 retry() {
     local attempts="$1"
     local sleep_sec="$2"
@@ -16,6 +41,26 @@ retry() {
         i=$((i + 1))
         sleep "$sleep_sec"
     done
+}
+
+download_tarball_with_fallback() {
+    local dest="$1"
+    shift
+    local tarball_url_base="${OAS_LOCAL_TARBALL_URL%/}"
+
+    for name in "$@"; do
+        [ -z "$name" ] && continue
+        local url="${tarball_url_base}/${name}"
+        echo "Fetching local tarball: ${url}"
+        if curl -fsSL "$url" -o "$dest"; then
+            echo "Downloaded ${name}"
+            return 0
+        fi
+        echo "Missing ${name}, trying next candidate..."
+    done
+
+    echo "ERROR: failed to download tarball from ${tarball_url_base}" >&2
+    return 1
 }
 
 install_cli_with_registry_fallback() {
@@ -59,14 +104,18 @@ if ! command -v bun &> /dev/null; then
     retry 5 3 bash -c "curl -fsSL --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors https://bun.sh/install | bash"
     unset GITHUB
 fi
-export PATH="$HOME/.bun/bin:$PATH"
 
 # Install CLI: from local tarballs (OAS_LOCAL_TARBALL_URL) or npm registry
-if [ -n "${OAS_LOCAL_TARBALL_URL:-}" ]; then
+if [ "$USE_LOCAL_TARBALLS" = true ]; then
     echo "Installing from local tarballs at ${OAS_LOCAL_TARBALL_URL}"
     mkdir -p /tmp/oas-local && cd /tmp/oas-local
-    curl -fsSL "${OAS_LOCAL_TARBALL_URL}/open-agent-sdk-0.1.0-alpha.1.tgz" -o sdk.tgz
-    curl -fsSL "${OAS_LOCAL_TARBALL_URL}/open-agent-sdk-cli-0.1.0-alpha.1.tgz" -o cli.tgz
+    package_version="${OAS_PACKAGE_VERSION:-0.1.0-alpha.1}"
+    download_tarball_with_fallback sdk.tgz \
+        "open-agent-sdk.tgz" \
+        "open-agent-sdk-${package_version}.tgz"
+    download_tarball_with_fallback cli.tgz \
+        "open-agent-sdk-cli.tgz" \
+        "open-agent-sdk-cli-${package_version}.tgz"
     mkdir -p sdk cli
     tar xzf sdk.tgz -C sdk --strip-components=1
     tar xzf cli.tgz -C cli --strip-components=1
@@ -94,4 +143,5 @@ fi
 
 echo "Bun ready: $(bun --version)"
 echo "CLI ready: $(which oas)"
-echo "CLI version: $(oas --version 2>&1 || echo 'version check failed')"
+help_output="$(oas --help 2>&1 || true)"
+echo "CLI help: $(printf '%s\n' "$help_output" | sed -n '1p')"

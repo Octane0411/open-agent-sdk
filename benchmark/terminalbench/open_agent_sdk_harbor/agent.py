@@ -42,12 +42,19 @@ Note: Environment variables MUST be passed via --ae flag for Docker container ac
 import os
 from pathlib import Path
 
+from jinja2 import Environment as JinjaEnvironment
 from harbor.agents.installed.base import BaseInstalledAgent, ExecInput
+from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
 
 
 # CLI command (installed globally by install script)
 CLI_COMMAND = "/usr/local/bin/bun /root/.bun/bin/oas"
+
+
+def should_disable_local_tarballs() -> bool:
+    """Return True when runtime should ignore any repo-loaded local tarball URL."""
+    return os.environ.get("OAS_DISABLE_LOCAL_TARBALLS", "").lower() in {"1", "true", "yes"}
 
 
 def is_minimax_model(model_name: str) -> bool:
@@ -117,17 +124,97 @@ class OpenAgentSDKAgent(BaseInstalledAgent):
         """Path to the install script template."""
         return Path(__file__).parent / "install-open-agent-sdk.sh.j2"
 
-    def _setup_env(self) -> dict[str, str]:
-        """Pass mirror/local-install env vars to install script."""
-        env = super()._setup_env()
-        for key in ("OAS_GITHUB_MIRROR", "OAS_NPM_REGISTRIES", "OAS_LOCAL_TARBALL_URL"):
+    def _build_exec_env(self, model_name: str) -> dict[str, str]:
+        """Collect host env vars that must be present inside the container."""
+        env: dict[str, str] = {}
+        disable_local_tarballs = should_disable_local_tarballs()
+        if disable_local_tarballs:
+            env["OAS_DISABLE_LOCAL_TARBALLS"] = "1"
+        for key in get_required_env_var_names(model_name):
+            val = os.environ.get(key)
+            if val:
+                env[key] = val
+        for key in (
+            "OAS_GITHUB_MIRROR",
+            "OAS_NPM_REGISTRIES",
+            "OAS_LOCAL_TARBALL_URL",
+            "OAS_PACKAGE_VERSION",
+        ):
+            if key == "OAS_LOCAL_TARBALL_URL" and disable_local_tarballs:
+                continue
             val = os.environ.get(key)
             if val:
                 env[key] = val
         return env
 
+    def _setup_env(self) -> dict[str, str]:
+        """Pass mirror/local-install env vars to install script."""
+        env: dict[str, str] = {}
+        disable_local_tarballs = should_disable_local_tarballs()
+        if disable_local_tarballs:
+            env["OAS_DISABLE_LOCAL_TARBALLS"] = "1"
+        version = self.version()
+        if version:
+            env["OAS_PACKAGE_VERSION"] = version
+        for key in ("OAS_GITHUB_MIRROR", "OAS_NPM_REGISTRIES", "OAS_LOCAL_TARBALL_URL"):
+            if key == "OAS_LOCAL_TARBALL_URL" and disable_local_tarballs:
+                env.pop(key, None)
+                continue
+            val = os.environ.get(key)
+            if val:
+                env[key] = val
+            elif key == "OAS_LOCAL_TARBALL_URL":
+                env.pop(key, None)
+        return env
+
+    async def setup(self, environment: BaseEnvironment) -> None:
+        """Install the agent with repo-controlled setup env injection."""
+        await environment.exec(
+            command="echo 'PS1=1 . ~/.bashrc 2>/dev/null; unset PS1' >> ~/.bash_profile"
+        )
+        await environment.exec(command="mkdir -p /installed-agent")
+
+        if not self._install_agent_template_path.exists():
+            raise FileNotFoundError(
+                f"Install agent template file not found: {self._install_agent_template_path}"
+            )
+
+        template_env = JinjaEnvironment()
+        template = template_env.from_string(self._install_agent_template_path.read_text())
+        rendered_script = template.render(**self._template_variables)
+
+        script_path = self.logs_dir / "install.sh"
+        script_path.write_text(rendered_script)
+
+        await environment.upload_file(
+            source_path=script_path,
+            target_path="/installed-agent/install.sh",
+        )
+
+        setup_env = {"DEBIAN_FRONTEND": "noninteractive", **self._setup_env()}
+        result = await environment.exec(
+            command="bash /installed-agent/install.sh",
+            env=setup_env,
+        )
+
+        setup_dir = self.logs_dir / "setup"
+        setup_dir.mkdir(parents=True, exist_ok=True)
+        (setup_dir / "return-code.txt").write_text(str(result.return_code))
+
+        if result.stdout:
+            (setup_dir / "stdout.txt").write_text(result.stdout)
+        if result.stderr:
+            (setup_dir / "stderr.txt").write_text(result.stderr)
+
+        if result.return_code != 0:
+            raise RuntimeError(
+                f"Agent setup failed with exit code {result.return_code}. "
+                f"See logs in {setup_dir}"
+            )
+
     def create_run_agent_commands(self, instruction: str) -> list[ExecInput]:
         model = self.model_name or "gemini-2.0-flash"
+        exec_env = self._build_exec_env(model)
 
         # Build CLI command with provider-specific flags.
         # IMPORTANT:
@@ -204,7 +291,7 @@ exit $RC"""
         return [
             ExecInput(
                 command=command,
-                timeout_sec=600,
+                env=exec_env,
             )
         ]
 

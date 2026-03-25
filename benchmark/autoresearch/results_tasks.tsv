@@ -1,0 +1,6 @@
+commit	tag	model	task_name	k	pass_count	fail_count	error_count	statuses	pass@k	pass^k	trial_rate
+45dead9	E2-baseline-smoke5-k3-task-ledger	MiniMax-M2.5	fix-git	3	3	0	0	PPP	1	1	1.0000
+45dead9	E2-baseline-smoke5-k3-task-ledger	MiniMax-M2.5	configure-git-webserver	3	0	3	0	FFF	0	0	0.0000
+45dead9	E2-baseline-smoke5-k3-task-ledger	MiniMax-M2.5	llm-inference-batching-scheduler	3	1	2	0	FFP	1	0	0.3333
+45dead9	E2-baseline-smoke5-k3-task-ledger	MiniMax-M2.5	gpt2-codegolf	3	0	3	0	FFF	0	0	0.0000
+45dead9	E2-baseline-smoke5-k3-task-ledger	MiniMax-M2.5	prove-plus-comm	3	2	0	1	EPP	1	0	0.6667

@@ -1,1 +1,12 @@
 commit	pass@k	pass^k	avg_trial	any_pass	all_pass	trial_pass	total_trials	tasks	k	description
+97e301f	0.0000	0.0000	0.0000	0	0	0	15	5	3	E0-baseline-smoke5-k3
+6353772	0.0000	0.0000	0.0000	0	0	0	15	5	3	E0c-baseline-smoke5-k3
+fe8f271	0.2000	0.0000	0.0667	1	0	1	15	5	3	E0d-baseline-smoke5-k3
+fe8f271	0.0000	0.0000	0.0000	0	0	0	5	5	1	E0e-smoke5-k1-fastpath
+fe8f271	0.0000	0.0000	0.0000	0	0	0	5	5	1	E0f-smoke5-k1-fastpath
+fe8f271	0.4000	0.4000	0.4000	2	2	2	5	5	1	E0g-smoke5-k1-fastpath
+fe8f271	0.0000	0.0000	0.0000	0	0	0	1	1	1	E0h-configure-fastpath
+fe8f271	0.0000	0.0000	0.0000	0	0	0	1	1	1	E0j-configure-fastpath
+fe8f271	0.4000	0.4000	0.4000	2	2	2	5	5	1	E0m-smoke5-k1-fastpath
+7b84d8a	0.4000	0.2000	0.2667	2	1	4	15	5	3	E1-baseline-smoke5-k3-official
+45dead9	0.6000	0.2000	0.4000	3	1	6	15	5	3	E2-baseline-smoke5-k3-task-ledger
