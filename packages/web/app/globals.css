@@ -26,7 +26,9 @@ body {
   margin: 0;
   min-height: 100%;
   color: var(--ink);
-  font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: 'Avenir Next', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   background:
     radial-gradient(1200px 540px at 10% -10%, rgba(201, 95, 52, 0.16), transparent 64%),
     radial-gradient(900px 560px at 100% 0%, rgba(23, 29, 33, 0.06), transparent 58%),
@@ -201,10 +203,13 @@ code {
 
 .hero h1 {
   margin: 0;
-  max-width: 10ch;
-  font-size: clamp(3.9rem, 8vw, 7.5rem);
-  line-height: 0.92;
-  letter-spacing: -0.055em;
+  max-width: 13ch;
+  font-size: clamp(3.2rem, 6.8vw, 6.2rem);
+  font-family: 'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.075em;
+  text-wrap: balance;
 }
 
 .hero-body,
@@ -465,6 +470,8 @@ code {
 .post h1 {
   margin: 0;
   font-size: clamp(2rem, 4.8vw, 4.15rem);
+  font-family: 'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  font-weight: 700;
   line-height: 0.96;
   letter-spacing: -0.04em;
 }
@@ -507,6 +514,7 @@ code {
 .resource-link h3 {
   margin: 0;
   font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
@@ -749,7 +757,7 @@ time {
 
   .hero h1 {
     max-width: 100%;
-    font-size: clamp(3rem, 14vw, 4.8rem);
+    font-size: clamp(2.75rem, 13vw, 4.6rem);
   }
 
   .workflow-step,
