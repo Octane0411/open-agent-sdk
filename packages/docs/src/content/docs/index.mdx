@@ -3,35 +3,55 @@ title: Open Agent SDK Documentation
 description: Lightweight, general-purpose TypeScript agent runtime. Open-source alternative to Claude Agent SDK.
 ---
 
-Lightweight, general-purpose TypeScript agent runtime. Open-source alternative to Claude Agent SDK.
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import DocsLandingHero from '../../components/DocsLandingHero.astro';
 
-Use this documentation to move from install to production-ready workflows:
+<DocsLandingHero
+  title="Move from install to a real agent runtime."
+  body="Use this documentation to go from first setup to production-oriented workflows with sessions, tools, permissions, hooks, storage, and provider strategy."
+  primaryAction={{ href: '/getting-started/quickstart/', label: 'Run the quickstart' }}
+  secondaryAction={{ href: '/api-reference/overview/', label: 'Browse the API' }}
+  signals={[
+    'Claude-style mental model',
+    'Sessions, tools, hooks, and permissions',
+    'Codex, OpenAI, Gemini, and Anthropic',
+    'Open runtime you can actually inspect'
+  ]}
+/>
 
-- Run one-shot prompts or session workflows quickly
-- Add tools, permissions, hooks, storage, and provider strategy with confidence
-- Migrate from Claude Agent SDK without rewriting your mental model
+## Start here
 
-## Quick links
-
-- [Installation](/getting-started/installation/)
-- [Quickstart](/getting-started/quickstart/)
-- [Provider & Auth Strategy](/guides/provider-auth-strategy/)
-- [Permissions & Safety](/guides/permissions-and-safety/)
-- [API Reference](/api-reference/overview/)
-- [Diff vs Claude Agent SDK](/migration/claude-agent-sdk-diff/)
-- [Quick Migration Guide](/migration/quick-migration/)
+<CardGrid stagger>
+  <Card title="Installation" icon="seti:package">
+    Set up the SDK, environment variables, and local runtime dependencies.
+  </Card>
+  <Card title="Quickstart" icon="rocket-launch" href="/getting-started/quickstart/">
+    Run your first prompt and session workflow from the same runtime surface.
+  </Card>
+  <Card title="Permissions & Safety" icon="shield-check" href="/guides/permissions-and-safety/">
+    Add tool gating, approval modes, and control points before the risky part.
+  </Card>
+  <Card title="Provider & Auth" icon="plug" href="/guides/provider-auth-strategy/">
+    Choose how Codex, OpenAI, Gemini, and Anthropic fit into your product surface.
+  </Card>
+</CardGrid>
 
 ## Why teams adopt Open Agent SDK
 
-- **Open runtime:** MIT-licensed core and transparent implementation instead of a black box
-- **Claude-style ergonomics:** Familiar session and tool-first workflow patterns
-- **Provider flexibility:** Integrate Codex, OpenAI, Gemini, and Anthropic without architecture rewrites
-- **Operational controls:** First-class tooling for sessions, permissions, hooks, storage, and MCP
-
-## Notes
-
-- Engineering workflows and ADRs still live in repository root `docs/`.
-- Current release line: `0.1.0-alpha.x`.
+<CardGrid>
+  <Card title="Open runtime, not a black box" icon="open-book">
+    Keep the implementation readable, extensible, and MIT-licensed instead of outsourcing the core loop.
+  </Card>
+  <Card title="Familiar workflow model" icon="repeat">
+    Stay close to the Claude-style mental model while gaining a broader runtime surface.
+  </Card>
+  <Card title="Provider strategy without a rewrite" icon="network">
+    Integrate Codex, OpenAI, Gemini, and Anthropic without rebuilding your abstractions.
+  </Card>
+  <Card title="Operational controls built in" icon="gear">
+    Use sessions, permissions, hooks, storage, MCP, and task delegation as first-class primitives.
+  </Card>
+</CardGrid>
 
 ## Suggested path
 
@@ -40,3 +60,22 @@ Use this documentation to move from install to production-ready workflows:
 3. [Choose provider and auth defaults](/guides/provider-auth-strategy/)
 4. [Configure permissions and safety](/guides/permissions-and-safety/)
 5. [Review migration details](/migration/quick-migration/)
+
+## Migration and reference
+
+<CardGrid>
+  <Card title="Quick migration guide" icon="paper-plane-tilt" href="/migration/quick-migration/">
+    Map Claude Agent SDK workflows onto Open Agent SDK without losing the mental model.
+  </Card>
+  <Card title="Diff vs Claude Agent SDK" icon="list-tree" href="/migration/claude-agent-sdk-diff/">
+    See where the APIs line up and where Open Agent SDK intentionally diverges.
+  </Card>
+  <Card title="API reference" icon="list" href="/api-reference/overview/">
+    Browse the typed runtime surface for sessions, providers, tools, hooks, and permissions.
+  </Card>
+</CardGrid>
+
+## Notes
+
+- Engineering workflows and ADRs still live in repository root `docs/`.
+- Current release line: `0.1.0-alpha.x`.

@@ -1,12 +1,15 @@
 <svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Open Agent SDK logo lockup</title>
-  <desc id="desc">Open Agent SDK logo with an operator tile symbol and horizontal wordmark.</desc>
+  <desc id="desc">Open Agent SDK logo with a circular aperture mark and horizontal wordmark.</desc>
 
-  <rect x="18" y="22" width="136" height="136" rx="34" fill="#171d21"/>
-  <rect x="25" y="29" width="122" height="122" rx="28" stroke="#2A3338" stroke-width="2"/>
-  <path d="M111 53A32 32 0 1 0 112 106" stroke="#FFF7EA" stroke-width="13" stroke-linecap="round"/>
-  <path d="M67 106L100 57" stroke="#C95F34" stroke-width="11" stroke-linecap="round"/>
-  <circle cx="113" cy="53" r="6.5" fill="#C95F34"/>
+  <svg x="18" y="22" width="136" height="136" viewBox="0 0 128 128" fill="none">
+    <rect width="128" height="128" rx="30" fill="#171D21"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M64 24C86.0914 24 104 41.9086 104 64C104 86.0914 86.0914 104 64 104C41.9086 104 24 86.0914 24 64C24 41.9086 41.9086 24 64 24ZM64 37C49.0883 37 37 49.0883 37 64C37 78.9117 49.0883 91 64 91C78.9117 91 91 78.9117 91 64C91 49.0883 78.9117 37 64 37Z" fill="#FFF7EA"/>
+    <path d="M44 89Q52.5 62.5 64 37" stroke="#FFF7EA" stroke-width="10" stroke-linecap="round"/>
+    <path d="M84 89Q75.5 62.5 64 37" stroke="#FFF7EA" stroke-width="10" stroke-linecap="round"/>
+    <path d="M55 72.5Q64 74 73 72.5" stroke="#FFF7EA" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="100" cy="28" r="6" fill="#D97945"/>
+  </svg>
 
   <g fill="#171D21">
     <text x="184" y="84" font-size="46" font-family="'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif" font-weight="700" letter-spacing="-1.6">Open Agent SDK</text>

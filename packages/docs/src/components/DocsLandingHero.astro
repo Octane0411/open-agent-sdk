@@ -1,0 +1,76 @@
+---
+interface Action {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  title: string;
+  body: string;
+  primaryAction: Action;
+  secondaryAction: Action;
+  signals?: string[];
+}
+
+const {
+  title,
+  body,
+  primaryAction,
+  secondaryAction,
+  signals = []
+} = Astro.props;
+---
+
+<section class="docs-hero">
+  <div class="docs-hero-copy">
+    <div class="docs-hero-brand">
+      <img src="/favicon.svg" alt="" width="28" height="28" />
+      <span>Open Agent SDK Docs</span>
+    </div>
+    <p class="docs-hero-kicker">Documentation</p>
+    <h1>{title}</h1>
+    <p class="docs-hero-body">{body}</p>
+    <div class="docs-hero-actions">
+      <a class="docs-hero-button docs-hero-button-primary" href={primaryAction.href}>
+        {primaryAction.label}
+      </a>
+      <a class="docs-hero-button docs-hero-button-secondary" href={secondaryAction.href}>
+        {secondaryAction.label}
+      </a>
+    </div>
+    <ul class="docs-hero-signals">
+      {signals.map((signal) => <li>{signal}</li>)}
+    </ul>
+  </div>
+
+  <aside class="docs-hero-panel" aria-label="What this docs site covers">
+    <div class="docs-hero-console">
+      <div class="docs-hero-console-header">
+        <div class="docs-hero-console-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <p>docs/index.mdx</p>
+      </div>
+      <div class="docs-hero-console-command">
+        <span>$</span>
+        <code>bunx open-agent-sdk@alpha init my-agent</code>
+      </div>
+      <ul class="docs-hero-console-list">
+        <li>
+          <span>install</span>
+          <p>Get the runtime running locally and understand the core package surface.</p>
+        </li>
+        <li>
+          <span>build</span>
+          <p>Wire providers, permissions, hooks, storage, MCP, and session workflows.</p>
+        </li>
+        <li>
+          <span>ship</span>
+          <p>Move from Claude-style patterns to an open runtime you can inspect and extend.</p>
+        </li>
+      </ul>
+    </div>
+  </aside>
+</section>

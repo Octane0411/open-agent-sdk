@@ -16,10 +16,6 @@ Lightweight, general-purpose TypeScript agent runtime. Open-source alternative t
 
 Use it when you want a lightweight open runtime with sessions, tools, hooks, subagents, and multi-provider support in a codebase you can actually inspect and extend.
 
-<div align="center">
-  <img src="./docs/branding/pixel-demo.svg" alt="Open Agent SDK Demo" width="100%">
-</div>
-
 More runnable examples: [Demo Gallery](./DEMO_GALLERY.md).
 
 ## Quickstart

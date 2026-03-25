@@ -1,19 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Open Agent SDK">
-  <rect width="128" height="128" rx="30" fill="#171d21"/>
-  <rect x="6" y="6" width="116" height="116" rx="24" fill="none" stroke="#2a3338" stroke-width="2"/>
-  <path
-    d="M90 39A31 31 0 1 0 91 88"
-    fill="none"
-    stroke="#fff7ea"
-    stroke-width="12"
-    stroke-linecap="round"
-  />
-  <path
-    d="M51 87L82 42"
-    fill="none"
-    stroke="#c95f34"
-    stroke-width="10"
-    stroke-linecap="round"
-  />
-  <circle cx="92" cy="39" r="6" fill="#c95f34"/>
+  <rect width="128" height="128" rx="30" fill="#171D21"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M64 24C86.0914 24 104 41.9086 104 64C104 86.0914 86.0914 104 64 104C41.9086 104 24 86.0914 24 64C24 41.9086 41.9086 24 64 24ZM64 37C49.0883 37 37 49.0883 37 64C37 78.9117 49.0883 91 64 91C78.9117 91 91 78.9117 91 64C91 49.0883 78.9117 37 64 37Z" fill="#FFF7EA"/>
+  <path d="M44 89Q52.5 62.5 64 37" stroke="#FFF7EA" stroke-width="10" stroke-linecap="round"/>
+  <path d="M84 89Q75.5 62.5 64 37" stroke="#FFF7EA" stroke-width="10" stroke-linecap="round"/>
+  <path d="M55 72.5Q64 74 73 72.5" stroke="#FFF7EA" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="100" cy="28" r="6" fill="#D97945"/>
 </svg>
