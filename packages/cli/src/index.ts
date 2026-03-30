@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { prompt, FileStorage, convertToATIF, cleanupBackgroundProcesses } from 'open-agent-sdk';
 import { resolveCodexCliAuth } from './codex-auth';
+import { resolveWorkingDirectory } from './cwd';
 
 const args = process.argv.slice(2);
 type CleanupBackgroundMode = 'never' | 'on-error' | 'always';
@@ -31,7 +32,7 @@ const provider = (getFlag('--provider') ?? process.env.OAS_PROVIDER) as
   'openai' | 'google' | 'anthropic' | 'codex' | 'openai-codex' | undefined;
 const outputFormat = getFlag('--output-format') ?? 'text';
 const maxTurns = parseInt(getFlag('--max-turns') ?? '50', 10);
-const cwd = getFlag('--cwd') ?? process.cwd();
+const cwd = resolveWorkingDirectory(getFlag('--cwd'));
 const baseURL = getFlag('--base-url') ?? process.env.ANTHROPIC_BASE_URL ?? process.env.OPENAI_BASE_URL;
 const saveTrajectory = getFlag('--save-trajectory');
 const sessionDir = getFlag('--session-dir');

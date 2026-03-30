@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUTPUT="${REPO_ROOT}/benchmark/autoresearch/results.tsv"
 TASK_OUTPUT="${REPO_ROOT}/benchmark/autoresearch/results_tasks.tsv"
 TASKS_FILE="${REPO_ROOT}/benchmark/terminalbench/task-lists/smoke-5.txt"
-MODEL="MiniMax-M2.5"
+MODEL=""
 K=3
 TAG=""
 SLEEP_BETWEEN=3
@@ -52,7 +52,7 @@ Runs the standard autoresearch iteration:
 Options:
   --tag LABEL             Required label written into results.tsv
   --tasks-file FILE       Task list passed to evaluate.sh
-  --model MODEL           Model name passed to evaluate.sh
+  --model MODEL           Required model name passed to evaluate.sh (for example: gpt-5.4)
   -k N                    Trials per task (default: 3)
   --sleep N               Sleep between trials (default: 3)
   --output FILE           results.tsv path (default: benchmark/autoresearch/results.tsv)
@@ -210,6 +210,11 @@ check_prewarmed_images() {
 
 if [ -z "$TAG" ]; then
   echo "--tag is required" >&2
+  exit 1
+fi
+
+if [ -z "$MODEL" ]; then
+  echo "--model is required (for example: gpt-5.4)" >&2
   exit 1
 fi
 

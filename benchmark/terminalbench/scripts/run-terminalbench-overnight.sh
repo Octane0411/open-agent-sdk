@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DATASET="terminal-bench@2.0"
-MODEL="MiniMax-M2.5"
+MODEL=""
 ENV_TYPE="docker"
 AGENT_IMPORT_PATH="harbor.agents.installed.open_agent_sdk:OpenAgentSDKAgent"
 TASKS_FILE=""
@@ -23,7 +23,7 @@ Required:
 
 Options:
   --dataset NAME             Harbor dataset (default: terminal-bench@2.0)
-  --model NAME               Model name (default: MiniMax-M2.5)
+  --model NAME               Required model name (for example: gpt-5.4)
   --env NAME                 Harbor env type (default: docker)
   --batch-size N             Cleanup every N tasks; 0 disables cleanup (default: 0)
   --keep-images N            Keep newest N terminal-bench images (default: 2)
@@ -62,6 +62,11 @@ done
 
 if [ -z "$TASKS_FILE" ] || [ ! -f "$TASKS_FILE" ]; then
   echo "--tasks-file is required and must exist" >&2
+  exit 1
+fi
+
+if [ -z "$MODEL" ]; then
+  echo "--model is required (for example: gpt-5.4)" >&2
   exit 1
 fi
 

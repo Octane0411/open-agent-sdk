@@ -90,6 +90,7 @@ bash benchmark/terminalbench/prewarm-images.sh \
 ```bash
 bash benchmark/autoresearch/run-experiment.sh \
   --tag "<experiment-id>" \
+  --model gpt-5.4 \
   --no-local-tarballs \
   -k 3
 ```
@@ -117,7 +118,7 @@ Each experiment should test one hypothesis.
 4. Run the targeted test gate or full test suite.
 5. Commit the candidate change.
 6. If the change affects installed OAS behavior, re-run pre-warm once.
-7. Run `run-experiment.sh`.
+7. Run `run-experiment.sh` with an explicit `--model`.
 8. Update the HTML report and experiment tree.
 9. Keep or revert the candidate change.
 

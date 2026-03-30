@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smoke-5 Campaign: E3</title>
+  <style>
+    :root {
+      --bg: #08111a;
+      --panel: rgba(10, 22, 33, 0.88);
+      --panel-soft: rgba(255, 255, 255, 0.035);
+      --line: rgba(255, 255, 255, 0.09);
+      --text: #edf4f8;
+      --muted: #9fb1bf;
+      --accent: #56d2c6;
+      --accent-strong: #8ff1d8;
+      --pass: #89f0b9;
+      --fail: #ff7b7b;
+      --warn: #f4bf72;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+      --mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
+      --sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      --serif: "Iowan Old Style", "Georgia", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at 12% 14%, rgba(86, 210, 198, 0.18), transparent 22%),
+        radial-gradient(circle at 84% 14%, rgba(244, 191, 114, 0.15), transparent 24%),
+        linear-gradient(180deg, #09131d 0%, #08111a 45%, #0a141d 100%);
+    }
+
+    code { font-family: var(--mono); color: var(--accent-strong); }
+
+    .page {
+      width: min(1220px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+
+    .hero, .section {
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(12, 25, 38, 0.96), rgba(8, 17, 26, 0.94));
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 42px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(24px);
+      opacity: 0.75;
+      z-index: 0;
+    }
+
+    .hero::before {
+      width: 320px;
+      height: 320px;
+      top: -90px;
+      right: -80px;
+      background: rgba(86, 210, 198, 0.18);
+    }
+
+    .hero::after {
+      width: 240px;
+      height: 240px;
+      left: -50px;
+      bottom: -90px;
+      background: rgba(244, 191, 114, 0.16);
+    }
+
+    .hero > * { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--accent-strong);
+      letter-spacing: 0.12em;
+      font-size: 11px;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+      gap: 28px;
+      margin-top: 26px;
+      align-items: end;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(52px, 8vw, 84px);
+      line-height: 0.92;
+      letter-spacing: -0.05em;
+      max-width: 10ch;
+    }
+
+    .hero p {
+      margin: 18px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 58ch;
+    }
+
+    .hero-card {
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 12px;
+    }
+
+    .hero-value {
+      margin-top: 10px;
+      font-size: 44px;
+      line-height: 1;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .metric {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .metric .value {
+      margin-top: 10px;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric .sub {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 50ch;
+      line-height: 1.6;
+    }
+
+    .kicker {
+      color: var(--accent-strong);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    h2 {
+      margin: 8px 0 0;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+    }
+
+    .tree {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      position: relative;
+    }
+
+    .tree::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 40px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(86, 210, 198, 0.2), rgba(244, 191, 114, 0.25));
+    }
+
+    .node {
+      position: relative;
+      z-index: 1;
+    }
+
+    .node-badge {
+      width: 80px;
+      height: 80px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 22px;
+      color: var(--accent-strong);
+      border: 1px solid rgba(143, 241, 216, 0.4);
+      background: radial-gradient(circle at 30% 30%, rgba(143, 241, 216, 0.18), rgba(86, 210, 198, 0.06));
+      box-shadow: 0 0 0 12px rgba(86, 210, 198, 0.05);
+    }
+
+    .node-meta {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .node-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .node-copy {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .node-metrics {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #dbe5ec;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .callout {
+      margin-top: 20px;
+      padding: 20px 22px;
+      border-radius: 22px;
+      border: 1px solid rgba(137, 240, 185, 0.18);
+      background: linear-gradient(180deg, rgba(137, 240, 185, 0.08), rgba(137, 240, 185, 0.03));
+    }
+
+    .callout strong {
+      color: var(--pass);
+      display: block;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .callout p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    th, td {
+      padding: 16px 18px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    td { line-height: 1.55; }
+
+    .status {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+    }
+
+    .status-pass { color: #0e281a; background: var(--pass); }
+    .status-fail { color: #340d11; background: var(--fail); }
+    .status-mixed { color: #2f1e02; background: var(--warn); }
+
+    .delta-up {
+      color: var(--pass);
+      font-weight: 700;
+    }
+
+    .delta-flat {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 18px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .tree,
+      .metric-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .tree::before {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <span class="eyebrow">Autoresearch Campaign Report</span>
+      <div class="hero-grid">
+        <div>
+          <h1>E3 First Real Iteration</h1>
+          <p>
+            This is the first real smoke-5 optimization run after the foundation work.
+            The candidate change normalized a blank <code>--cwd</code> to the actual CLI working directory,
+            and the successful run was recorded at commit <code>96c825e</code> after a required runtime tarball URL fix.
+          </p>
+        </div>
+        <div class="hero-card">
+          <div class="label">Current Best</div>
+          <div class="hero-value">pass@3 0.8000</div>
+          <p class="note">
+            Reliability also moved sharply: <code>pass^3 0.6000</code>. This is the first run where
+            three smoke-5 tasks are stable at <code>PPP</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="metric-strip">
+        <div class="metric">
+          <div class="label">Experiment</div>
+          <div class="value">E3</div>
+          <div class="sub">Tag: <code>E3-cli-cwd-normalization</code></div>
+        </div>
+        <div class="metric">
+          <div class="label">pass@3</div>
+          <div class="value">0.8000</div>
+          <div class="sub">4/5 tasks solved at least once</div>
+        </div>
+        <div class="metric">
+          <div class="label">pass^3</div>
+          <div class="value">0.6000</div>
+          <div class="sub">3/5 tasks solved in all three trials</div>
+        </div>
+        <div class="metric">
+          <div class="label">avg_trial_rate</div>
+          <div class="value">0.6667</div>
+          <div class="sub">10/15 trials passed</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Trajectory</div>
+          <h2>From Baseline To First Win</h2>
+        </div>
+        <p>
+          E1 established the first trustworthy baseline, E2 made the campaign reviewable, and E3 is the first
+          iteration that actually moved the agent’s task performance.
+        </p>
+      </div>
+
+      <div class="tree">
+        <article class="node">
+          <div class="node-badge">E1</div>
+          <div class="node-meta">
+            <div class="node-title">Official Baseline</div>
+            <div class="node-copy">First full smoke-5 <code>k=3</code> run on the stabilized fast path.</div>
+            <div class="node-metrics">
+              <span class="chip"><code>pass@3 0.4000</code></span>
+              <span class="chip"><code>pass^3 0.2000</code></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="node">
+          <div class="node-badge">E2</div>
+          <div class="node-meta">
+            <div class="node-title">Task Ledger Baseline</div>
+            <div class="node-copy">Same benchmark loop, but now with task-level stability records and review artifacts.</div>
+            <div class="node-metrics">
+              <span class="chip"><code>pass@3 0.6000</code></span>
+              <span class="chip"><code>pass^3 0.2000</code></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="node">
+          <div class="node-badge">E3</div>
+          <div class="node-meta">
+            <div class="node-title">cwd Normalization</div>
+            <div class="node-copy">First real candidate: recover the actual working directory when <code>--cwd</code> is blank.</div>
+            <div class="node-metrics">
+              <span class="chip"><code>pass@3 0.8000</code></span>
+              <span class="chip"><code>pass^3 0.6000</code></span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="callout">
+        <strong>KEEP</strong>
+        <p>
+          E3 improved both capability and reliability against E2. The decisive task-level wins were
+          <code>configure-git-webserver</code> going from <code>FFF</code> to <code>PPP</code> and
+          <code>prove-plus-comm</code> going from <code>EPP</code> to <code>PPP</code>.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Comparison</div>
+          <h2>E2 vs E3</h2>
+        </div>
+        <p>
+          E3 was recorded at <code>96c825e</code>. The earlier failed <code>71dd28c</code> row was a harness issue and should not be used as the comparison baseline.
+        </p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Experiment</th>
+            <th>Commit</th>
+            <th>pass@3</th>
+            <th>pass^3</th>
+            <th>avg_trial_rate</th>
+            <th>Reading</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>E2</strong></td>
+            <td><code>45dead9</code></td>
+            <td>0.6000</td>
+            <td>0.2000</td>
+            <td>0.4000</td>
+            <td>reviewable baseline, but still unstable</td>
+          </tr>
+          <tr>
+            <td><strong>E3</strong></td>
+            <td><code>96c825e</code></td>
+            <td class="delta-up">0.8000</td>
+            <td class="delta-up">0.6000</td>
+            <td class="delta-up">0.6667</td>
+            <td>first real optimization win</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Task Stability</div>
+          <h2>What Moved</h2>
+        </div>
+        <p>
+          The strongest signal in E3 is not a small aggregate bump. It is a stability shift in two concrete tasks.
+        </p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>E2</th>
+            <th>E3</th>
+            <th>Delta</th>
+            <th>Reading</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>fix-git</code></td>
+            <td><span class="status status-pass">PPP</span></td>
+            <td><span class="status status-pass">PPP</span></td>
+            <td><span class="delta-flat">flat</span></td>
+            <td>already stable, stayed stable</td>
+          </tr>
+          <tr>
+            <td><code>configure-git-webserver</code></td>
+            <td><span class="status status-fail">FFF</span></td>
+            <td><span class="status status-pass">PPP</span></td>
+            <td><span class="delta-up">major win</span></td>
+            <td>the biggest E3 improvement</td>
+          </tr>
+          <tr>
+            <td><code>llm-inference-batching-scheduler</code></td>
+            <td><span class="status status-mixed">FFP</span></td>
+            <td><span class="status status-mixed">FFP</span></td>
+            <td><span class="delta-flat">flat</span></td>
+            <td>still only occasionally solvable</td>
+          </tr>
+          <tr>
+            <td><code>gpt2-codegolf</code></td>
+            <td><span class="status status-fail">FFF</span></td>
+            <td><span class="status status-fail">FFF</span></td>
+            <td><span class="delta-flat">flat</span></td>
+            <td>still unsolved</td>
+          </tr>
+          <tr>
+            <td><code>prove-plus-comm</code></td>
+            <td><span class="status status-mixed">EPP</span></td>
+            <td><span class="status status-pass">PPP</span></td>
+            <td><span class="delta-up">reliability win</span></td>
+            <td>infra noise removed, now stable</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="kicker">E3 Details</div>
+          <h2>What Was Actually Tested</h2>
+        </div>
+        <p>
+          The behavior under test was small on purpose. E3 changed CLI working-directory normalization instead of editing the full ReAct loop.
+        </p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>File</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>candidate</td>
+            <td><code>packages/cli/src/index.ts</code></td>
+            <td>use a normalized working directory instead of trusting a blank <code>--cwd</code></td>
+          </tr>
+          <tr>
+            <td>candidate</td>
+            <td><code>packages/cli/src/cwd.ts</code></td>
+            <td>isolated helper for working-directory normalization</td>
+          </tr>
+          <tr>
+            <td>test</td>
+            <td><code>packages/cli/tests/cwd.test.ts</code></td>
+            <td>protect blank and missing cwd behavior</td>
+          </tr>
+          <tr>
+            <td>supporting fix</td>
+            <td><code>benchmark/autoresearch/evaluate.sh</code></td>
+            <td>preserve runtime tarball wiring instead of letting <code>.env</code> override it</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="footer">
+        Source of truth remains the TSV ledgers in <code>benchmark/autoresearch/results.tsv</code> and
+        <code>benchmark/autoresearch/results_tasks.tsv</code>. This HTML exists to make the campaign reviewable.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
