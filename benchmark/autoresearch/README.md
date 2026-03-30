@@ -56,6 +56,7 @@ bash ./benchmark/terminalbench/prewarm-images.sh \
 ```bash
 bash ./benchmark/autoresearch/run-experiment.sh \
   --tag "<short-label>" \
+  --model gpt-5.4 \
   --no-local-tarballs \
   -k 3
 ```
@@ -67,6 +68,7 @@ bash ./benchmark/autoresearch/run-experiment.sh \
 ```bash
 bash ./benchmark/autoresearch/run-experiment.sh \
   --tag "<short-label>" \
+  --model gpt-5.4 \
   --revert-on-regress
 ```
 
@@ -91,8 +93,13 @@ already baked into the images:
 ```bash
 bash ./benchmark/autoresearch/run-experiment.sh \
   --tag "<short-label>" \
+  --model gpt-5.4 \
   --no-local-tarballs
 ```
+
+`run-experiment.sh` and `evaluate.sh` require an explicit `--model`. They no
+longer fall back to a hidden default, so each experiment row can be traced to
+the model you intended to run.
 
 ## Cost Control
 

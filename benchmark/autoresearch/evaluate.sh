@@ -17,7 +17,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 TASKS_FILE="${REPO_ROOT}/benchmark/terminalbench/task-lists/smoke-5.txt"
-MODEL="MiniMax-M2.5"
+MODEL=""
 K=3
 TAG="eval"
 OUTPUT=""
@@ -37,7 +37,7 @@ Usage: evaluate.sh [options]
 
 Options:
   --tasks-file FILE    Task list file, one task per line (default: smoke-5.txt)
-  --model MODEL        LLM model name (default: MiniMax-M2.5)
+  --model MODEL        Required LLM model name (for example: gpt-5.4)
   -k N                 Trials per task (default: 3)
   --tag TAG            Label for this run (default: "eval")
   --output FILE        Append TSV summary to file
@@ -67,6 +67,11 @@ done
 
 if [ ! -f "$TASKS_FILE" ]; then
   echo "Tasks file not found: $TASKS_FILE" >&2
+  exit 1
+fi
+
+if [ -z "$MODEL" ]; then
+  echo "--model is required (for example: gpt-5.4)" >&2
   exit 1
 fi
 
